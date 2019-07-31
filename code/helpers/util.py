@@ -58,7 +58,7 @@ def getIdxRange(num_files,batch_size):
     return idx_range;
 
 def readLinesFromFile(file_name):
-    with open(file_name,'rb') as f:
+    with open(file_name,'r') as f:
         lines=f.readlines();
     lines=[line.strip('\n') for line in lines];
     return lines

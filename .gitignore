@@ -55,3 +55,7 @@ data
 experiments
 scratch
 TO DO
+OSVOS-PyTorch
+OSVOS-TensorFlow
+cocoapi
+models-master
