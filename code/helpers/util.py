@@ -123,7 +123,7 @@ def replaceSpecialChar(string,replace_with):
     return string
 
 def writeFile(file_name,list_to_write):
-    with open(file_name,'wb') as f:
+    with open(file_name,'w') as f:
         for string in list_to_write:
             f.write(string+'\n');
 
