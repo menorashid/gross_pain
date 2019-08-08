@@ -79,7 +79,7 @@ def script_extract_motion_frames():
     motion_files = glob.glob(os.path.join(in_dir,'*.txt'))
     motion_files.sort()
 
-    print (motion_files)
+    # print (motion_files)
     # input()
 
     out_dir_meta = os.path.join('../scratch','frames_at_motion')
@@ -94,13 +94,7 @@ def script_extract_motion_frames():
         out_dir = os.path.join(out_dir_meta, vid_name)
         util.mkdir(out_dir)
 
-        cam_time = os.path.split(motion_file)[1]
-        cam_time = cam_time[:cam_time.rindex('.')]
-        cam_time = cam_time.split('_')
-        cam = int(cam_time[0][2:])
-        vid_start_time = datetime.strptime(cam_time[1],'%Y%m%d%H%M%S')
-        vid_start_time = np.datetime64(vid_start_time)
-        print (type(vid_start_time))
+        cam, vid_start_time = pms.get_vid_info(video_file)
 
         df = pms.read_motion_file(motion_file)
         motion_str = 'Motion Detection Started'
@@ -113,8 +107,10 @@ def script_extract_motion_frames():
         commands= [extract_frame_at_time(video_file, out_dir, time_curr) for time_curr in vid_times]
         commands = set(commands)
         commands_file =os.path.join(out_dir,'commands.txt') 
+        # print (commands[0])        
+        # print (commands_file)
         util.writeFile(commands_file, commands)
-        
+        # break
         for command in commands:
             subprocess.call(command, shell=True)
             
