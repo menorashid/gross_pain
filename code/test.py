@@ -23,6 +23,7 @@ class DeepLabModel(object):
 
     INPUT_TENSOR_NAME = 'ImageTensor:0'
     OUTPUT_TENSOR_NAME = 'SemanticPredictions:0'
+    # 'SemanticPredictions:0'
     INPUT_SIZE = 448
     FROZEN_GRAPH_NAME = 'frozen_inference_graph'
 
@@ -48,6 +49,7 @@ class DeepLabModel(object):
             tf.import_graph_def(graph_def, name='')
 
         self.sess = tf.Session(graph=self.graph)
+        # print(tf.contrib.graph_editor.get_tensors(self.graph))
 
     def run(self, image):
         """Runs inference on a single image.
@@ -167,8 +169,8 @@ def run_visualization(model, url, out_file):
     seg_map[seg_map>0]=255
     # seg_map = np.array(seg_map*256, dtype = uint8)
     scipy.misc.imsave(out_file,seg_map.astype(np.uint8))
-    print original_im.size, seg_map.shape
-    print original_im, out_file
+    # print (original_im.size, seg_map.shape)
+    # print (original_im, out_file)
     # print(resized_im.size, seg_map.shape)
     # vis_segmentation(resized_im, seg_map, out_file)
 
