@@ -3,7 +3,6 @@ import scipy
 import subprocess;
 import os;
 
-
 def getFilesInFolder(folder,ext):
     list_files=[os.path.join(folder,file_curr) for file_curr in os.listdir(folder) if file_curr.endswith(ext)];
     return list_files;     

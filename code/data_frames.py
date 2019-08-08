@@ -5,8 +5,20 @@ from datetime import datetime
 import multiprocessing
 import pandas as pd
 from helpers import util
-from helpers import parse_motion_file as pms
 
+def get_command_extract_frame_at_time(video_file, out_file, time_curr):
+    timestampStr = pd.to_datetime(time_curr).strftime('%H:%M:%S')
+    command = ['ffmpeg', '-ss']
+    command.append(timestampStr)
+    command.extend(['-i',video_file])
+    command.extend(['-vframes 1'])
+    command.append('-vf scale=448:256')
+    command.append('-y')
+    command.append(out_file)
+    command.append('-hide_banner')
+
+    command = ' '.join(command)
+    return command
 
 class Horse_Video_Data():
     def __init__(self,horse_data_dir):
@@ -122,29 +134,44 @@ class Motion_File_Data():
     def get_motion_times(self,motion_str):
         motion_str = 'Motion Detection Started'
         rows = self.df.loc[(self.df['Minor Type']==motion_str),['Date Time']]
-        motion_times =rows.iloc[:,0].values    
+        motion_times =np.array(rows.iloc[:,0])
+        # .values    
         return motion_times
     
 
 def main():
 
     in_dir = '../data/surveillance_camera/Naughty_but_Nice'
-    vid_data = Horse_Video_Data(in_dir)
-
-    motion_file = glob.glob(os.path.join(in_dir,'*','*.txt'))[700]
+    
+    motion_file = glob.glob(os.path.join(in_dir,'*','*.txt'))[7] 
     
     motion_data = Motion_File_Data(motion_file)
     motion_times = motion_data.get_motion_times('Motion Detection Started')
-
-    # motion_df = pms.read_motion_file(motion_file)
-    # motion_str = 'Motion Detection Started'
-    # rows = motion_df.loc[(motion_df['Minor Type']==motion_str),['Date Time']]
-    # motion_times =rows.iloc[:,0].values    
+   
     print (motion_times.shape)
-    motion_time = motion_times[3]
-    print ('motion_time', motion_time)
+    motion_time = motion_times[-10] 
+    print ('motion_time', motion_time, type(motion_time))
+    
+    vid_data = Horse_Video_Data(in_dir)
+    closest_times = vid_data.get_closest_vid_time(motion_time)
+    
+    out_dir = '../scratch/coordinated_motion'
+    
+    import subprocess
+    from helpers import visualize
+    for idx_row in range(closest_times.shape[0]):
+        diff = motion_time - np.datetime64(closest_times[idx_row,1])
+        vid_file = closest_times[idx_row,2]
 
-    print (vid_data.get_closest_vid_time(motion_time))
+        out_file = os.path.join(out_dir,'cam_'+str(closest_times[idx_row,0])+'.jpg')
+        command = get_command_extract_frame_at_time(vid_file, out_file, diff)
+        subprocess.call(command, shell=True)
+    visualize.writeHTMLForFolder(out_dir)
+
+
+
+
+
 
     
 
