@@ -1,14 +1,16 @@
 import pandas as pd
 import numpy as np
+import subprocess
 import torch
 import os
 
 
 class MultiViewFrameExtractor():
-    def __init__(self, width, height, frame_rate, output_dir,
+    def __init__(self, data_path, width, height, frame_rate, output_dir,
                  views, data_selection_path):
         """
         Args:
+        data_path: str (where the raw videos are, root where the structure is root/subject/)
         width: int
         height: int
         frame_rate: int (frames per second to extract)
@@ -21,7 +23,7 @@ class MultiViewFrameExtractor():
                              The .csv-file should specify the subject, start and end
                              date-time for the intervals, and a pain label.
         """
-
+        self.data_path = data_path
         self.image_size = (width, height)
         self.frame_rate = frame_rate
         self.output_dir = output_dir
@@ -49,13 +51,26 @@ class MultiViewFrameExtractor():
             for ind, row in horse_df.iterrows():
                 # Each row will contain the start and end times and a pain label.
                 print(row)
-                start = str(row['Start'])
-                end = str(row['End'])
-                interval_dir_path = self.get_interval_dir_path(subject_dir_path, start, end)
+                # Just for directory naming
+                start_str = str(row['Start'])
+                end_str = str(row['End'])
+                interval_dir_path = self.get_interval_dir_path(subject_dir_path, start_str, end_str)
+
+                # Timestamps for start and end
+                start = pd.to_datetime(row['Start'], format='%Y%m%d%H%M%S')
+                end = pd.to_datetime(row['End'], format='%Y%m%d%H%M%S')
+                length = str(start - end)
+
                 for view in self.views:
                     view_dir_path = self.get_view_dir_path(interval_dir_path, view)
 
-                    length = str((pd.to_datetime(row['End']) - pd.to_datetime(row['Start'])))
+                    # Identify the video containing the start
+                    # Check if it also contains the end
+                      # If yes -- extract until end of interval, done.
+                      # If no -- extract until end of video,
+                      #          go to next video,
+                      #          repeat.
+
 
                     # # Remove "0 days " in the beginning of the timedelta to fit the ffmpeg command.
                     # length_ffmpeg = length[7:]
@@ -79,7 +94,8 @@ class MultiViewFrameExtractor():
             print("Creating clip directories for subject {}...".format(subject))
 
             horse_df = self.data_selection_df.loc[self.data_selection_df['Subject'] == subject]
-            for vid in horse_df['Video_ID']:
+            for ind, row in horse_df.iterrows():
+                import pdb; pdb.set_trace()
                 start = str(row['Start'])
                 end = str(row['End'])
                 interval_dir_path = self.get_interval_dir_path(subject_dir_path, start, end)
