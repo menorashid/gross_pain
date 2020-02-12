@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import os
 
+
 class MultiViewFrameExtractor():
     def __init__(self, width, height, frame_rate, output_dir,
                  views, data_selection_path):
@@ -32,26 +33,28 @@ class MultiViewFrameExtractor():
     def get_subject_dir_path(self, subject):
         return self.output_dir + '/' + subject + '/'
 
-    def get_interval_dir_path(self, subject, start, end):
-        return get_subject_dir_path(subject) + start + '_' + end + '/'
+    def get_interval_dir_path(self, subject_dir_path, start, end):
+        return subject_dir_path + start + '_' + end + '/'
 
-    def get_view_dir_path(self, subject, start, end, view):
-        return get_interval_dir_path(subject, start, end) + view + '/'
+    def get_view_dir_path(self, interval_dir_path, view):
+        return interval_dir_path + view + '/'
 
     def extract_frames(self):
         for i, subject in enumerate(self.subjects):
+            subject_dir_path = self.get_subject_dir_path(subject)
             print("Extracting frames for subject {}...".format(subject))
             counter = 1  # Counter of clips from the same video.
             horse_df = self.data_selection_df.loc[self.data_selection_df['Subject'] == subject]
     
             for ind, row in horse_df.iterrows():
+                # Each row will contain the start and end times and a pain label.
                 print(row)
+                start = str(row['Start'])
+                end = str(row['End'])
+                interval_dir_path = self.get_interval_dir_path(subject_dir_path, start, end)
                 for view in self.views:
-                    # Each row will contain the start and end times and a pain label.
-                    start = str(row['Start'])
-                    end = str(row['End'])
+                    view_dir_path = self.get_view_dir_path(interval_dir_path, view)
 
-                    frame_path = get_view_dir_path(subject, start, end, view)
                     length = str((pd.to_datetime(row['End']) - pd.to_datetime(row['Start'])))
 
                     # # Remove "0 days " in the beginning of the timedelta to fit the ffmpeg command.
@@ -70,6 +73,7 @@ class MultiViewFrameExtractor():
     def create_clip_directories(self):
         subprocess.call(['mkdir', self.output_dir])
         for i, subject in enumerate(self.subjects):
+            subject_dir_path = self.get_subject_dir_path(subject)
             subprocess.call(['mkdir', subject_dir_path])
 
             print("Creating clip directories for subject {}...".format(subject))
@@ -78,12 +82,11 @@ class MultiViewFrameExtractor():
             for vid in horse_df['Video_ID']:
                 start = str(row['Start'])
                 end = str(row['End'])
-                interval_dir = start + '_' + end
-                interval_dir_path = subject_dir_path + interval_dir + '/'
+                interval_dir_path = self.get_interval_dir_path(subject_dir_path, start, end)
                 subprocess.call(['mkdir', interval_dir_path])
                 for view in self.views:
-                    viewpoint_dir = interval_dir_path + str(view) + '/'
-                    subprocess.call(['mkdir', viewpoint_dir])
+                    view_dir_path = self.get_view_dir_path(interval_dir_path, view)
+                    subprocess.call(['mkdir', view_dir_path])
 
 
 
