@@ -21,7 +21,7 @@ def parse_arguments(argv):
       help="Width of extracted frames.")
   parser.add_argument('--height', type=int,
       help="Height of extracted frames.")
-  parser.add_argument('--frame_rate', type=int,
+  parser.add_argument('--frame_rate', type=float,
       help="Frame rate to extract at.")
   return parser.parse_args(argv)
 
