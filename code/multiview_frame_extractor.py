@@ -29,6 +29,14 @@ class MultiViewFrameExtractor():
 
         self.subjects = self.data_selection_df.Subject.unique()
 
+    def get_subject_dir_path(self, subject):
+        return self.output_dir + '/' + subject + '/'
+
+    def get_interval_dir_path(self, subject, start, end):
+        return get_subject_dir_path(subject) + start + '_' + end + '/'
+
+    def get_view_dir_path(self, subject, start, end, view):
+        return get_interval_dir_path(subject, start, end) + view + '/'
 
     def extract_frames(self):
         for i, subject in enumerate(self.subjects):
@@ -38,55 +46,44 @@ class MultiViewFrameExtractor():
     
             for ind, row in horse_df.iterrows():
                 print(row)
-                occurences = check_if_unique_in_df(row['Video_ID'], horse_df)
+                for view in self.views:
+                    # Each row will contain the start and end times and a pain label.
+                    start = str(row['Start'])
+                    end = str(row['End'])
+
+                    frame_path = get_view_dir_path(subject, start, end, view)
+                    length = str((pd.to_datetime(row['End']) - pd.to_datetime(row['Start'])))
+
+                    # # Remove "0 days " in the beginning of the timedelta to fit the ffmpeg command.
+                    # length_ffmpeg = length[7:]
+                    # print(start, end, length)
     
-                if occurences == 1:
-                    clip_dir_path = output_dir + '/' + subject + '/' + row['Video_ID']
-                elif occurences > 1:
-                    clip_dir_path = output_dir + '/' + subject + '/' + row['Video_ID'] + \
-                                    '_' + str(counter)
-                    if counter == occurences:
-                        counter = 1  # Reset
-                    else:
-                        counter += 1
-                else:
-                    print('Warning, 0 or negative occurences of clip')
+                    # complete_output_path = clip_dir_path + '/frame_%06d.jpg'
+                    # video_path = get_video_path(row)
     
-                start = str(row['Start'])
-                end = str(row['End'])
-                # Remove "0 days " in the beginning of the timedelta to fit the ffmpeg command.
-                length = str((pd.to_datetime(row['End']) - pd.to_datetime(row['Start'])))[7:]
-                print(start, end, length)
-    
-                complete_output_path = clip_dir_path + '/frame_%06d.jpg'
-                video_path = get_video_path(row)
-    
-                ffmpeg_command = ['ffmpeg', '-ss', start, '-i', video_path, '-t', length, '-vf',
-                     'scale=448:256', '-r', str(1), complete_output_path, '-hide_banner']
-                print(ffmpeg_command)
-                subprocess.call(ffmpeg_command)
+                    # ffmpeg_command = ['ffmpeg', '-ss', start, '-i', video_path, '-t', length, '-vf',
+                    #      'scale=448:256', '-r', str(1), complete_output_path, '-hide_banner']
+                    # print(ffmpeg_command)
+                    # subprocess.call(ffmpeg_command)
 
 
     def create_clip_directories(self):
         subprocess.call(['mkdir', self.output_dir])
         for i, subject in enumerate(self.subjects):
-            subprocess.call(['mkdir', output_dir + '/' + subject])
+            subprocess.call(['mkdir', subject_dir_path])
+
             print("Creating clip directories for subject {}...".format(subject))
-            counter = 1  # Counter of clips from the same video.
+
             horse_df = self.data_selection_df.loc[self.data_selection_df['Subject'] == subject]
             for vid in horse_df['Video_ID']:
-                occurences = check_if_unique_in_df(vid, df)
-                if occurences == 1:
-                    clip_dir_path = output_dir + '/' + subject + '/' + vid
-                elif occurences > 1:
-                    clip_dir_path = output_dir + '/' + subject + '/' + vid + '_' + str(counter)
-                    if counter == occurences: 
-                        counter = 1  # Reset
-                    else:
-                        counter += 1
-                else:
-                    print('Warning, 0 or negative occurences of clip')
-                subprocess.call(['mkdir', clip_dir_path])
+                start = str(row['Start'])
+                end = str(row['End'])
+                interval_dir = start + '_' + end
+                interval_dir_path = subject_dir_path + interval_dir + '/'
+                subprocess.call(['mkdir', interval_dir_path])
+                for view in self.views:
+                    viewpoint_dir = interval_dir_path + str(view) + '/'
+                    subprocess.call(['mkdir', viewpoint_dir])
 
 
 
@@ -97,5 +94,11 @@ def check_if_unique_in_df(file_name, df):
     :return: int [nb occurences of sequences from the same video clip in the pd.DataFrame]
     """
     return len(df[df['Video_ID'] == file_name])
+
+
+def get_video_path(row):
+    p = 'Pain' if row['Pain']==1 else 'No_Pain'
+    path = row['Subject'] + '/' + p + '/' + row['Video_ID'] + '.mp4'
+    return path
 
 

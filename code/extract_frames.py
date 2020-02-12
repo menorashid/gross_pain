@@ -8,12 +8,6 @@ import ast
 from multiview_frame_extractor import MultiViewFrameExtractor
 
 
-def get_video_path(row):
-    p = 'Pain' if row['Pain']==1 else 'No_Pain'
-    path = row['Subject'] + '/' + p + '/' + row['Video_ID'] + '.mp4'
-    return path
-
-
 def parse_arguments(argv):
   """Parses the arguments passed to the extract_frames.py script."""
   parser = argparse.ArgumentParser()
