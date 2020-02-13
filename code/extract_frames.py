@@ -41,6 +41,6 @@ if __name__ == '__main__':
                                               data_selection_path=args.csv_path)
 
     frame_extractor.create_clip_directories()
-    frame.extractor.extract_frames()
+    frame_extractor.extract_frames()
 
 
