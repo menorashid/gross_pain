@@ -102,6 +102,9 @@ class Motion_File_Data():
         p = multiprocessing.Pool()
         args = [(lines, idx_curr) for idx_curr in idx_event]
         events = p.map(self.parse_event, args)
+        p.close()
+        p.join()
+
         events = [event for event in events if event is not None]
         columns = np.array(['Date Time','Major Type', 'Minor Type', 'Camera'])
         df = pd.DataFrame(columns = columns)
