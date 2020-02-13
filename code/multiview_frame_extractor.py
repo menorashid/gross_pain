@@ -66,10 +66,15 @@ class MultiViewFrameExtractor():
                 for view in self.views:
                     view_dir_path = self.get_view_dir_path(interval_dir_path, view)
 
-                    video = self.find_video(subject, view, start)
-
                     # Identify the video containing the start
-                    # Check if it also contains the end
+                    start_video_path, duration = self.find_video_and_its_duration(subject, view, start)
+                    import pdb; pdb.set_trace()
+
+                    # Check if it also contains the end (bool)
+                    if duration < (end-start):
+                        print('Need to look for next clip.')
+                        
+                    # same_video = self.timestamp_in_video(start_video_path, end)
                       # If yes -- extract until end of interval, done.
                       # If no -- extract until end of video,
                       #          go to next video,
@@ -99,7 +104,6 @@ class MultiViewFrameExtractor():
 
             horse_df = self.data_selection_df.loc[self.data_selection_df['Subject'] == subject]
             for ind, row in horse_df.iterrows():
-                import pdb; pdb.set_trace()
                 start = str(row['Start'])
                 end = str(row['End'])
                 interval_dir_path = self.get_interval_dir_path(subject_dir_path, start, end)
@@ -108,40 +112,80 @@ class MultiViewFrameExtractor():
                     view_dir_path = self.get_view_dir_path(interval_dir_path, view)
                     subprocess.call(['mkdir', view_dir_path])
 
-    def find_video(self, subject, view, time):
+    def find_video_and_its_duration(self, subject, view, time):
         """
         subject: str (e.g. Aslan)
         view: int (e.g. 0, use lookup table)
         time: pd.datetime
         returns video path str
         """
+
+        # The videos are found in the following dir structure:
+        # subject/yyyy-mm-dd/ch0x_yyyymmddHHMMSS.mp4
+        # where x is the camera ID for that horse, found in viewpoints.csv
+
         subject_path = self.data_path + subject + '/'
         lookup_viewpoint = pd.read_csv('../data/viewpoints.csv', index_col='Subject')
         camera = lookup_viewpoint.at[subject, str(view)]
         camera_str = 'ch0' + str(camera)
 
-        
         date_dir = [dd for dd in os.listdir(subject_path)
                     if pd.to_datetime(dd.split('/')[-1]).date() == time.date()]
         date_path = subject_path + date_dir[0] + '/'
-        
-        camera_filenames = [fn[:fn.rindex('.')] for fn in os.listdir(date_path)
+       
+        # Get list of all filenames on format 'ch0x_yyyymmddHHMMSS.mp4' 
+        camera_filenames = [fn for fn in os.listdir(date_path)
                             if fn.startswith(camera_str) and '.mp4' in fn]
 
-        filename_times = [fn.split('_')[-1] for fn in camera_filenames]
+        # Remove .mp4 extension, format now 'ch0x_yyyymmddHHMMSS'
+        camera_times = [fn[:fn.rindex('.')] for fn in camera_filenames]
 
-        time_stamps = map(from_filename_time_to_pd_datetime, filename_times)
+        # Get only the time part, format now 'yyyymmddHHMMSS'
+        filename_times = [fn.split('_')[-1] for fn in camera_times]
+        # Convert strings to pd.TimeStamps
+        time_stamps = list(map(from_filename_time_to_pd_datetime, filename_times))
+        # Get the pd.TimeDeltas for each timestamp in the list,
+        # relative to the given time
+        time_deltas = [get_timedelta(time, ts) for ts in time_stamps]
 
-        # video_filename = 
-        import pdb; pdb.set_trace()
+        # Get the index before that of the first negative TimeDelta
+        correct_index = get_index_for_correct_file(time_deltas)
 
-        for path, dirs, files in sorted(os.walk(subject_path)):
-            date = pd.to_datetime(path.split('/')[-1]).date()
-            print(path)
+        # Also return the length of the clip
+        duration = time_stamps[correct_index+1] - time_stamps[correct_index]
 
-        return 'subj_path/date/video_path.mp4'
+        file_path = date_path + camera_filenames[correct_index]
+        return file_path, duration
+
+    def timestamp_in_video(self, video_path, time):
+        """
+        video_path: str
+        time: pd.TimeStamp
+        return: bool
+        """
+        time_str = video_path[:video_path(rindex('.'))].split('_')[-1]
+        time_stamp = from_filename_time_to_pd_datetime(time_str)
+
         
 
+
+def get_index_for_correct_file(time_deltas):
+    """
+    time_deltas: [pd.TimeDelta] list of timedeltas.
+    Finds index of the file we're looking for.
+    return: int
+    """
+    for ind, td in enumerate(time_deltas):
+        # When we have passed the correct file
+        if td.days < 0:
+            # Get the index from the last file
+            correct_index = ind-1
+            break
+    return correct_index
+
+
+def get_timedelta(time_stamp_1, time_stamp_2):
+    return time_stamp_1 - time_stamp_2
 
 
 def check_if_unique_in_df(file_name, df):
