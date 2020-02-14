@@ -7,6 +7,7 @@ import os
 
 VIEWPOINTS = {0: 'Front left', 1: 'Front right',
               2: 'Back right', 3: 'Back left'}
+LEN_FILE_ID = 19
 
 
 class MultiViewFrameExtractor():
@@ -95,6 +96,7 @@ class MultiViewFrameExtractor():
 
                     while duration_cumulative < interval_duration:
                         print('There are still frames left to extract on the interval.', '\n')
+
                         # Identify the video containing the start
                         start_video_path, \
                         remaining_duration, \
@@ -127,7 +129,6 @@ class MultiViewFrameExtractor():
                         print('\n')
                         print(ffmpeg_command)
                         print('\n')
-                        import pdb; pdb.set_trace()
                         subprocess.call(ffmpeg_command)
                         # Keep track of how much of the interval we have covered
                         duration_cumulative += remaining_duration
@@ -186,9 +187,12 @@ class MultiViewFrameExtractor():
         camera_times = [fn[:fn.rindex('.')] for fn in camera_filenames]
 
         # Get only the time part, format now 'yyyymmddHHMMSS'
-        filename_times = [fn.split('_')[-1] for fn in camera_times]
+        filename_times = [fn.split('_')[-1] for fn in camera_times
+                          if len(fn) == LEN_FILE_ID]
+
         # Convert strings to pd.TimeStamps
         time_stamps = list(map(from_filename_time_to_pd_datetime, filename_times))
+
         # Get the pd.TimeDeltas for each timestamp in the list,
         # relative to the given time
         time_deltas = [get_timedelta(time, ts) for ts in time_stamps]
