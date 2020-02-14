@@ -5,6 +5,10 @@ import torch
 import os
 
 
+VIEWPOINTS = {0: 'Front left', 1: 'Front right',
+              2: 'Back right', 3: 'Back left'}
+
+
 class MultiViewFrameExtractor():
     def __init__(self, data_path, width, height, frame_rate, output_dir,
                  views, data_selection_path):
@@ -32,11 +36,20 @@ class MultiViewFrameExtractor():
 
         self.subjects = self.data_selection_df.Subject.unique()
 
+    # The following methods construct path strings. Frames saved on format:
+    # self.output_dir/subject/yymmddHHMMSS_HHMMSS/LXYZ_%06d.jpg
+    # where the two timestamps are for the start and end of the interval,
+    # L is the first letter of the subject name,
+    # X is the index of the interval for that subject,
+    # Y is the viewpoint and
+    # Z is the index of the raw video file for that interval.
+
     def get_subject_dir_path(self, subject):
         return self.output_dir + '/' + subject + '/'
 
     def get_interval_dir_path(self, subject_dir_path, start, end):
-        return subject_dir_path + start + '_' + end + '/'
+        # Keep only HHMMSS for the end time.
+        return subject_dir_path + start + '_' + end[8:] + '/'
 
     def get_view_dir_path(self, interval_dir_path, view):
         return interval_dir_path + str(view) + '/'
@@ -45,7 +58,7 @@ class MultiViewFrameExtractor():
         for i, subject in enumerate(self.subjects):
             subject_dir_path = self.get_subject_dir_path(subject)
             print("Extracting frames for subject {}...".format(subject))
-            counter = 1  # Counter of clips from the same video.
+            interval_ind = 0  # Counter for the extracted intervals to index file extension.
             horse_df = self.data_selection_df.loc[self.data_selection_df['Subject'] == subject]
     
             for ind, row in horse_df.iterrows():
@@ -59,39 +72,69 @@ class MultiViewFrameExtractor():
                                                                end_str)
 
                 # Timestamps for start and end
-                start = pd.to_datetime(row['Start'], format='%Y%m%d%H%M%S')
-                end = pd.to_datetime(row['End'], format='%Y%m%d%H%M%S')
-                length = str(start - end)
+                start_interval = pd.to_datetime(row['Start'], format='%Y%m%d%H%M%S')
+                end_interval = pd.to_datetime(row['End'], format='%Y%m%d%H%M%S')
+                interval_duration = end_interval - start_interval
+                print('\n')
+                print('Total interval duration: ', interval_duration)
 
                 for view in self.views:
+                    print('\n')
+                    print('View: ', view, ' ({})'.format(VIEWPOINTS[view]))
+                    # Path to the directory of this view, which is a subdir to the interval
                     view_dir_path = self.get_view_dir_path(interval_dir_path, view)
+                    # Reset the start variable to start_interval for each view.
+                    start = start_interval
 
-                    # Identify the video containing the start
-                    start_video_path, duration = self.find_video_and_its_duration(subject, view, start)
-                    import pdb; pdb.set_trace()
+                    # Variable to keep track of how much of the interval we have covered
+                    # since we might traverse multiple clips.
+                    duration_cumulative = pd.Timedelta(pd.offsets.Second(0))
+                    # Include clip ind in the frame_id so that ffmpeg does not overwrite 
+                    # frames when extracting from multiple clips into the same folder.
+                    clip_ind = 0
 
-                    # Check if it also contains the end (bool)
-                    if duration < (end-start):
-                        print('Need to look for next clip.')
-                        
-                    # same_video = self.timestamp_in_video(start_video_path, end)
-                      # If yes -- extract until end of interval, done.
-                      # If no -- extract until end of video,
-                      #          go to next video,
-                      #          repeat.
+                    while duration_cumulative < interval_duration:
+                        print('There are still frames left to extract on the interval.', '\n')
+                        # Identify the video containing the start
+                        start_video_path, \
+                        remaining_duration, \
+                        start_in_video = self._find_video_and_its_duration(subject, view, start)
+                        print('\n')
+                        if remaining_duration > (end_interval-start): # If the end is also in this clip
+                            print('The end of the interval is in this video file.')
+                            remaining_duration = end_interval-start # Only extract until end of interval
+                        print('\n')
+                        print('Path to clip: ', start_video_path)
+                        print('Duration until end or end of clip: ', remaining_duration)
+                        print('Start time in video: ', start_in_video)
+                        print('\n')
+                        # Extract until the end of this clip
+                        # (Remove "0 days " in the beginning of the timedelta to fit the ffmpeg command.)
+                        duration_ffmpeg = str(remaining_duration)[7:]
+                        print(start, end_interval, duration_ffmpeg)
 
+                        frame_id = subject[0] + str(interval_ind) + str(view) + str(clip_ind)
+                        # complete_output_path = view_dir_path + '%~nf' + frame_id + '_%06d.jpg'
+                        complete_output_path = view_dir_path + frame_id + '_%06d.jpg'
 
-                    # # Remove "0 days " in the beginning of the timedelta to fit the ffmpeg command.
-                    # length_ffmpeg = length[7:]
-                    # print(start, end, length)
+                        # The bellow should be on format '-vf scale=448:256'
+                        ffmpeg_scale = 'scale='+ str(self.image_size[0]) + ':' + str(self.image_size[1])
     
-                    # complete_output_path = clip_dir_path + '/frame_%06d.jpg'
-                    # video_path = get_video_path(row)
-    
-                    # ffmpeg_command = ['ffmpeg', '-ss', start, '-i', video_path, '-t', length, '-vf',
-                    #      'scale=448:256', '-r', str(1), complete_output_path, '-hide_banner']
-                    # print(ffmpeg_command)
-                    # subprocess.call(ffmpeg_command)
+                        ffmpeg_command = ['ffmpeg', '-ss', start_in_video, '-i', start_video_path, '-t',
+                                          duration_ffmpeg, '-vf', ffmpeg_scale,
+                                          '-r', str(self.frame_rate),
+                                          complete_output_path, '-hide_banner']
+                        print('\n')
+                        print(ffmpeg_command)
+                        print('\n')
+                        import pdb; pdb.set_trace()
+                        subprocess.call(ffmpeg_command)
+                        # Keep track of how much of the interval we have covered
+                        duration_cumulative += remaining_duration
+                        start = start + remaining_duration
+                        clip_ind += 1
+                # We went through all viewpoints, and move on to the next interval.        
+                interval_ind += 1
 
 
     def create_clip_directories(self):
@@ -100,6 +143,7 @@ class MultiViewFrameExtractor():
             subject_dir_path = self.get_subject_dir_path(subject)
             subprocess.call(['mkdir', subject_dir_path])
 
+            print('\n')
             print("Creating clip directories for subject {}...".format(subject))
 
             horse_df = self.data_selection_df.loc[self.data_selection_df['Subject'] == subject]
@@ -112,12 +156,13 @@ class MultiViewFrameExtractor():
                     view_dir_path = self.get_view_dir_path(interval_dir_path, view)
                     subprocess.call(['mkdir', view_dir_path])
 
-    def find_video_and_its_duration(self, subject, view, time):
+    def _find_video_and_its_duration(self, subject, view, time):
         """
         subject: str (e.g. Aslan)
         view: int (e.g. 0, use lookup table)
         time: pd.datetime
-        returns video path str
+        returns video path str, remainder duration pd.TimeDelta,
+                start time in video (str)
         """
 
         # The videos are found in the following dir structure:
@@ -149,58 +194,38 @@ class MultiViewFrameExtractor():
         time_deltas = [get_timedelta(time, ts) for ts in time_stamps]
 
         # Get the index before that of the first negative TimeDelta
-        correct_index = get_index_for_correct_file(time_deltas)
+        correct_index = self._get_index_for_correct_file(time_deltas)
 
-        # Also return the length of the clip
-        duration = time_stamps[correct_index+1] - time_stamps[correct_index]
+        # Return the length of the remainder of the clip
+        remaining_duration = time_stamps[correct_index+1] - time
+
+        # Also return the start time as a string for ffmpeg
+        # (Remove "0 days " in the beginning of the timedelta to fit the ffmpeg command.)
+        start_time_in_video = str(time - time_stamps[correct_index])[7:]
 
         file_path = date_path + camera_filenames[correct_index]
-        return file_path, duration
+        return file_path, remaining_duration, start_time_in_video
 
-    def timestamp_in_video(self, video_path, time):
+
+    def _get_index_for_correct_file(self, time_deltas):
         """
-        video_path: str
-        time: pd.TimeStamp
-        return: bool
+        time_deltas: [pd.TimeDelta] list of timedeltas.
+        Finds index of the file we're looking for; aka the one
+        before the one where the delta is negative.
+        return: int
         """
-        time_str = video_path[:video_path(rindex('.'))].split('_')[-1]
-        time_stamp = from_filename_time_to_pd_datetime(time_str)
-
-        
-
-
-def get_index_for_correct_file(time_deltas):
-    """
-    time_deltas: [pd.TimeDelta] list of timedeltas.
-    Finds index of the file we're looking for.
-    return: int
-    """
-    for ind, td in enumerate(time_deltas):
-        # When we have passed the correct file
-        if td.days < 0:
-            # Get the index from the last file
-            correct_index = ind-1
-            break
-    return correct_index
+        for ind, td in enumerate(time_deltas):
+            # When we have passed the correct file
+            if td.days < 0:
+                # Get the index from the last file
+                correct_index = ind-1
+                break
+        return correct_index
 
 
 def get_timedelta(time_stamp_1, time_stamp_2):
     return time_stamp_1 - time_stamp_2
 
-
-def check_if_unique_in_df(file_name, df):
-    """
-    param file_name: str
-    param df: pd.DataFrame
-    :return: int [nb occurences of sequences from the same video clip in the pd.DataFrame]
-    """
-    return len(df[df['Video_ID'] == file_name])
-
-
-def get_video_path(row):
-    p = 'Pain' if row['Pain']==1 else 'No_Pain'
-    path = row['Subject'] + '/' + p + '/' + row['Video_ID'] + '.mp4'
-    return path
 
 def from_filename_time_to_pd_datetime(yyyymmddHHMMSS):
     return pd.to_datetime(yyyymmddHHMMSS, format='%Y%m%d%H%M%S')
