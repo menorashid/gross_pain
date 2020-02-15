@@ -7,6 +7,7 @@ import pandas as pd
 from helpers import util
 
 def get_command_extract_frame_at_time(video_file, out_file, time_curr):
+    time_curr = time_curr.astype('datetime64[D]')
     timestampStr = pd.to_datetime(time_curr).strftime('%H:%M:%S')
     command = ['ffmpeg', '-ss']
     command.append(timestampStr)
@@ -52,7 +53,7 @@ class Horse_Video_Data():
         cam_time = cam_time.split('_')
         cam = int(cam_time[0][2:])
         vid_start_time = datetime.strptime(cam_time[1],'%Y%m%d%H%M%S')
-        vid_start_time = np.datetime64(vid_start_time)
+        # vid_start_time = np.datetime64(vid_start_time)
         
         return cam, vid_start_time
 
@@ -138,37 +139,37 @@ class Motion_File_Data():
         motion_str = 'Motion Detection Started'
         rows = self.df.loc[(self.df['Minor Type']==motion_str),['Date Time']]
         motion_times =np.array(rows.iloc[:,0])
-        # .values    
+
         return motion_times
     
 
 def main():
 
-    in_dir = '../data/surveillance_camera/Naughty_but_Nice'
+    in_dir = '../data/lps_data/surveillance_camera/Naughty_but_Nice'
     
     motion_file = glob.glob(os.path.join(in_dir,'*','*.txt'))[7] 
     
     motion_data = Motion_File_Data(motion_file)
     motion_times = motion_data.get_motion_times('Motion Detection Started')
    
-    print (motion_times.shape)
     motion_time = motion_times[-10] 
-    print ('motion_time', motion_time, type(motion_time))
     
     vid_data = Horse_Video_Data(in_dir)
     closest_times = vid_data.get_closest_vid_time(motion_time)
-    
     out_dir = '../scratch/coordinated_motion'
-    
+    util.mkdir(out_dir)
+
     import subprocess
     from helpers import visualize
-    for idx_row in range(closest_times.shape[0]):
+    for idx_idx_row,idx_row in enumerate(range(closest_times.shape[0])):
         diff = motion_time - np.datetime64(closest_times[idx_row,1])
         vid_file = closest_times[idx_row,2]
 
         out_file = os.path.join(out_dir,'cam_'+str(closest_times[idx_row,0])+'.jpg')
         command = get_command_extract_frame_at_time(vid_file, out_file, diff)
+        print(command)
         subprocess.call(command, shell=True)
+
     visualize.writeHTMLForFolder(out_dir)
 
 
