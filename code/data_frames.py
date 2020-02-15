@@ -53,7 +53,7 @@ class Horse_Video_Data():
         cam_time = cam_time.split('_')
         cam = int(cam_time[0][2:])
         vid_start_time = datetime.strptime(cam_time[1],'%Y%m%d%H%M%S')
-        # vid_start_time = np.datetime64(vid_start_time)
+        vid_start_time = np.datetime64(vid_start_time)
         
         return cam, vid_start_time
 
