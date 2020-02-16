@@ -165,7 +165,7 @@ def main():
     pain_times_file = '../data/frame_extraction_files/peak_pain.txt'
     bl_times_file = '../data/frame_extraction_files/pre_bl_cps_time.txt'
 
-    out_file = '../data/frame_extraction_files/pain_no_pain_intervals_for_extraction.txt'
+    out_file = '../data/frame_extraction_files/pain_no_pain_intervals_for_extraction.csv'
 
     # trimming 2 minutes around when people are in the stable 
     ppl_buffer = np.timedelta64(2,'m') 
@@ -175,8 +175,7 @@ def main():
 
 
     stable_df = get_stable_dataframe(csv_path)
-    sanity_check_times(stable_df)
-
+    
     no_people_intervals = get_no_people_intervals(stable_df)
     
     # add 2 min buffer to make sure there are no people
@@ -187,9 +186,8 @@ def main():
     pain_times_df = get_observation_df(pain_times_file,1)
     bl_times_df = get_observation_df(bl_times_file,0)
     
-    # print (bl_times_df)
-    s = input()
     
+
     csv_lines = []
 
     for idx_row,row in pain_times_df.iterrows():
