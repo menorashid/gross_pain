@@ -110,24 +110,24 @@ class MultiViewFrameExtractor():
                         print('Duration until end or end of clip: ', remaining_duration)
                         print('Start time in video: ', start_in_video)
                         print('\n')
-                        # Extract until the end of this clip
-                        # (Remove "0 days " in the beginning of the timedelta to fit the ffmpeg command.)
+                        # Remove "0 days " in the beginning of the timedelta to fit the ffmpeg command.
                         duration_ffmpeg = str(remaining_duration)[7:]
                         print(start, end_interval, duration_ffmpeg)
+                        # frame_id is just the .jpg identifier.
                         frame_id = subject[:2] + '_' + str(interval_ind) + '_' + str(view) + '_'  + str(clip_ind)
-                        # complete_output_path = view_dir_path + '%~nf' + frame_id + '_%06d.jpg'
                         complete_output_path = view_dir_path + frame_id + '_%06d.jpg'
 
                         # The bellow should be on format '-vf scale=448:256'
                         ffmpeg_scale = 'scale='+ str(self.image_size[0]) + ':' + str(self.image_size[1])
     
-                        ffmpeg_command = ['ffmpeg', '-ss', start_in_video, '-i', start_video_path, '-t',
-                                          duration_ffmpeg, '-vf', ffmpeg_scale,
-                                          '-r', str(self.frame_rate),
-                                          complete_output_path, '-hide_banner']
+                        ffmpeg_command = ['ffmpeg', '-ss', start_in_video, '-i', start_video_path,
+                                          '-t', duration_ffmpeg, '-vf', ffmpeg_scale,
+                                          '-r', str(self.frame_rate), complete_output_path,
+                                          '-hide_banner']
                         print('\n')
                         print(ffmpeg_command)
                         print('\n')
+                        # Extract frames
                         subprocess.call(ffmpeg_command)
                         # Keep track of how much of the interval we have covered
                         duration_cumulative += remaining_duration
@@ -156,6 +156,7 @@ class MultiViewFrameExtractor():
                     view_dir_path = self.get_view_dir_path(interval_dir_path, view)
                     subprocess.call(['mkdir', view_dir_path])
 
+
     def _find_video_and_its_duration(self, subject, view, time):
         """
         subject: str (e.g. Aslan)
@@ -167,10 +168,10 @@ class MultiViewFrameExtractor():
 
         # The videos are found in the following dir structure:
         # subject/yyyy-mm-dd/ch0x_yyyymmddHHMMSS.mp4
-        # where x is the camera ID for that horse, found in viewpoints.csv
+        # where x is the camera ID for that horse, found in ../metadata/viewpoints.csv
 
         subject_path = self.data_path + subject + '/'
-        lookup_viewpoint = pd.read_csv('../data/viewpoints.csv', index_col='Subject')
+        lookup_viewpoint = pd.read_csv('../metadata/viewpoints.csv', index_col='subject')
         camera = lookup_viewpoint.at[subject, str(view)]
         camera_str = 'ch0' + str(camera)
 
