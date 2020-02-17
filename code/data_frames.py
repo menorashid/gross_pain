@@ -5,8 +5,9 @@ from datetime import datetime
 import multiprocessing
 import pandas as pd
 from helpers import util
-
+ 
 def get_command_extract_frame_at_time(video_file, out_file, time_curr):
+    time_curr = time_curr.astype('datetime64[ns]')
     timestampStr = pd.to_datetime(time_curr).strftime('%H:%M:%S')
     command = ['ffmpeg', '-ss']
     command.append(timestampStr)
@@ -20,6 +21,8 @@ def get_command_extract_frame_at_time(video_file, out_file, time_curr):
     command = ' '.join(command)
     return command
 
+# makes a df from data path to horse videos. 
+# columns of df ['Horse','Camera', 'Start Time','File']
 class Horse_Video_Data():
     def __init__(self,horse_data_dir):
         self.data_dir = horse_data_dir
@@ -56,7 +59,7 @@ class Horse_Video_Data():
         
         return cam, vid_start_time
 
-
+    # gets df row with video that contains queried time (motion_time). can specify camera views (cam_range), and columns to return (ret_info).
     def get_closest_vid_time(self, motion_time, cam_range=None, ret_info = ['Camera','Start Time','File']):
 
         if cam_range is None:
@@ -87,7 +90,7 @@ class Horse_Video_Data():
         return rows_to_ret
 
 
-
+# makes a df from motion file 
 class Motion_File_Data():
     def __init__(self, motion_file):
         self.motion_file = motion_file
@@ -135,41 +138,53 @@ class Motion_File_Data():
         return [datetime_object]+vals
     
     def get_motion_times(self,motion_str):
-        motion_str = 'Motion Detection Started'
+        # motion_str = 'Motion Detection Started'
         rows = self.df.loc[(self.df['Minor Type']==motion_str),['Date Time']]
         motion_times =np.array(rows.iloc[:,0])
-        # .values    
+
         return motion_times
     
 
 def main():
 
-    in_dir = '../data/surveillance_camera/Naughty_but_Nice'
-    
-    motion_file = glob.glob(os.path.join(in_dir,'*','*.txt'))[7] 
-    
-    motion_data = Motion_File_Data(motion_file)
-    motion_times = motion_data.get_motion_times('Motion Detection Started')
-   
-    print (motion_times.shape)
-    motion_time = motion_times[-10] 
-    print ('motion_time', motion_time, type(motion_time))
-    
+    in_dir = '../data/lps_data/surveillance_camera/Naughty_but_Nice'
     vid_data = Horse_Video_Data(in_dir)
-    closest_times = vid_data.get_closest_vid_time(motion_time)
     
-    out_dir = '../scratch/coordinated_motion'
-    
-    import subprocess
-    from helpers import visualize
-    for idx_row in range(closest_times.shape[0]):
-        diff = motion_time - np.datetime64(closest_times[idx_row,1])
-        vid_file = closest_times[idx_row,2]
+    date_strs = ['12/7/18 8:17:36','12/7/18  6:17:10','12/7/18  7:17:10']
+    for date_str in date_strs:
+        motion_time = np.datetime64(datetime.strptime(date_str,'%m/%d/%y %H:%M:%S'))
+        closest_times = vid_data.get_closest_vid_time(motion_time,cam_range = [6])
+        
+        vid_file = closest_times[0][2]
 
-        out_file = os.path.join(out_dir,'cam_'+str(closest_times[idx_row,0])+'.jpg')
-        command = get_command_extract_frame_at_time(vid_file, out_file, diff)
-        subprocess.call(command, shell=True)
-    visualize.writeHTMLForFolder(out_dir)
+        scp_command = ' '.join(['scp','maheenrashid@vision8.idav.ucdavis.edu:'+vid_file.replace('..','/home/maheenrashid/gross_pain'),'../data/check_nbn_morn/'])
+        print (scp_command)
+
+
+    # motion_file = glob.glob(os.path.join(in_dir,'*','*.txt'))[7] 
+    # motion_data = Motion_File_Data(motion_file)
+    # motion_times = motion_data.get_motion_times('Motion Detection Started')
+    # motion_time = motion_times[-10] 
+    ## date_str = '20181207050027'
+    ## motion_time = np.datetime64(datetime.strptime(date_str,'%Y%m%d%H%M%S'))
+    # closest_times = vid_data.get_closest_vid_time(motion_time,cam_range = [6])
+
+    # out_dir = '../scratch/coordinated_motion'
+    # util.mkdir(out_dir)
+
+    # import subprocess
+    # from helpers import visualize
+    # for idx_idx_row,idx_row in enumerate(range(closest_times.shape[0])):
+    #     diff = motion_time - np.datetime64(closest_times[idx_row,1])
+    #     diff = np.timedelta64(diff,'ns')
+    #     vid_file = closest_times[idx_row,2]
+
+    #     out_file = os.path.join(out_dir,'cam_'+str(closest_times[idx_row,0])+'.jpg')
+    #     command = get_command_extract_frame_at_time(vid_file, out_file, diff)
+    #     # print(command)
+    #     subprocess.call(command, shell=True)
+
+    # visualize.writeHTMLForFolder(out_dir)
 
 
 
