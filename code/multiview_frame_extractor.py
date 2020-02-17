@@ -114,8 +114,7 @@ class MultiViewFrameExtractor():
                         # (Remove "0 days " in the beginning of the timedelta to fit the ffmpeg command.)
                         duration_ffmpeg = str(remaining_duration)[7:]
                         print(start, end_interval, duration_ffmpeg)
-
-                        frame_id = subject[0] + str(interval_ind) + str(view) + str(clip_ind)
+                        frame_id = subject[:2] + '_' + str(interval_ind) + '_' + str(view) + '_'  + str(clip_ind)
                         # complete_output_path = view_dir_path + '%~nf' + frame_id + '_%06d.jpg'
                         complete_output_path = view_dir_path + frame_id + '_%06d.jpg'
 
