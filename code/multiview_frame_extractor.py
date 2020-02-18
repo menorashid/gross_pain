@@ -35,7 +35,7 @@ class MultiViewFrameExtractor():
         self.views = views
         self.data_selection_df = pd.read_csv(data_selection_path)
 
-        self.subjects = self.data_selection_df.Subject.unique()
+        self.subjects = self.data_selection_df.subject.unique()
 
     # The following methods construct path strings. Frames saved on format:
     # self.output_dir/subject/yymmddHHMMSS_HHMMSS/LXYZ_%06d.jpg
@@ -60,21 +60,21 @@ class MultiViewFrameExtractor():
             subject_dir_path = self.get_subject_dir_path(subject)
             print("Extracting frames for subject {}...".format(subject))
             interval_ind = 0  # Counter for the extracted intervals to index file extension.
-            horse_df = self.data_selection_df.loc[self.data_selection_df['Subject'] == subject]
+            horse_df = self.data_selection_df.loc[self.data_selection_df['subject'] == subject]
     
             for ind, row in horse_df.iterrows():
                 # Each row will contain the start and end times and a pain label.
                 print(row)
                 # Just for directory naming
-                start_str = str(row['Start'])
-                end_str = str(row['End'])
+                start_str = str(row['start'])
+                end_str = str(row['end'])
                 interval_dir_path = self.get_interval_dir_path(subject_dir_path,
                                                                start_str,
                                                                end_str)
 
                 # Timestamps for start and end
-                start_interval = pd.to_datetime(row['Start'], format='%Y%m%d%H%M%S')
-                end_interval = pd.to_datetime(row['End'], format='%Y%m%d%H%M%S')
+                start_interval = pd.to_datetime(row['start'], format='%Y%m%d%H%M%S')
+                end_interval = pd.to_datetime(row['end'], format='%Y%m%d%H%M%S')
                 interval_duration = end_interval - start_interval
                 print('\n')
                 print('Total interval duration: ', interval_duration)
@@ -146,10 +146,10 @@ class MultiViewFrameExtractor():
             print('\n')
             print("Creating clip directories for subject {}...".format(subject))
 
-            horse_df = self.data_selection_df.loc[self.data_selection_df['Subject'] == subject]
+            horse_df = self.data_selection_df.loc[self.data_selection_df['subject'] == subject]
             for ind, row in horse_df.iterrows():
-                start = str(row['Start'])
-                end = str(row['End'])
+                start = str(row['start'])
+                end = str(row['end'])
                 interval_dir_path = self.get_interval_dir_path(subject_dir_path, start, end)
                 subprocess.call(['mkdir', interval_dir_path])
                 for view in self.views:
@@ -170,7 +170,7 @@ class MultiViewFrameExtractor():
         # where x is the camera ID for that horse, found in viewpoints.csv
 
         subject_path = self.data_path + subject + '/'
-        lookup_viewpoint = pd.read_csv('../data/viewpoints.csv', index_col='Subject')
+        lookup_viewpoint = pd.read_csv('../data/viewpoints.csv', index_col='subject')
         camera = lookup_viewpoint.at[subject, str(view)]
         camera_str = 'ch0' + str(camera)
 
