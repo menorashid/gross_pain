@@ -183,12 +183,11 @@ class MultiViewFrameExtractor():
         camera_filenames = [fn for fn in os.listdir(date_path)
                             if fn.startswith(camera_str) and '.mp4' in fn]
 
-        # Remove .mp4 extension, format now 'ch0x_yyyymmddHHMMSS'
-        camera_times = [fn[:fn.rindex('.')] for fn in camera_filenames]
-
+        # Remove .mp4 extension, while avoiding some files that are
+        # ch0x_yyyymmddHHMMSS_001.mp4.
         # Get only the time part, format now 'yyyymmddHHMMSS'
-        filename_times = [fn.split('_')[-1] for fn in camera_times
-                          if len(fn) == LEN_FILE_ID]
+        # Start from after ch0x_ (index 5)
+        filename_times = [fn[5:LEN_FILE_ID] for fn in camera_filenames]
 
         # Convert strings to pd.TimeStamps
         time_stamps = list(map(from_filename_time_to_pd_datetime, filename_times))
