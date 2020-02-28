@@ -3,7 +3,7 @@ import numpy as np
 import subprocess
 import torch
 import os
-
+from helpers import util
 
 VIEWPOINTS = {0: 'Front left', 1: 'Front right',
               2: 'Back right', 3: 'Back left'}
@@ -46,14 +46,14 @@ class MultiViewFrameExtractor():
     # Z is the index of the raw video file for that interval.
 
     def get_subject_dir_path(self, subject):
-        return self.output_dir + '/' + subject + '/'
+        return os.path.join(self.output_dir,subject)
 
     def get_interval_dir_path(self, subject_dir_path, start, end):
         # Keep only HHMMSS for the end time.
-        return subject_dir_path + start + '_' + end[8:] + '/'
+        return os.path.join(subject_dir_path,start + '_' + end[8:])
 
     def get_view_dir_path(self, interval_dir_path, view):
-        return interval_dir_path + str(view) + '/'
+        return os.path.join(interval_dir_path,str(view))
 
     def extract_frames(self):
         for i, subject in enumerate(self.subjects):
@@ -115,7 +115,7 @@ class MultiViewFrameExtractor():
                         print(start, end_interval, duration_ffmpeg)
                         # frame_id is just the .jpg identifier.
                         frame_id = subject[:2] + '_' + str(interval_ind) + '_' + str(view) + '_'  + str(clip_ind)
-                        complete_output_path = view_dir_path + frame_id + '_%06d.jpg'
+                        complete_output_path = os.path.join(view_dir_path, frame_id + '_%06d.jpg')
 
                         # The bellow should be on format '-vf scale=448:256'
                         ffmpeg_scale = 'scale='+ str(self.image_size[0]) + ':' + str(self.image_size[1])
@@ -127,6 +127,7 @@ class MultiViewFrameExtractor():
                         print('\n')
                         print(ffmpeg_command)
                         print('\n')
+                        s = input()
                         # Extract frames
                         subprocess.call(ffmpeg_command)
                         # Keep track of how much of the interval we have covered
@@ -138,10 +139,12 @@ class MultiViewFrameExtractor():
 
 
     def create_clip_directories(self):
-        subprocess.call(['mkdir', self.output_dir])
+        # subprocess.call(['mkdir', self.output_dir])
+        util.mkdir(self.output_dir)
         for i, subject in enumerate(self.subjects):
             subject_dir_path = self.get_subject_dir_path(subject)
-            subprocess.call(['mkdir', subject_dir_path])
+            # subprocess.call(['mkdir', subject_dir_path])
+            util.mkdir(subject_dir_path)
 
             print('\n')
             print("Creating clip directories for subject {}...".format(subject))
@@ -151,10 +154,12 @@ class MultiViewFrameExtractor():
                 start = str(row['start'])
                 end = str(row['end'])
                 interval_dir_path = self.get_interval_dir_path(subject_dir_path, start, end)
-                subprocess.call(['mkdir', interval_dir_path])
+                # subprocess.call(['mkdir', interval_dir_path])
+                util.mkdir(interval_dir_path)
                 for view in self.views:
                     view_dir_path = self.get_view_dir_path(interval_dir_path, view)
-                    subprocess.call(['mkdir', view_dir_path])
+                    # subprocess.call(['mkdir', view_dir_path])
+                    util.mkdir(view_dir_path)
 
 
     def _find_video_and_its_duration(self, subject, view, time):
