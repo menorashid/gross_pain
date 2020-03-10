@@ -197,7 +197,7 @@ def main():
         # get half required time before pain time
         intervals_keep += get_bef_intervals(row['Date Time'], no_people_intervals, required_time/2.)
         # format for file
-        csv_lines += format_intervals_for_csv(row['Horse'], str(row['Pain']), intervals_keep)
+        csv_lines += format_intervals_for_csv(row['Horse'].lower().replace(' ','_'), str(row['Pain']), intervals_keep)
 
 
     for idx_row,row in bl_times_df.iterrows():
@@ -205,8 +205,9 @@ def main():
         # get required time after baseline time
         intervals_keep += get_aft_intervals(row['Date Time'], no_people_intervals, required_time)
         # intervals_keep += get_bef_intervals(row['Date Time'], no_people_intervals, required_time/2.)
-        csv_lines += format_intervals_for_csv(row['Horse'], str(row['Pain']), intervals_keep)
+        csv_lines += format_intervals_for_csv(row['Horse'].lower().replace(' ','_'), str(row['Pain']), intervals_keep)
 
+    csv_lines.sort()
     print (out_file,len(csv_lines))
     util.writeFile(out_file, csv_lines)
 
