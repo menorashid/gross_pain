@@ -4,7 +4,7 @@ import subprocess
 import argparse
 import sys
 import ast
-
+import multiprocessing
 from multiview_frame_extractor import MultiViewFrameExtractor
 
 
@@ -25,6 +25,8 @@ def parse_arguments(argv):
       help="Height of extracted frames.")
   parser.add_argument('--frame_rate', type=float,
       help="Frame rate to extract at.")
+  parser.add_argument('--num_processes', type=int,
+      help="Number of processes to use for frame extraction", default = multiprocessing.cpu_count())
   return parser.parse_args(argv)
 
 
@@ -38,7 +40,8 @@ if __name__ == '__main__':
                                               frame_rate=args.frame_rate,
                                               output_dir=args.output_dir,
                                               views=views,
-                                              data_selection_path=args.csv_path)
+                                              data_selection_path=args.csv_path,
+                                              num_processes = args.num_processes)
 
     frame_extractor.create_clip_directories()
     frame_extractor.extract_frames()
