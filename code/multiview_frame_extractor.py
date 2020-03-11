@@ -58,93 +58,9 @@ class MultiViewFrameExtractor():
     def get_view_dir_path(self, interval_dir_path, view):
         return os.path.join(interval_dir_path,str(view))
 
-    def extract_frames_old(self):
-        for i, subject in enumerate(self.subjects):
-            subject_dir_path = self.get_subject_dir_path(subject)
-            print("Extracting frames for subject {}...".format(subject))
-            interval_ind = 0  # Counter for the extracted intervals to index file extension.
-            horse_df = self.data_selection_df.loc[self.data_selection_df['subject'] == subject]
-    
-            for ind, row in horse_df.iterrows():
-                # Each row will contain the start and end times and a pain label.
-                print(row)
-                # Just for directory naming
-                start_str = str(row['start'])
-                end_str = str(row['end'])
-                interval_dir_path = self.get_interval_dir_path(subject_dir_path,
-                                                               start_str,
-                                                               end_str)
-
-                # Timestamps for start and end
-                start_interval = pd.to_datetime(row['start'], format='%Y%m%d%H%M%S')
-                end_interval = pd.to_datetime(row['end'], format='%Y%m%d%H%M%S')
-                interval_duration = end_interval - start_interval
-                print('\n')
-                print('Total interval duration: ', interval_duration)
-
-                for view in self.views:
-                    print('\n')
-                    print('View: ', view, ' ({})'.format(VIEWPOINTS[view]))
-                    # Path to the directory of this view, which is a subdir to the interval
-                    view_dir_path = self.get_view_dir_path(interval_dir_path, view)
-                    # Reset the start variable to start_interval for each view.
-                    start = start_interval
-
-                    # Variable to keep track of how much of the interval we have covered
-                    # since we might traverse multiple clips.
-                    duration_cumulative = pd.Timedelta(pd.offsets.Second(0))
-                    # Include clip ind in the frame_id so that ffmpeg does not overwrite 
-                    # frames when extracting from multiple clips into the same folder.
-                    clip_ind = 0
-
-                    while duration_cumulative < interval_duration:
-                        print('There are still frames left to extract on the interval.', '\n')
-
-                        # Identify the video containing the start
-                        start_video_path, \
-                        remaining_duration, \
-                        start_in_video = self._find_video_and_its_duration(subject, view, start)
-                        print('\n')
-                        if remaining_duration > (end_interval-start): # If the end is also in this clip
-                            print('The end of the interval is in this video file.')
-                            remaining_duration = end_interval-start # Only extract until end of interval
-                        print('\n')
-                        print('Path to clip: ', start_video_path)
-                        print('Duration until end or end of clip: ', remaining_duration)
-                        print('Start time in video: ', start_in_video)
-                        print('\n')
-                        # Remove "0 days " in the beginning of the timedelta to fit the ffmpeg command.
-                        duration_ffmpeg = str(remaining_duration)[7:]
-                        print(start, end_interval, duration_ffmpeg)
-                        # frame_id is just the .jpg identifier.
-                        frame_id = subject[:2] + '_' + str(interval_ind) + '_' + str(view) + '_'  + str(clip_ind)
-                        complete_output_path = os.path.join(view_dir_path, frame_id + '_%06d.jpg')
-
-                        # The bellow should be on format '-vf scale=448:256'
-                        ffmpeg_scale = 'scale='+ str(self.image_size[0]) + ':' + str(self.image_size[1])
-    
-                        ffmpeg_command = ['ffmpeg', '-ss', start_in_video, '-i', start_video_path,
-                                          '-t', duration_ffmpeg, '-vf', ffmpeg_scale,
-                                          '-r', str(self.frame_rate), complete_output_path,
-                                          '-vsync', 'vfr',
-                                          '-hide_banner']
-                        print('\n')
-                        print(ffmpeg_command)
-                        print (' '.join(ffmpeg_command))
-                        print('\n')
-                        # Extract frames
-                        subprocess.call(ffmpeg_command)
-                        # Keep track of how much of the interval we have covered
-                        duration_cumulative += remaining_duration
-                        start = start + remaining_duration
-                        clip_ind += 1
-                # We went through all viewpoints, and move on to the next interval.        
-                interval_ind += 1
-
-
     def extract_frames(self):
         ffmpeg_scale = 'scale='+ str(self.image_size[0]) + ':' + str(self.image_size[1])
-        inc = pd.Timedelta(1/self.frame_rate,'s')
+        inc = pd.Timedelta(1/float(self.frame_rate),'s')
 
         for i, subject in enumerate(self.subjects):
             subject_dir_path = self.get_subject_dir_path(subject)
