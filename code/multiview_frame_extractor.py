@@ -13,8 +13,8 @@ LEN_FILE_ID = 19
 
 
 class MultiViewFrameExtractor():
-    def __init__(self, data_path, width, height, frame_rate, output_dir,
-                 views, data_selection_path, num_processes):
+    def __init__(self, data_path, width= None, height = None, frame_rate = None, output_dir = None,
+                 views = None, data_selection_path = None, num_processes = None):
         """
         Args:
         data_path: str (where the raw videos are, root where the structure is root/subject/)
@@ -36,8 +36,12 @@ class MultiViewFrameExtractor():
         self.frame_rate = frame_rate
         self.output_dir = output_dir
         self.views = views
-        self.data_selection_df = pd.read_csv(data_selection_path)
-        self.subjects = self.data_selection_df.subject.unique()
+        if data_selection_path is None:
+            self.data_selection_df = None
+            self.subjects = None
+        else:
+            self.data_selection_df = pd.read_csv(data_selection_path)
+            self.subjects = self.data_selection_df.subject.unique()
         self.num_processes = num_processes
 
     # The following methods construct path strings. Frames saved on format:
@@ -145,6 +149,30 @@ class MultiViewFrameExtractor():
         # reset because ffmpeg makes the terminal messed up
         # subprocess.call('reset')
 
+
+    def extract_single_time(self, subject, time_str, views, out_dir):
+        time_pd = from_filename_time_to_pd_datetime(time_str)
+        out_files = []
+        for view in views:
+            # get video_names and times
+            video_paths, video_start_times = self._find_videos(subject, view, time_pd.date())
+            video_path, time_in_video = self._find_video_containing_time(video_paths, video_start_times, time_pd)
+
+            
+            frame_id = '_'.join([subject[:2], str(view),time_str+'.jpg'])
+            complete_output_path = os.path.join(out_dir, frame_id)
+            ffmpeg_command = ['ffmpeg', '-ss', time_in_video, '-i', video_path, 
+                                  '-vframes','1',
+                                  '-y',
+                                  # '-vf', 'scale=480:220',
+                                  complete_output_path,
+                                  ]
+                                  # '-loglevel', 'quiet']
+            print (' '.join(ffmpeg_command))
+            subprocess.call(ffmpeg_command)
+            out_files.append(complete_output_path)
+
+        return out_files
 
 
     def create_clip_directories(self):
@@ -275,4 +303,3 @@ def get_timedelta(time_stamp_1, time_stamp_2):
 
 def from_filename_time_to_pd_datetime(yyyymmddHHMMSS):
     return pd.to_datetime(yyyymmddHHMMSS, format='%Y%m%d%H%M%S')
-
