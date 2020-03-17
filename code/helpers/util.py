@@ -2,6 +2,18 @@ import numpy as np;
 import scipy
 import subprocess;
 import os;
+import importlib
+import importlib.util
+
+
+def load_module(path):
+    # if contained in module it would be a oneliner: 
+    # config_dict_module = importlib.import_module(dict_module_name) 
+    module_child_name = path.split('/')[-1].replace('.py','')
+    spec = importlib.util.spec_from_file_location(module_child_name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 def getFilesInFolder(folder,ext):
     list_files=[os.path.join(folder,file_curr) for file_curr in os.listdir(folder) if file_curr.endswith(ext)];
