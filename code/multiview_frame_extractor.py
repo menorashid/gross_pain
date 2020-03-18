@@ -104,6 +104,7 @@ class MultiViewFrameExtractor():
                 for view in self.views:
                     
                     view_dir_path = self.get_view_dir_path(interval_dir_path, view)
+                    util.makedirs(view_dir_path)
 
                     # get video_names and times
                     video_paths, video_start_times = self._find_videos(subject, view, start_interval.date())
@@ -137,6 +138,7 @@ class MultiViewFrameExtractor():
                     print('Extracting frames multithreaded ')
                     pool.map(subprocess.call,ffmpeg_commands)
                     print('Done for view', view)
+                    
 
             
                 
@@ -147,7 +149,7 @@ class MultiViewFrameExtractor():
                 interval_ind += 1
 
         # reset because ffmpeg makes the terminal messed up
-        # subprocess.call('reset')
+        subprocess.call('reset')
 
 
     def extract_single_time(self, subject, time_str, views, out_dir):
@@ -164,10 +166,9 @@ class MultiViewFrameExtractor():
             ffmpeg_command = ['ffmpeg', '-ss', time_in_video, '-i', video_path, 
                                   '-vframes','1',
                                   '-y',
-                                  # '-vf', 'scale=480:220',
                                   complete_output_path,
                                   ]
-                                  # '-loglevel', 'quiet']
+                                  
             print (' '.join(ffmpeg_command))
             subprocess.call(ffmpeg_command)
             out_files.append(complete_output_path)
@@ -216,10 +217,10 @@ class MultiViewFrameExtractor():
         camera = lookup_viewpoint.at[subject, str(view)]
         camera_str = 'ch0' + str(camera)
 
-        date_dir = [dd for dd in os.listdir(subject_path)
-                    if pd.to_datetime(dd.split('/')[-1]).date() == query_date]
+        date_dir = [dd for dd in os.listdir(subject_path) if os.path.isdir(os.path.join(subject_path,dd)) and 
+                    pd.to_datetime(dd.split('/')[-1]).date() == query_date]
         date_path = os.path.join(subject_path, date_dir[0])
-       
+
         # Get list of all filenames on format 'ch0x_yyyymmddHHMMSS.mp4' 
         camera_filenames = [fn for fn in os.listdir(date_path)
                             if fn.startswith(camera_str) and '.mp4' in fn]
@@ -290,7 +291,7 @@ class MultiViewFrameExtractor():
         """
         for ind, td in enumerate(time_deltas):
             # When we have passed the correct file
-            if td.days < 0:
+            if td.days <= 0:
                 # Get the index from the last file
                 correct_index = ind-1
                 break
