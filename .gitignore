@@ -26,6 +26,9 @@
 *.sql
 *.sqlite
 
+# Jupyter
+*.ipynb_checkpoints/
+
 # OS generated files #
 ######################
 .DS_Store
