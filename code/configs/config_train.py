@@ -1,6 +1,6 @@
 config_dict = {
-    'input_types'             : ['img'],
-    'output_types'            : ['3D', 'img'],
+    'input_types'             : ['img_crop'],
+    'output_types'            : ['3D', 'img_crop'],
     'label_types_train'       : ['img_crop'],
     'label_types_test'        : ['img_crop'],
     'num_workers'             : 4,
