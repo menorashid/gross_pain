@@ -7,11 +7,12 @@ import os
 
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.sampler import Sampler
+from random import shuffle
 from helpers import util
 from tqdm import tqdm
 
 
-class MultiViewFrameDataset(Dataset):
+class MultiViewDataset(Dataset):
     """Multi-view surveillance dataset of horses in their box."""
     def __init__(self, data_folder, 
                  input_types, label_types,
@@ -63,13 +64,12 @@ class MultiViewFrameDataset(Dataset):
 
         def get_image_name(key):
             id_str = 'as' if subject == 0 else 'br'
-            frame_id = '_'.join(id_str, str(f'{seq:02}'), str(cam), str(f'{frame:06}'))
-            frame_id += '_'
-            return self.data_folder + '/subj_{}/seq_{:02d}/{}/{}_{:06d}.jpg'.format(subject,
-                                                                                    seq,
-                                                                                    cam,
-                                                                                    frame_id,
-                                                                                    frame)
+            frame_id = '_'.join([id_str, str(f'{seq:02}'), str(cam), str(f'{frame:06}')])
+            return self.data_folder + '/subj_{}/seq_{:02d}/{}/{}.jpg'.format(subject,
+                                                                             seq,
+                                                                             cam,
+                                                                             frame_id,
+                                                                             frame)
         def load_image(name):
             return np.array(self.transform_in(imageio.imread(name)), dtype='float32')
 
@@ -85,7 +85,7 @@ class MultiViewFrameDataset(Dataset):
         return load_data(self.input_types), load_data(self.label_types)
 
 
-class MultiViewFrameDatasetSampler(Sampler):
+class MultiViewDatasetSampler(Sampler):
     def __init__(self, data_folder, batch_size,
                  horse_subset=None,
                  use_subject_batches=0, use_cam_batches=0,
@@ -137,7 +137,7 @@ class MultiViewFrameDatasetSampler(Sampler):
 
     def __iter__(self):
         index_list = []
-        print("Randomizing dataset (MultiViewFrameDatasetSampler.__iter__)")
+        print("Randomizing dataset (MultiViewDatasetSampler.__iter__)")
         with tqdm(total=len(self.all_keys)//self.every_nth_frame) as pbar:
             for index in range(0,len(self.all_keys), self.every_nth_frame):
                 pbar.update(1)
@@ -177,11 +177,11 @@ if __name__ == '__main__':
     config_dict_module = util.load_module("configs/config_train.py")
     config_dict = config_dict_module.config_dict
 
-    dataset = MultiViewFrameDataset(
+    dataset = MultiViewDataset(
                  data_folder=config_dict['data_dir_path'],
                  input_types=['img_crop'], label_types=['img_crop'])
 
-    batch_sampler = MultiViewFrameDatasetSampler(
+    batch_sampler = MultiViewDatasetSampler(
                  data_folder=config_dict['data_dir_path'],
                  use_subject_batches=1, use_cam_batches=2,
                  batch_size=8,
@@ -190,4 +190,12 @@ if __name__ == '__main__':
     trainloader = DataLoader(dataset, batch_sampler=batch_sampler,
                              num_workers=0, pin_memory=False,
                              collate_fn=util.default_collate_with_string)
+
+    data_iterator = iter(trainloader)
+    input_dict, label_dict = next(data_iterator)
+
+    import ipdb; ipdb.set_trace()
+
+    print('Number of frames in dataset: ', len(dataset))
+
     
