@@ -62,11 +62,14 @@ class MultiViewFrameExtractor():
     def get_view_dir_path(self, interval_dir_path, view):
         return os.path.join(interval_dir_path,str(view))
 
-    def extract_frames(self):
+    def extract_frames(self, replace = False, subjects_to_extract = None):
         ffmpeg_scale = 'scale='+ str(self.image_size[0]) + ':' + str(self.image_size[1])
         inc = pd.Timedelta(1/float(self.frame_rate),'s')
-
-        for i, subject in enumerate(self.subjects):
+        
+        if subjects_to_extract is None:
+            subjects_to_extract = self.subjects
+        
+        for i, subject in enumerate(subjects_to_extract):
             subject_dir_path = self.get_subject_dir_path(subject)
             print("Extracting frames for subject {}...".format(subject))
             interval_ind = 0  # Counter for the extracted intervals to index file extension.
@@ -103,11 +106,16 @@ class MultiViewFrameExtractor():
 
                 for view in self.views:
                     
+                    print('Doing view', view)
+
                     view_dir_path = self.get_view_dir_path(interval_dir_path, view)
                     util.makedirs(view_dir_path)
 
                     # get video_names and times
                     video_paths, video_start_times = self._find_videos(subject, view, start_interval.date())
+                    if len(video_paths)==0:
+                        print('No videos for subject %s, view %d, date %s found'%(subject, view, str(start_interval.date())))
+                        continue
 
                     # get containing videos multithreaded
                     # to do if need be
@@ -117,13 +125,20 @@ class MultiViewFrameExtractor():
                     path_and_time = []
                     for curr_time in all_times:
                         video_path, time_in_video = self._find_video_containing_time(video_paths, video_start_times, curr_time)
-                        path_and_time.append((video_path,time_in_video))
-                    
+                        if video_path is None:
+                            print ('Video for time ',curr_time,' not found')
+                        else:
+                            path_and_time.append((video_path, time_in_video))
+
                     # set up ffmpeg commands
                     ffmpeg_commands = []
                     for idx_path,(video_path, time_in_video) in enumerate(path_and_time):
                         frame_id = '_'.join([subject[:2], '%02d'%interval_ind, str(view), '%06d.jpg'%idx_path])
                         complete_output_path = os.path.join(view_dir_path, frame_id)
+                        
+                        if not replace and os.path.exists(complete_output_path):
+                            continue
+                        
                         ffmpeg_command = ['ffmpeg', '-ss', time_in_video, '-i', video_path,
                                           '-vframes','1',
                                           '-y',
@@ -135,7 +150,7 @@ class MultiViewFrameExtractor():
 
                     
                     # extract
-                    print('Extracting frames multithreaded ')
+                    print('Extracting %d frames multithreaded '%len(ffmpeg_commands))
                     pool.map(subprocess.call,ffmpeg_commands)
                     print('Done for view', view)
                     
@@ -149,7 +164,7 @@ class MultiViewFrameExtractor():
                 interval_ind += 1
 
         # reset because ffmpeg makes the terminal messed up
-        subprocess.call('reset')
+        # subprocess.call('reset')
 
 
     def extract_single_time(self, subject, time_str, views, out_dir):
@@ -246,11 +261,15 @@ class MultiViewFrameExtractor():
 
         # Get the index before that of the first negative TimeDelta
         correct_index = self._get_index_for_correct_file(time_deltas)
-
-        # Also return the start time as a string for ffmpeg
-        # (Remove "0 days " in the beginning of the timedelta to fit the ffmpeg command.)
-        start_time_in_video = str(time - time_stamps[correct_index])[7:]
-        return camera_filenames[correct_index], start_time_in_video
+        
+        if correct_index is None:
+            # if time not found return None
+            return None, None
+        else:
+            # Also return the start time as a string for ffmpeg
+            # (Remove "0 days " in the beginning of the timedelta to fit the ffmpeg command.)
+            start_time_in_video = str(time - time_stamps[correct_index])[7:]
+            return camera_filenames[correct_index], start_time_in_video
 
 
     def _find_video_and_its_duration(self, subject, view, time):
@@ -289,12 +308,20 @@ class MultiViewFrameExtractor():
         before the one where the delta is negative.
         return: int
         """
-        for ind, td in enumerate(time_deltas):
-            # When we have passed the correct file
-            if td.days <= 0:
-                # Get the index from the last file
-                correct_index = ind-1
-                break
+
+        # finds index with the smallest positive time delta. 
+        # Returns none if there are no positive time deltas
+        # works if there are no negative time deltas.
+
+        time_deltas = np.array([time_delta.total_seconds() for time_delta in time_deltas])
+        row_bin = time_deltas >=0
+        
+        if np.sum(row_bin)==0:
+            correct_index = None
+        else:
+            correct_index = np.argmin(time_deltas[row_bin])
+            correct_index = np.where(row_bin)[0][correct_index]
+
         return correct_index
 
 
