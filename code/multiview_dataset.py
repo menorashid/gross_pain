@@ -1,14 +1,18 @@
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import pandas as pd
 import numpy as np
 import torchvision
 import imageio
 import torch
-import os
 
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.sampler import Sampler
 from random import shuffle
-from helpers import util
+from rhodin.python.utils import datasets as rhodin_utils_datasets
+from rhodin.python.utils import io as rhodin_utils_io
 from tqdm import tqdm
 
 
@@ -16,7 +20,7 @@ class MultiViewDataset(Dataset):
     """Multi-view surveillance dataset of horses in their box."""
     def __init__(self, data_folder, 
                  input_types, label_types,
-                 mean=(0.485, 0.456, 0.406),
+                 mean=(0.485, 0.456, 0.406),  #TODO update these to horse dataset.
                  stdDev= (0.229, 0.224, 0.225),
                  use_sequential_frames=0,
                  ):
@@ -43,7 +47,7 @@ class MultiViewDataset(Dataset):
             Image256toTensor(), # torchvision.transforms.ToTensor() the torchvision one behaved differently for different pytorch versions, hence the custom one..
             torchvision.transforms.Normalize(self.mean, self.stdDev)
         ])
-        label_dict = pd.read_csv(data_folder + '/labels.csv').to_dict()
+        label_dict = pd.read_csv(data_folder + 'frame_index.csv').to_dict()
         print('Loading .csv label file to memory')
         self.label_dict = label_dict
 
@@ -52,24 +56,24 @@ class MultiViewDataset(Dataset):
 
     def get_local_indices(self, index):
         input_dict = {}
-        cam = int(self.label_dict['cam'][index])
-        seq = int(self.label_dict['seq'][index])
-        frame = int(self.label_dict['frame'][index])
-        subject = int(self.label_dict['subject'][index])
-        return cam, seq, frame, subject
+        interval = self.label_dict['interval'][index]
+        interval_ind = self.label_dict['interval_ind'][index]
+        view = self.label_dict['view'][index]
+        subject = self.label_dict['subject'][index]
+        frame = self.label_dict['frame'][index]
+        return interval, interval_ind, view, subject, frame
 
     def __getitem__(self, index):
 
-        cam, seq, frame, subject = self.get_local_indices(index)
+        interval, interval_ind, view, subject, frame = self.get_local_indices(index)
 
         def get_image_name(key):
-            id_str = 'as' if subject == 0 else 'br'
-            frame_id = '_'.join([id_str, str(f'{seq:02}'), str(cam), str(f'{frame:06}')])
-            return self.data_folder + '/subj_{}/seq_{:02d}/{}/{}.jpg'.format(subject,
-                                                                             seq,
-                                                                             cam,
-                                                                             frame_id,
-                                                                             frame)
+            frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
+                                str(view), '%06d'%frame])
+            return self.data_folder + '/{}/{}/{}/{}.jpg'.format(subject,
+                                                                interval,
+                                                                view,
+                                                                frame_id)
         def load_image(name):
             return np.array(self.transform_in(imageio.imread(name)), dtype='float32')
 
@@ -86,9 +90,15 @@ class MultiViewDataset(Dataset):
 
 
 class MultiViewDatasetSampler(Sampler):
+    """ This sampler decides how to iterate over the indices in the dataset.
+        Prepares batches of sub-batches, where a sub-batch contains
+        indices corresponding to frames from different views at t,
+        and indices corresponding to frames from different
+        views at t', from the same interval."""
+
     def __init__(self, data_folder, batch_size,
                  horse_subset=None,
-                 use_subject_batches=0, use_cam_batches=0,
+                 use_subject_batches=0, use_view_batches=0,
                  randomize=True,
                  use_sequential_frames=0,
                  every_nth_frame=1):
@@ -96,85 +106,103 @@ class MultiViewDatasetSampler(Sampler):
         for arg,val in list(locals().items()):
             setattr(self, arg, val)
 
-        # build cam/subject datastructure
-        label_dict = pd.read_csv(data_folder + '/labels.csv').to_dict()
+        # build view/subject datastructure
+        label_dict = pd.read_csv(data_folder + 'frame_index.csv').to_dict()
         print('Loading .csv label file to memory')
         self.label_dict = label_dict
         print('Establishing sequence association. Available labels:', list(label_dict.keys()))
         all_keys = set()
-        camsets = {}
-        sequence_keys = {}
+        viewsets = {}
+        interval_keys = {}
         data_length = len(label_dict['frame'])
         with tqdm(total=data_length) as pbar:
             for index in range(data_length):
                 pbar.update(1)
                 sub_i = label_dict['subject'][index]
-                cam_i = label_dict['cam'][index]
-                seq_i = label_dict['seq'][index]
+                view_i = label_dict['view'][index]
+                interval_i = label_dict['interval'][index]
                 frame_i = label_dict['frame'][index]
 
                 if horse_subset is not None and sub_i not in horse_subset:
                     continue
+                # A key is an 'absolute moment in time', regardless of view.
+                key = (sub_i, interval_i, frame_i)
+                # Each key points to its different views by storing their indices.
+                # A viewset is a collection of indices of the frames corresponding to
+                # that moment in time, i.e. that key.
+                if key not in viewsets:
+                    viewsets[key] = {}
+                viewsets[key][view_i] = index
 
-                key = (sub_i, seq_i, frame_i)
-                if key not in camsets:
-                    camsets[key] = {}
-                camsets[key][cam_i] = index
-
-                # only add if accumulated enough cameras
-                if len(camsets[key]) >= self.use_cam_batches:
+                # Only add if accumulated enough views
+                if len(viewsets[key]) >= self.use_view_batches:
                     all_keys.add(key)
 
-                    if seq_i not in sequence_keys:
-                        sequence_keys[seq_i] = set()
-                    sequence_keys[seq_i].add(key)
+                    if interval_i not in interval_keys:
+                        interval_keys[interval_i] = set()
+                    interval_keys[interval_i].add(key)
 
         self.all_keys = list(all_keys)
-        self.camsets = camsets
-        self.sequence_keys = {seq: list(keyset) for seq, keyset in sequence_keys.items()}
-        print("DictDataset: Done initializing, listed {} camsets ({} frames) and {} sequences".format(
-                                            len(self.camsets), len(self.all_keys), len(sequence_keys)))
+        self.viewsets = viewsets
+        self.interval_keys = {interval: list(keyset)
+                              for interval, keyset in interval_keys.items()}
+
+        print("DictDataset: Done initializing, listed {} viewsets ({} frames) and {} sequences".format(
+                                            len(self.viewsets), len(self.all_keys), len(interval_keys)))
 
     def __iter__(self):
         index_list = []
         print("Randomizing dataset (MultiViewDatasetSampler.__iter__)")
+        # Iterate over all keys, i.e. all 'moments in time'
         with tqdm(total=len(self.all_keys)//self.every_nth_frame) as pbar:
             for index in range(0,len(self.all_keys), self.every_nth_frame):
                 pbar.update(1)
                 key = self.all_keys[index]
-                def get_cam_subbatch(key):
-                    camset = self.camsets[key]
-                    cam_keys = list(camset.keys())
-                    assert self.use_cam_batches <= len(cam_keys)
+                def get_view_subbatch(key):
+                    """ Given a key (a moment in time),
+                        return x indices for that key,
+                        where x = self.use_view_batches."""
+                    viewset = self.viewsets[key]
+                    viewset_keys = list(viewset.keys())
+                    assert self.use_view_batches <= len(viewset_keys)
                     if self.randomize:
-                        shuffle(cam_keys)
-                    if self.use_cam_batches == 0:
-                        cam_subset_size = 99
+                        shuffle(viewset_keys)
+                    if self.use_view_batches == 0:
+                        view_subset_size = 99
                     else:
-                        cam_subset_size = self.use_cam_batches
-                    cam_indices = [camset[k] for k in cam_keys[:cam_subset_size]]
-                    return cam_indices
+                        view_subset_size = self.use_view_batches
+                    view_indices = [viewset[k] for k in viewset_keys[:view_subset_size]]
+                    return view_indices
 
-                index_list = index_list + get_cam_subbatch(key)
+                index_list = index_list + get_view_subbatch(key)
                 if self.use_subject_batches:
-                    seqi = key[1]
-                    potential_keys = self.sequence_keys[seqi]
+                    # Add indices for random moment (t') from the same interval.
+                    # These indices can be from any viewpoint.
+                    # I suspect that this is the appearance branch.
+                    interval_i = key[1]
+                    potential_keys = self.interval_keys[interval_i]
                     key_other = potential_keys[np.random.randint(len(potential_keys))]
-                    index_list = index_list + get_cam_subbatch(key_other)
+                    index_list = index_list + get_view_subbatch(key_other)
 
-        subject_batch_factor = 1+int(self.use_subject_batches > 0) # either 1 or 2
-        cam_batch_factor = max(1,self.use_cam_batches)
-        sub_batch_size = cam_batch_factor*subject_batch_factor
+        subject_batch_factor = 1 + int(self.use_subject_batches > 0) # either 1 or 2
+        view_batch_factor = max(1, self.use_view_batches)
+        # The following number should be equal to the number of new indices
+        # added per iteration in the above loop, so we can group them accordingly. 
+        sub_batch_size = view_batch_factor*subject_batch_factor
+        # Check that the following holds so we don't split up sub-batches.
+        assert self.batch_size % sub_batch_size == 0
+        # Check that we can safely reshape index_list into sub-batches.
         assert len(index_list) % sub_batch_size == 0
         indices_batched = np.array(index_list).reshape([-1,sub_batch_size])
         if self.randomize:
+            # Randomizes the order of the sub-batches.
             indices_batched = np.random.permutation(indices_batched)
         indices_batched = indices_batched.reshape([-1])[:(indices_batched.size//self.batch_size)*self.batch_size] # drop last frames
         return iter(indices_batched.reshape([-1,self.batch_size]))
 
 
 if __name__ == '__main__':
-    config_dict_module = util.load_module("configs/config_train.py")
+    config_dict_module = rhodin_utils_io.loadModule("configs/config_train.py")
     config_dict = config_dict_module.config_dict
 
     dataset = MultiViewDataset(
@@ -183,18 +211,18 @@ if __name__ == '__main__':
 
     batch_sampler = MultiViewDatasetSampler(
                  data_folder=config_dict['data_dir_path'],
-                 use_subject_batches=1, use_cam_batches=2,
+                 use_subject_batches=1, use_view_batches=2,
                  batch_size=8,
                  randomize=True)
 
     trainloader = DataLoader(dataset, batch_sampler=batch_sampler,
                              num_workers=0, pin_memory=False,
-                             collate_fn=util.default_collate_with_string)
+                             collate_fn=rhodin_utils_datasets.default_collate_with_string)
+    import ipdb; ipdb.set_trace()
 
     data_iterator = iter(trainloader)
     input_dict, label_dict = next(data_iterator)
 
-    import ipdb; ipdb.set_trace()
 
     print('Number of frames in dataset: ', len(dataset))
 
