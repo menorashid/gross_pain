@@ -57,7 +57,8 @@ class MultiViewFrameExtractor():
 
     def get_interval_dir_path(self, subject_dir_path, start, end):
         # Keep only HHMMSS for the end time.
-        return os.path.join(subject_dir_path,start + '_' + end[8:])
+        interval_str = start + '_' + end[8:]
+        return os.path.join(subject_dir_path, interval_str), interval_str
 
     def get_view_dir_path(self, interval_dir_path, view):
         return os.path.join(interval_dir_path,str(view))
@@ -69,7 +70,13 @@ class MultiViewFrameExtractor():
         if subjects_to_extract is None:
             subjects_to_extract = self.subjects
         
+        # To help us read the data, we save a long .csv-file
+        # with labels for each frame(a frame index).
+        column_headers = ['interval', 'interval_ind', 'view', 'subject', 'pain', 'frame']
+        big_list = []
+
         for i, subject in enumerate(subjects_to_extract):
+
             subject_dir_path = self.get_subject_dir_path(subject)
             print("Extracting frames for subject {}...".format(subject))
             interval_ind = 0  # Counter for the extracted intervals to index file extension.
@@ -78,12 +85,13 @@ class MultiViewFrameExtractor():
             for ind, row in horse_df.iterrows():
                 # Each row will contain the start and end times and a pain label.
                 print(row)
+                pain = row['pain']
                 # Just for directory naming
                 start_str = str(row['start'])
                 end_str = str(row['end'])
-                interval_dir_path = self.get_interval_dir_path(subject_dir_path,
-                                                               start_str,
-                                                               end_str)
+                interval_dir_path, interval_str = self.get_interval_dir_path(subject_dir_path,
+                                                                             start_str,
+                                                                             end_str)
 
                 # Timestamps for start and end
                 start_interval = pd.to_datetime(row['start'], format='%Y%m%d%H%M%S')
@@ -132,13 +140,19 @@ class MultiViewFrameExtractor():
 
                     # set up ffmpeg commands
                     ffmpeg_commands = []
-                    for idx_path,(video_path, time_in_video) in enumerate(path_and_time):
-                        frame_id = '_'.join([subject[:2], '%02d'%interval_ind, str(view), '%06d.jpg'%idx_path])
-                        complete_output_path = os.path.join(view_dir_path, frame_id)
-                        
+                    for idx_path, (video_path, time_in_video) in enumerate(path_and_time):
+                        padded_idx_path = '%06d'%idx_path
+                        padded_interval_ind = '%02d'%interval_ind
+                        frame_id = '_'.join([subject[:2], padded_interval_ind, str(view), padded_idx_path])
+                        complete_output_path = os.path.join(view_dir_path, frame_id + '.jpg')
+
                         if not replace and os.path.exists(complete_output_path):
                             continue
                         
+                        # Save a row to the frame index .csv-file
+                        row_list = [interval_str, padded_interval_ind, view, subject, pain, padded_idx_path]
+                        big_list.append(row_list)
+
                         ffmpeg_command = ['ffmpeg', '-ss', time_in_video, '-i', video_path,
                                           '-vframes','1',
                                           '-y',
@@ -161,6 +175,9 @@ class MultiViewFrameExtractor():
                 print('Done for interval', interval_ind)
                 print('\n')
                 interval_ind += 1
+
+        frame_index_df = pd.DataFrame(big_list, columns=column_headers)
+        frame_index_df.to_csv(path_or_buf= self.output_dir + 'frame_index.csv')
 
         # reset because ffmpeg makes the terminal messed up
         # subprocess.call('reset')
@@ -205,7 +222,7 @@ class MultiViewFrameExtractor():
             for ind, row in horse_df.iterrows():
                 start = str(row['start'])
                 end = str(row['end'])
-                interval_dir_path = self.get_interval_dir_path(subject_dir_path, start, end)
+                interval_dir_path, _ = self.get_interval_dir_path(subject_dir_path, start, end)
                 # subprocess.call(['mkdir', interval_dir_path])
                 util.mkdir(interval_dir_path)
                 for view in self.views:
