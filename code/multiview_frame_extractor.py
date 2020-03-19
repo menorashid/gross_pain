@@ -148,7 +148,6 @@ class MultiViewFrameExtractor():
                                           '-loglevel', 'quiet']
                         ffmpeg_commands.append(ffmpeg_command)
 
-                    
                     # extract
                     print('Extracting %d frames multithreaded '%len(ffmpeg_commands))
                     pool.map(subprocess.call,ffmpeg_commands)

@@ -4,56 +4,154 @@ import numpy as np
 from helpers import util, visualize
 from multiview_frame_extractor import MultiViewFrameExtractor
 import multiprocessing
-import 
+import glob
+from scripts_for_visualization import view_multiple_dirs
+import subprocess
+import pandas as pd
+import cv2
+
 
 def extract_calibration_vid_frames():
-	data_path = '../data/camera_calibration_videos'
-	out_dir = '../data/camera_calibration_frames'
-	data_selection_path = '../metadata/interval_calibration.csv'
-	util.mkdir(out_dir)
+    data_path = '../data/camera_calibration_videos'
+    out_dir = '../data/camera_calibration_frames_redo'
+    data_selection_path = '../metadata/interval_calibration.csv'
+    util.mkdir(out_dir)
 
-	mve = MultiViewFrameExtractor(data_path = data_path, width= 2688, height = 1520, frame_rate = 1/5., output_dir = out_dir,
+    mve = MultiViewFrameExtractor(data_path = data_path, width= 2688, height = 1520, frame_rate = 1/5., output_dir = out_dir,
                  views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count())
-	mve.extract_frames()
+    mve.extract_frames()
 
-	# mve = MultiViewFrameExtractor(data_path = data_path, width= 2688, height = 1520, frame_rate = 1/5., output_dir = out_dir,
+    # mve = MultiViewFrameExtractor(data_path = data_path, width= 2688, height = 1520, frame_rate = 1/5., output_dir = out_dir,
  #                 views = [3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count())
-	# mve.extract_frames(subjects_to_extract = ['cell1'])
+    # mve.extract_frames(replace = True, subjects_to_extract=['cell2'])
+    
+    dirs_to_check = [os.path.join(out_dir, 'cell1','20200317130703_131800'), os.path.join(out_dir,'cell2','20200317130703_131800')]
+    view_multiple_dirs(dirs_to_check, out_dir)
 
 def fix_filenames():
-	pass
-	# get video names
+    vid_dir = '../data/camera_calibration_videos/original_videos/2020-03-17'
+    out_dir = '../data/camera_calibration_videos/cell1/2020-03-17'
+    util.makedirs(out_dir)
 
-	# extract first frame
+    # get video names
+    vid_files = glob.glob(os.path.join(vid_dir,'*.mp4'))
+    vid_files.sort()
 
-	# view first frames
+    # # extract first frame
+    # for vid_file in vid_files:
+    #   # command = ['ffmpeg', '-i', vid_file, '-vf', '"select=eq(n\,0)"', '-q:v', '3', vid_file[:vid_file.rindex('.')]+'.jpg']
+    #   command = ['ffmpeg', '-i', vid_file, '-y', '-vframes', '1', '-f', 'image2', vid_file[:vid_file.rindex('.')]+'.jpg']
+    #   subprocess.call(command)
 
-	# what're the times i see
+    # # view first frames
+    # visualize.writeHTMLForFolder(vid_dir, height = 506, width = 896)
 
-	# rename files
+    # # what're the times i see
+    new_times = ['130659', '130657', '130659', '130659', '131240', '130659', '130659','131150', '130659', '130659','131010']
+    
+    # rename files
+    for vid_file, new_time in zip(vid_files, new_times):
+        vid_name = os.path.split(vid_file)[1]
+        vid_name = vid_name[:13]+new_time+'.mp4'
+        out_file = os.path.join(out_dir, vid_name)
+        command = ['cp',vid_file, out_file]
+        print (' '.join(command))
+        subprocess.call(command)
 
+
+def do_intrinsic(im_list, out_dir = False):
+    check_rows = 7
+    check_cols = 9
+    h = 1520
+    w = 2688
+
+    # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
+    objp = np.zeros((check_rows*check_cols,3), np.float32)
+    objp[:,:2] = np.mgrid[0:check_rows,0:check_cols].T.reshape(-1,2)
+
+    # Arrays to store object points and image points from all the images.
+    objpoints = [] # 3d point in real world space
+    imgpoints = [] # 2d points in image plane.
+
+    # load list of images
+    for idx_fname, fname in enumerate(im_list):
+        img = cv2.imread(fname)
+        
+        gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        
+        # detect chessboard
+        ret, corners = cv2.findChessboardCorners(gray, (check_rows,check_cols),None)
+        
+        if ret == True:
+            objpoints.append(objp)
+
+            # corners2 = cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
+            # imgpoints.append(corners2)
+            imgpoints.append(corners)
+
+            if out_dir:
+                out_file = os.path.join(out_dir,'check_%02d.jpg'%idx_fname)
+                # Draw and display the corners
+                dst = cv2.drawChessboardCorners(img, (check_rows,check_cols), corners,ret)
+                cv2.imwrite(out_file,dst)
+
+    # calibrate the camera
+    # mtx = cv2.initCameraMatrix2D(objpoints, imgpoints, (h,w))
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, (h,w), None, None)
+    newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),1,(w,h))
+    
+    if out_dir:
+        for idx_fname, fname in enumerate(im_list):
+            img = cv2.imread(fname)
+            gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+            out_file = os.path.join(out_dir,'undistort_%02d.jpg'%idx_fname)
+            dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
+            x,y,w,h = roi
+            dst = dst[y:y+h, x:x+w]
+            
+            cv2.imwrite(out_file,dst)
 
 
 def main():
-	
-	# extract_calibration_vid_frames()
+    # fix_filenames()
+    # extract_calibration_vid_frames()
 
-	out_dir_html = '../data/camera_calibration_frames'
-	dirs_to_check = [os.path.join(out_dir_html, 'cell1','20200317130703_131800'), os.path.join(out_dir_html,'cell2','20200317130703_131800')]
-	view_multiple_dirs(dirs_to_check, out_dir_html)
+    meta_dir = '../data/camera_calibration_frames_redo'
+    out_dir_meta = '../scratch/viewing_intrinsic_calib'
+    util.mkdir(out_dir_meta)
 
-	# return
-	# print ('hello')
-	# data_path = '../data/lps_data/surveillance_camera'
-	# out_dir = '../data/camera_calibration_frames'
-	# data_selection_path = './interval_debug.csv'
-	# util.mkdir(out_dir)
+    interval_str = '20200317130703_131800'
+    frame_file = '../metadata/calibration_frames.csv'
+    frame_df = pd.read_csv(frame_file)
+    print (frame_df)
 
-	# mve = MultiViewFrameExtractor(data_path = data_path, width= 396, height = 224, frame_rate = 1/5., output_dir = out_dir,
- #                 views = [0], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count())
-	# mve.extract_frames(subjects_to_extract = ['sir_holger'])
-	
+    for idx_row,row in frame_df.iterrows():
+        im_fmt = '_'.join(['ce','00',str(row['view']),'%06d.jpg'])
+        im_dir = os.path.join(meta_dir,'cell'+str(row['cell']),interval_str,str(row['view']))
+        im_list = [os.path.join(im_dir,im_fmt%im_idx) for im_idx in range(row['start_frame'],row['end_frame']+1)]
+        out_dir = os.path.join(out_dir_meta,'cam_'+str(row['cam']))
+        util.mkdir(out_dir)
+        do_intrinsic(im_list, out_dir)
+        visualize.writeHTMLForFolder(out_dir,height = 506, width = 896)
+        print (out_dir)
+        
+    
+
+
+
+
+    
+
+
+    # out_dir_html = '../data/camera_calibration_frames'
+    # dirs_to_check = [os.path.join(out_dir_html, 'cell1','20200317130703_131800'), os.path.join(out_dir_html,'cell2','20200317130703_131800')]
+    # view_multiple_dirs(dirs_to_check, out_dir_html)
+
+
+
+    
+    
 
 
 if __name__=='__main__':
-	main()
+    main()
