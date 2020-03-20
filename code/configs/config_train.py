@@ -1,6 +1,11 @@
+numJoints = 17
+inputDimension = 128
+
 config_dict = {
+    # General parameters
+    'dpi'                     : 190,
     'input_types'             : ['img_crop'],
-    'output_types'            : ['3D', 'img_crop'],
+    'output_types'            : ['img_crop'],
     'label_types_train'       : ['img_crop'],
     'label_types_test'        : ['img_crop'],
     'num_workers'             : 4,
@@ -23,8 +28,38 @@ config_dict = {
     'views'                   : '[0,1,2,3]',
     'image_width'             : 128,
     'image_height'            : 128,
-    'data_dir_path'           : '../data/frames_debug/',
-    'train_subjects'          : ['aslan', 'inkasso'],
+    'data_dir_path'           : '../data/frames_test/',
+    'train_subjects'          : ['aslan', 'brava'],
+
+    # network parameters
+    'batch_size_train' : 16,
+    'batch_size_test' : 16, #10 #self.batch_size # Note, needs to be = self.batch_size for multi-view validation
+    'outputDimension_3d' : numJoints * 3,
+    'outputDimension_2d' : inputDimension // 8,
+
+    # loss 
+    'train_scale_normalized' : True,
+    'train_crop_relative' : False,
+
+    # dataset
+    'dataset_folder_train' : '../data/frames_test/',
+    'dataset_folder_test' : '../data/frames_test/',
+    #'dataset_folder' :'/Users/rhodin/H36M-MultiView-test',
+    'training_set' : 'LPS_frames_test',
+    'img_mean' : (0.485, 0.456, 0.406),
+    'img_std' : (0.229, 0.224, 0.225),
+    'horse_subset' : ['aslan', 'brava'], # all training subjects
+    'active_cameras' : False,
+    'inputDimension' : inputDimension,
+    'mirror_augmentation' : False,
+    'perspectiveCorrection' : True,
+    'rotation_augmentation' : True,
+    'shear_augmentation' : 0,
+    'scale_augmentation' : False,
+    'seam_scaling' : 1.0,
+    'use_view_batches' : 4,
+    'use_subject_batches' : True,
+    'every_nth_frame' : 100,
 
     # Encoder-decoder
     'latent_bg' : 0,
@@ -45,5 +80,9 @@ config_dict = {
     'encoderType' : 'UNet',
     'implicit_rotation' : False,
     'predict_rotation' : False,
-    'skip_background' : True
+    'skip_background' : False,
+
+    # From rhodin config
+    'note'              : 'resL3'
+
 }
