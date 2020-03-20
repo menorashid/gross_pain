@@ -150,6 +150,9 @@ class MultiViewDatasetSampler(Sampler):
         print("DictDataset: Done initializing, listed {} viewsets ({} frames) and {} sequences".format(
                                             len(self.viewsets), len(self.all_keys), len(interval_keys)))
 
+    def __len__(self):
+        return len(self.label_dict['frame'])
+
     def __iter__(self):
         index_list = []
         print("Randomizing dataset (MultiViewDatasetSampler.__iter__)")
