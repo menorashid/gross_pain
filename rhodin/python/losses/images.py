@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from models import resnet_low_level
+from rhodin.python.models import resnet_low_level
 
 if torch.cuda.is_available():
     device = "cuda:0"

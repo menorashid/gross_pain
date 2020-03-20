@@ -5,7 +5,7 @@ import time
 from collections import defaultdict
 from enum import Enum
 
-from ignite._utils import _to_hours_mins_secs
+from rhodin.python.ignite._utils import _to_hours_mins_secs
 
 IS_PYTHON2 = sys.version_info[0] < 3
 
@@ -99,7 +99,7 @@ class Engine(object):
         """
         if event_name not in Events.__members__.values():
             self._logger.error("attempt to add event handler to an invalid event %s ", event_name)
-            raise ValueError("Event {} is not a valid event for this Engine".format(event_name))
+            # raise ValueError("Event {} is not a valid event for this Engine".format(event_name))
 
         event_args = (Exception(), ) if event_name == Events.EXCEPTION_RAISED else ()
         self._check_signature(handler, 'handler', *(event_args + args), **kwargs)

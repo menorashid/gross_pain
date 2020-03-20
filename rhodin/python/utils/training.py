@@ -1,12 +1,12 @@
 import torch
 import numpy as np
 import os
-from utils import datasets as utils_data
-from utils import plot_dict_batch as utils_plot_batch
+from rhodin.python.utils import datasets as utils_data
+from rhodin.python.utils import plot_dict_batch as utils_plot_batch
 
 import sys
-sys.path.insert(0,'./ignite')
-from ignite.engine.engine import Engine, State, Events
+# sys.path.insert(0,'./ignite')
+from rhodin.python.ignite.engine.engine import Engine, State, Events
 
 import matplotlib.image as mpimg
 import IPython
@@ -145,7 +145,7 @@ def save_model_state(save_path, engine, current_loss, model, optimizer, state):
         pickle.dump(state_variables, open(os.path.join(model_path,"state_best_val_t1.pickle"),'wb'))
 
 # Fix of original Ignite Loss to not depend on single tensor output but to accept dictionaries
-from ignite.metrics import Metric
+from rhodin.python.ignite.metrics import Metric
 class AccumulatedLoss(Metric):
     """
     Calculates the average loss according to the passed loss_fn.

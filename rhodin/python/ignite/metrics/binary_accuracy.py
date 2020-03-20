@@ -2,8 +2,8 @@ from __future__ import division
 
 import torch
 
-from ignite.metrics.metric import Metric
-from ignite.exceptions import NotComputableError
+from rhodin.python.ignite.metrics.metric import Metric
+from rhodin.python.ignite.exceptions import NotComputableError
 
 
 class BinaryAccuracy(Metric):

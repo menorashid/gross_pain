@@ -1,7 +1,7 @@
 import torch
 
-from ignite.engine.engine import Engine, State, Events
-from ignite._utils import convert_tensor
+from rhodin.python.ignite.engine.engine import Engine, State, Events
+from rhodin.python.ignite._utils import convert_tensor
 
 
 def _prepare_batch(batch, device=None):
