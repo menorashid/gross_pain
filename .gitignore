@@ -62,3 +62,6 @@ OSVOS-PyTorch
 OSVOS-TensorFlow
 cocoapi
 models-master
+
+# Output
+output/
