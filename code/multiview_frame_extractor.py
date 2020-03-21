@@ -43,6 +43,7 @@ class MultiViewFrameExtractor():
             self.data_selection_df = pd.read_csv(data_selection_path)
             self.subjects = self.data_selection_df.subject.unique()
         self.num_processes = num_processes
+        self.lookup_viewpoint = pd.read_csv('../metadata/viewpoints.csv', index_col='subject')
 
     # The following methods construct path strings. Frames saved on format:
     # self.output_dir/subject/yymmddHHMMSS_HHMMSS/LXYZ_%06d.jpg
@@ -63,7 +64,7 @@ class MultiViewFrameExtractor():
     def get_view_dir_path(self, interval_dir_path, view):
         return os.path.join(interval_dir_path,str(view))
 
-    def extract_frames(self, replace = False, subjects_to_extract = None):
+    def extract_frames(self, replace = True, subjects_to_extract = None):
         ffmpeg_scale = 'scale='+ str(self.image_size[0]) + ':' + str(self.image_size[1])
         inc = pd.Timedelta(1/float(self.frame_rate),'s')
         
@@ -182,6 +183,45 @@ class MultiViewFrameExtractor():
         # reset because ffmpeg makes the terminal messed up
         # subprocess.call('reset')
 
+    def get_videos_containing_intervals(self, subjects_to_extract = None):
+        
+        if subjects_to_extract is None:
+            subjects_to_extract = self.subjects
+        
+        video_paths = []
+
+        for i, subject in enumerate(subjects_to_extract):
+            horse_df = self.data_selection_df.loc[self.data_selection_df['subject'] == subject]
+
+            for ind, row in horse_df.iterrows():
+                print (row)
+                # Each row will contain the start and end times and a pain label.
+                start_str = str(row['start'])
+                end_str = str(row['end'])
+                _, interval_str = self.get_interval_dir_path('',start_str,end_str)
+                print (interval_str)
+
+                # Timestamps for start and end
+                start_interval = pd.to_datetime(row['start'], format='%Y%m%d%H%M%S')
+                end_interval = pd.to_datetime(row['end'], format='%Y%m%d%H%M%S')
+                interval_duration = end_interval - start_interval
+                print('\n')
+                print('Total interval duration: ', interval_duration)
+
+                for view in self.views:
+                    curr_time = start_interval
+                    while curr_time< end_interval:
+                        video_path, remaining_duration, time_in_video = self._find_video_and_its_duration(subject, view, curr_time)
+                        curr_time = curr_time+remaining_duration
+                        video_paths.append(video_path)
+
+                    video_end, _, _ = self._find_video_and_its_duration(subject, view, end_interval)
+                    assert (video_end == video_paths[-1])
+
+        return video_paths
+                    
+
+                        
 
     def extract_single_time(self, subject, time_str, views, out_dir):
         time_pd = from_filename_time_to_pd_datetime(time_str)
@@ -244,8 +284,7 @@ class MultiViewFrameExtractor():
         # where x is the camera ID for that horse, found in ../metadata/viewpoints.csv
 
         subject_path = os.path.join(self.data_path, subject)
-        lookup_viewpoint = pd.read_csv('../metadata/viewpoints.csv', index_col='subject')
-        camera = lookup_viewpoint.at[subject, str(view)]
+        camera = self.lookup_viewpoint.at[subject, str(view)]
         camera_str = 'ch0' + str(camera)
 
         date_dir = [dd for dd in os.listdir(subject_path) if os.path.isdir(os.path.join(subject_path,dd)) and 

@@ -28,6 +28,36 @@ def extract_calibration_vid_frames():
     dirs_to_check = [os.path.join(out_dir, 'cell1','20200317130703_131800'), os.path.join(out_dir,'cell2','20200317130703_131800')]
     view_multiple_dirs(dirs_to_check, out_dir)
 
+def fix_filenames():
+    vid_dir = '../data/camera_calibration_videos/original_videos/2020-03-17'
+    out_dir = '../data/camera_calibration_videos/cell1/2020-03-17'
+    util.makedirs(out_dir)
+
+    # get video names
+    vid_files = glob.glob(os.path.join(vid_dir,'*.mp4'))
+    vid_files.sort()
+
+    # # extract first frame
+    # for vid_file in vid_files:
+    #   # command = ['ffmpeg', '-i', vid_file, '-vf', '"select=eq(n\,0)"', '-q:v', '3', vid_file[:vid_file.rindex('.')]+'.jpg']
+    #   command = ['ffmpeg', '-i', vid_file, '-y', '-vframes', '1', '-f', 'image2', vid_file[:vid_file.rindex('.')]+'.jpg']
+    #   subprocess.call(command)
+
+    # # view first frames
+    # visualize.writeHTMLForFolder(vid_dir, height = 506, width = 896)
+
+    # # what're the times i see
+    new_times = ['130659', '130657', '130659', '130659', '131240', '130659', '130659','131150', '130659', '130659','131010']
+    
+    # rename files
+    for vid_file, new_time in zip(vid_files, new_times):
+        vid_name = os.path.split(vid_file)[1]
+        vid_name = vid_name[:13]+new_time+'.mp4'
+        out_file = os.path.join(out_dir, vid_name)
+        command = ['cp',vid_file, out_file]
+        print (' '.join(command))
+        subprocess.call(command)
+
 #  goes through a list of images and returns the ones with visible checkboard
 def get_img_chessboard(fname):
     check_cols = 7
