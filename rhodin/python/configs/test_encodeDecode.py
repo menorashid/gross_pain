@@ -64,6 +64,11 @@ class IgniteTestNVS(train_encodeDecode.IgniteTrainNVS):
             return output_img
 
         def rotationMatrixXZY(theta, phi, psi):
+            print ('theta', 'phi', 'psi')
+            theta = psi
+            psi = 0.
+            print (theta, phi, psi)
+
             Ax = np.matrix([[1, 0, 0],
                             [0, np.cos(theta), -np.sin(theta)],
                             [0, np.sin(theta), np.cos(theta)]])
@@ -81,8 +86,21 @@ class IgniteTestNVS(train_encodeDecode.IgniteTrainNVS):
         def nextImage():
             nonlocal input_dict, label_dict
             input_dict, label_dict = next(data_iterator)
+
             input_dict['external_rotation_global'] = torch.from_numpy(np.eye(3)).float().to(device)
+            input_dict['img_crop']=input_dict['bg_crop']
         nextImage()
+
+        print (list(input_dict.keys()))
+        for k in label_dict.keys():
+            print (k)
+            # print (type(label_dict[k]))
+        l = input()
+            # if 'y' in l:
+            #     print (label_dict[k])
+            # if 's' in l:
+            #     print (label_dict[k].shape)
+
 
 
         # apply model on images

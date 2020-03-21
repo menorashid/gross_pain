@@ -9,7 +9,7 @@ def plot_2Dpose(ax, pose_2d, bones, bones_dashed=[], bones_dashdot=[], colormap=
                 linewidth=1, limits=None, color_order=[0, 5, 9, 15, 2, 10, 12, 4, 14, 13, 11, 3, 7, 8, 6, 1]):
     cmap = plt.get_cmap(colormap)
 
-    plt.axis('equal')
+    #plt.axis('equal')
     maximum = max(color_order) #len(bones)
     for i, bone in enumerate(bones):
         colorIndex = (color_order[i] * cmap.N / float(maximum))
@@ -198,7 +198,7 @@ def plot_3Dpose_simple(ax, pose_3d, bones, linewidth=1, colormap='gist_rainbow',
         cmap = plt.get_cmap(colormap)
 
         plot_handles = {'lines': [], 'points': []}
-        plt.axis('equal')
+        #plt.axis('equal')
         maximum = len(bones)  # max(color_order) #len(bones)
         for i, bone in enumerate(bones):
             assert i < len(color_order)
