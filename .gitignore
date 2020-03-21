@@ -65,3 +65,7 @@ models-master
 
 # Output
 output/
+
+# more
+Release-v1.2/
+*.xml

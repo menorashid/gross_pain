@@ -199,7 +199,7 @@ class MultiViewFrameExtractor():
                 start_str = str(row['start'])
                 end_str = str(row['end'])
                 _, interval_str = self.get_interval_dir_path('',start_str,end_str)
-                print (interval_str)
+                # print (interval_str)
 
                 # Timestamps for start and end
                 start_interval = pd.to_datetime(row['start'], format='%Y%m%d%H%M%S')
