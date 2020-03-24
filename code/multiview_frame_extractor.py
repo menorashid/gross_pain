@@ -14,7 +14,7 @@ LEN_FILE_ID = 19
 
 class MultiViewFrameExtractor():
     def __init__(self, data_path, width= None, height = None, frame_rate = None, output_dir = None,
-                 views = None, data_selection_path = None, num_processes = None):
+                 views = None, data_selection_path = None, num_processes = None, offset_file = None):
         """
         Args:
         data_path: str (where the raw videos are, root where the structure is root/subject/)
@@ -44,6 +44,10 @@ class MultiViewFrameExtractor():
             self.subjects = self.data_selection_df.subject.unique()
         self.num_processes = num_processes
         self.lookup_viewpoint = pd.read_csv('../metadata/viewpoints.csv', index_col='subject')
+        if offset_file is None:
+            self.offset_df = None
+        else:
+            self.offset_df = pd.read_csv(offset_file)
 
     # The following methods construct path strings. Frames saved on format:
     # self.output_dir/subject/yymmddHHMMSS_HHMMSS/LXYZ_%06d.jpg
@@ -74,9 +78,10 @@ class MultiViewFrameExtractor():
         # To help us read the data, we save a long .csv-file
         # with labels for each frame(a frame index).
         column_headers = ['interval', 'interval_ind', 'view', 'subject', 'pain', 'frame']
-        big_list = []
+        
 
         for i, subject in enumerate(subjects_to_extract):
+            big_list = []
 
             subject_dir_path = self.get_subject_dir_path(subject)
             print("Extracting frames for subject {}...".format(subject))
@@ -112,9 +117,9 @@ class MultiViewFrameExtractor():
                     curr_time += inc
 
                 print('Total frames in interval: ', len(all_times))
-
+                
                 for view in self.views:
-                    
+                    t = time_proper.time()
                     print('Doing view', view)
 
                     view_dir_path = self.get_view_dir_path(interval_dir_path, view)
@@ -142,6 +147,19 @@ class MultiViewFrameExtractor():
                     # set up ffmpeg commands
                     ffmpeg_commands = []
                     for idx_path, (video_path, time_in_video) in enumerate(path_and_time):
+                        time_pd = pd.Timedelta(time_in_video)
+                        
+                        # key frames are once every 2.5 seconds. go to the nearest one, and then accurately seek.
+                        time_kf = pd.Timedelta(time_pd.total_seconds()//2.5 *2.5,'s')
+                        diff = time_pd - time_kf
+                        time_in_video = str(time_kf)[7:]
+                        # diff_str = str(diff)[7:]
+                        diff = diff.total_seconds()*20
+                        diff = diff-1 if diff>0 else 0
+                        frame_num_str = r'select=eq(n\,%d)'%diff
+
+                        # ffmpeg -ss 00:25:12.5 -i ../data/lps_data/surveillance_camera/brava/2018-11-02/ch04_20181102161155.mp4 -vframes 1 -y -vf "select=eq(n\,29)",scale=2688:1520 ../scratch/frame_extraction_with_offsets/brava/20181102163705_164705/2/br_00_2_000005.jpg -hide_banner
+                        
                         padded_idx_path = '%06d'%idx_path
                         padded_interval_ind = '%02d'%interval_ind
                         frame_id = '_'.join([subject[:2], padded_interval_ind, str(view), padded_idx_path])
@@ -157,16 +175,19 @@ class MultiViewFrameExtractor():
                         ffmpeg_command = ['ffmpeg', '-ss', time_in_video, '-i', video_path,
                                           '-vframes','1',
                                           '-y',
-                                          '-vf', ffmpeg_scale,
+                                          '-vf', frame_num_str+','+ffmpeg_scale,
                                           complete_output_path,
-                                          '-hide_banner',
-                                          '-loglevel', 'quiet']
+                                          '-hide_banner', '-loglevel', 'quiet']
+
+                                            # '-ss',diff_str,
+                        # print (' '.join(ffmpeg_command))
                         ffmpeg_commands.append(ffmpeg_command)
+                        
 
                     # extract
                     print('Extracting %d frames multithreaded '%len(ffmpeg_commands))
                     pool.map(subprocess.call,ffmpeg_commands)
-                    print('Done for view', view)
+                    print('Done for view', view, time_proper.time()-t )
                     
 
             
@@ -177,8 +198,10 @@ class MultiViewFrameExtractor():
                 print('\n')
                 interval_ind += 1
 
-        frame_index_df = pd.DataFrame(big_list, columns=column_headers)
-        frame_index_df.to_csv(path_or_buf= self.output_dir + 'frame_index.csv')
+            frame_index_df = pd.DataFrame(big_list, columns=column_headers)
+            out_file_index = os.path.join(self.output_dir,subject+'_'+'frame_index.csv')
+            print(out_file_index)
+            frame_index_df.to_csv(path_or_buf= out_file_index)
 
         # reset because ffmpeg makes the terminal messed up
         # subprocess.call('reset')
@@ -295,15 +318,12 @@ class MultiViewFrameExtractor():
         camera_filenames = [fn for fn in os.listdir(date_path)
                             if fn.startswith(camera_str) and '.mp4' in fn]
 
-        # Remove .mp4 extension, while avoiding some files that are
-        # ch0x_yyyymmddHHMMSS_001.mp4.
-        # Get only the time part, format now 'yyyymmddHHMMSS'
-        # Start from after ch0x_ (index 5)
-        filename_times = [fn[5:LEN_FILE_ID] for fn in camera_filenames]
 
-        # Convert strings to pd.TimeStamps
-        time_stamps = list(map(from_filename_time_to_pd_datetime, filename_times))
-
+        # get video start time from name
+        time_stamps = list(map(self._get_video_start_time, camera_filenames))
+        # [self._get_video_start_time(camera_filename
+        # list(map(from_filename_time_to_pd_datetime, filename_times))
+        
         file_paths = [os.path.join(date_path, file_name) for file_name in camera_filenames]
         return file_paths, time_stamps
 
@@ -324,6 +344,7 @@ class MultiViewFrameExtractor():
             # Also return the start time as a string for ffmpeg
             # (Remove "0 days " in the beginning of the timedelta to fit the ffmpeg command.)
             start_time_in_video = str(time - time_stamps[correct_index])[7:]
+            
             return camera_filenames[correct_index], start_time_in_video
 
 
@@ -351,7 +372,6 @@ class MultiViewFrameExtractor():
         # Also return the start time as a string for ffmpeg
         # (Remove "0 days " in the beginning of the timedelta to fit the ffmpeg command.)
         start_time_in_video = str(time - time_stamps[correct_index])[7:]
-
         
         return camera_filenames[correct_index], remaining_duration, start_time_in_video
 
@@ -378,6 +398,35 @@ class MultiViewFrameExtractor():
             correct_index = np.where(row_bin)[0][correct_index]
 
         return correct_index
+
+    def _get_video_start_time(self,vid_name):
+        # Remove .mp4 extension, while avoiding some files that are
+        # ch0x_yyyymmddHHMMSS_001.mp4.
+        # Get only the time part, format now 'yyyymmddHHMMSS'
+        # Start from after ch0x_ (index 5)
+        vid_name =os.path.split(vid_name)[1]
+        vid_name = vid_name[:vid_name.rindex('.')]
+        # assert vid_name.count('_')==1
+        vid_time = from_filename_time_to_pd_datetime(vid_name[5:LEN_FILE_ID])
+        
+        # # Convert strings to pd.TimeStamps
+        # time_stamps = list(map(from_filename_time_to_pd_datetime, filename_times))
+
+        if self.offset_df is not None:
+            rows = self.offset_df.loc[self.offset_df['video_name'] == vid_name]
+            if len(rows)!=0:
+                assert len(rows)==1
+                offset = rows.iloc[0]['offset']
+                if offset>=0:
+                    vid_time = vid_time - pd.to_timedelta(offset, unit='s')
+                else:
+                    # print (vid_name, vid_time, offset)
+                    vid_time = vid_time +  pd.to_timedelta(-1*offset, unit='s')
+                    # print (vid_name, vid_time, offset)
+                    # s = input()
+
+        return vid_time
+
 
 
 def get_timedelta(time_stamp_1, time_stamp_2):

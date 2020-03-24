@@ -10,6 +10,7 @@ import pytesseract as ocr
 import cv2
 import re
 import pandas as pd
+import scripts_for_visualization as sfv
 
 def extract_first_frames(vid_files, out_dir):
     # extract first frame
@@ -99,15 +100,42 @@ def sort_auto_and_manual_checks(im_files,times_arr,out_file_auto, out_file_manua
     util.writeFile(out_file_auto,im_auto)
     util.writeFile(out_file_manual_check, im_check)
 
+def write_md_for_manual_check(offsets, out_dir_check, md_file ):
+    md_rows =[]
+    md_rows.append('**Just Checking**')
+    md_rows.append(' ')
+    md_rows.append('row idx|vid_name|vid time|frame time|offset')
+    md_rows.append(':---:|:---:|:---:|:---:|:---:')
+    # md_rows.append(' ')
+    for idx_row, row in offsets.iterrows():
+        im_path = row['im_file']
+        offset = row['offset']
+        vid_time = os.path.split(im_path)[1][-10:-4]
+        out_file = os.path.join(out_dir_check, os.path.split(im_path)[1])
+        
+        if not os.path.exists(out_file):
+            im = cv2.imread(im_path)[:200,:1000]
+            cv2.imwrite(out_file, im)
+        str_arr = [str(idx_row),os.path.split(im_path)[1][:-4],vid_time,'![]('+os.path.split(out_file)[1]+')',str(offset)]
+        md_rows.append('|'.join(str_arr))
+    util.writeFile(md_file, md_rows)
+
+
 def main():
     data_path = '../data/lps_data/surveillance_camera'
     
     data_selection_path = '../metadata/intervals_for_extraction.csv'
-    out_file = os.path.join('../metadata','intervals_for_extraction_video_file_list.txt')
-    out_file_offsets_auto = '../metadata/video_offsets_auto.csv'
-    out_file_offsets_manual = '../metadata/video_offsets_manual.csv'
-    out_file_offsets_all = '../metadata/video_offsets_all.csv'
-
+    
+    out_dir_offsets = '../metadata/fixing_offsets'
+    out_file = os.path.join(out_dir_offsets,'intervals_for_extraction_video_file_list.txt')
+    out_file_offsets_auto = os.path.join(out_dir_offsets,'video_offsets_auto.csv')
+    out_file_offsets_manual = os.path.join(out_dir_offsets,'video_offsets_manual.csv')
+    out_file_offsets_all = os.path.join(out_dir_offsets,'video_offsets_all.csv')
+    out_file_corrected_offsets = os.path.join(out_dir_offsets,'corrected_offsets.csv')
+    out_file_final =  os.path.join(out_dir_offsets,'video_offsets_final.csv')
+    data_selection_path_for_testing = os.path.join(out_dir_offsets, 'intervals_to_test.csv')
+    util.mkdir(out_dir_offsets)
+    
     out_dir = '../scratch/check_first_frames'
     times_file = os.path.join(out_dir,'times.npy')
     out_file_manual_check = os.path.join(out_dir,'manual_check.txt')
@@ -165,28 +193,58 @@ def main():
 
     ## step 7 - double check the offsets
     ## makes an md with vid time, frame time image, and offset on each row
-    offsets = pd.read_csv(out_file_offsets_all)
-    out_dir_check = '../scratch/check_times'
-    md_file = os.path.join(out_dir_check,'double_check.md')
-    util.mkdir(out_dir_check)
-    md_rows =[]
-    md_rows.append('**Just Checking**')
-    md_rows.append(' ')
-    md_rows.append('row idx|vid_name|vid time|frame time|offset')
-    md_rows.append(':---:|:---:|:---:|:---:|:---:')
-    # md_rows.append(' ')
-    for idx_row, row in offsets.iterrows():
-        im_path = row['im_file']
-        offset = row['offset']
-        vid_time = os.path.split(im_path)[1][-10:-4]
-        out_file = os.path.join(out_dir_check, os.path.split(im_path)[1])
-        
-        if not os.path.exists(out_file):
-            im = cv2.imread(im_path)[:200,:1000]
-            cv2.imwrite(out_file, im)
-        str_arr = [str(idx_row),os.path.split(im_path)[1][:-4],vid_time,'![]('+os.path.split(out_file)[1]+')',str(offset)]
-        md_rows.append('|'.join(str_arr))
-    util.writeFile(md_file, md_rows)
+    # offsets = pd.read_csv(out_file_offsets_all)
+    # out_dir_check = '../scratch/check_times'
+    # md_file = os.path.join(out_dir_check,'double_check.md')
+    # util.mkdir(out_dir_check)
+    # write_md_for_manual_check(offsets, out_dir_check, md_file)
+
+
+    ## step 8 - rewrite offsets file with corrected offsets
+    # offsets = pd.read_csv(out_file_offsets_all)
+    # for idx_row, row in offsets.iterrows():
+    #     offsets.at[idx_row,'im_file'] = os.path.split(row['im_file'])[1][:-4]
+    
+    # corrected_offsets = pd.read_csv(out_file_corrected_offsets)
+    # print (corrected_offsets)
+
+    # for idx,row in corrected_offsets.iterrows():
+    #     val = offsets.loc[offsets['im_file']==row['video_name']]
+    #     assert len(val)==1
+    #     idx_to_change = val.iloc[0].name
+    #     offsets.at[idx_to_change,'offset'] = row['offset']
+
+    # offsets = offsets.rename(columns={"im_file": "video_name"})
+    # print (offsets)
+    # print (offsets.iloc[39])
+    # offsets.to_csv(out_file_final, index = False)
+
+    ## step 9 - extract frames with and without offsets and view difference
+    out_dir_testing = '../data/intervals_for_extraction_128_128_2fps'
+    util.mkdir(out_dir_testing)
+    mve = MultiViewFrameExtractor(data_path = data_path, width= 128, height = 128, frame_rate = 2., output_dir = out_dir_testing,views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count(), offset_file = out_file_final)
+    mve.extract_frames()
+
+    # dirs_to_check = [dir_curr for dir_curr in glob.glob(os.path.join(out_dir_testing,'*','*')) if os.path.isdir(dir_curr)]
+    # print (dirs_to_check)
+
+    # sfv.view_multiple_dirs(dirs_to_check, out_dir_testing)
+
+    # out_dir_testing = '../scratch/frame_extraction_no_offsets'
+    # util.mkdir(out_dir_testing)
+    # mve = MultiViewFrameExtractor(data_path = data_path, width= 2688, height = 1520, frame_rate = 2., output_dir = out_dir_testing,views = [0,1,2,3], data_selection_path = data_selection_path_for_testing, num_processes = multiprocessing.cpu_count())
+    # mve.extract_frames()
+    
+    # dirs_to_check = [dir_curr for dir_curr in glob.glob(os.path.join(out_dir_testing,'*','*')) if os.path.isdir(dir_curr)]
+    # print (dirs_to_check)
+
+    # sfv.view_multiple_dirs(dirs_to_check, out_dir_testing)
+
+
+    # mve = MultiViewFrameExtractor(data_path = data_path, width= 2688, height = 1520, frame_rate = 1., output_dir = out_dir,
+    #              views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count())
+    # mve.extract_frames()
+
 
 
 
