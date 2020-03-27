@@ -216,10 +216,12 @@ class IgniteTrainNVS:
     
     def load_data_train(self,config_dict):
         dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_train'],
-            input_types=config_dict['input_types'], label_types=config_dict['label_types_train'])
+                                   input_types=config_dict['input_types'],
+                                   label_types=config_dict['label_types_train'],
+                                   subjects=config_dict['train_subjects'])
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_train'],
-              horse_subset=config_dict['horse_subset'],
+              subjects=config_dict['train_subjects'],
               use_subject_batches=config_dict['use_subject_batches'], use_view_batches=config_dict['use_view_batches'],
               batch_size=config_dict['batch_size_train'],
               randomize=True,
@@ -231,13 +233,17 @@ class IgniteTrainNVS:
     
     def load_data_test(self,config_dict):
         dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_test'],
-            input_types=config_dict['input_types'], label_types=config_dict['label_types_test'])
+                                   input_types=config_dict['input_types'],
+                                   label_types=config_dict['label_types_test'],
+                                   subjects=config_dict['test_subjects'])
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_test'],
-            use_subject_batches=0, use_view_batches=config_dict['use_view_batches'],
-            batch_size=config_dict['batch_size_test'],
-            randomize=True,
-            every_nth_frame=config_dict['every_nth_frame'])
+                                                subjects=config_dict['test_subjects'],
+                                                use_subject_batches=0,
+                                                use_view_batches=config_dict['use_view_batches'],
+                                                batch_size=config_dict['batch_size_test'],
+                                                randomize=True,
+                                                every_nth_frame=config_dict['every_nth_frame'])
 
         loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler, num_workers=0, pin_memory=False,
                                              collate_fn=rhodin_utils_datasets.default_collate_with_string)
@@ -273,7 +279,7 @@ class IgniteTrainNVS:
         return loss_train, loss_test
     
     def get_parameter_description(self, config_dict):#, config_dict):
-        folder = "../output/trainNVS_{note}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}_skipBG{latent_bg}_fg{latent_fg}_3d{skip_background}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}_nth{every_nth_frame}_c{active_cameras}_sub{horse_subset}_bs{use_view_batches}_lr{learning_rate}_".format(**config_dict)
+        folder = "../output/trainNVS_{note}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}_skipBG{latent_bg}_fg{latent_fg}_3d{skip_background}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}_nth{every_nth_frame}_c{active_cameras}_train{train_subjects}_test{test_subjects}_bs{use_view_batches}_lr{learning_rate}_".format(**config_dict)
         folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
         #config_dict['storage_folder'] = folder
         return folder
