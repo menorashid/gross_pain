@@ -28,8 +28,10 @@ config_dict = {
     'views'                   : '[0,1,2,3]',
     'image_width'             : 128,
     'image_height'            : 128,
-    'data_dir_path'           : '../data/frames_test/',
-    'train_subjects'          : ['aslan', 'brava'],
+    # 'data_dir_path'           : '../data/frames_test/',
+    'data_dir_path'           : '../data/intervals_for_extraction_128_128_2fps/',
+    'train_subjects'          : ['inkasso'],
+    'test_subjects'          : ['kastanjett'],
 
     # network parameters
     'batch_size_train' : 16,
@@ -42,13 +44,14 @@ config_dict = {
     'train_crop_relative' : False,
 
     # dataset
-    'dataset_folder_train' : '../data/frames_test/',
-    'dataset_folder_test' : '../data/frames_test/',
-    #'dataset_folder' :'/Users/rhodin/H36M-MultiView-test',
-    'training_set' : 'LPS_frames_test',
+    # 'dataset_folder_train' : '../data/frames_test/',
+    # 'dataset_folder_test' : '../data/frames_test/',
+    'dataset_folder_train' : '../data/intervals_for_extraction_128_128_2fps/',
+    'dataset_folder_test' : '../data/intervals_for_extraction_128_128_2fps/',
+    # 'training_set' : 'LPS_frames_test',
+    'training_set' : 'LPS_2fps',
     'img_mean' : (0.485, 0.456, 0.406),
     'img_std' : (0.229, 0.224, 0.225),
-    'horse_subset' : ['aslan', 'brava'], # all training subjects
     'active_cameras' : False,
     'inputDimension' : inputDimension,
     'mirror_augmentation' : False,
