@@ -124,7 +124,7 @@ def write_md_for_manual_check(offsets, out_dir_check, md_file ):
 def main():
     data_path = '../data/lps_data/surveillance_camera'
     
-    data_selection_path = '../metadata/intervals_for_extraction.csv'
+    data_selection_path = '../metadata/intervals_for_debugging.csv'
     
     out_dir_offsets = '../metadata/fixing_offsets'
     out_file = os.path.join(out_dir_offsets,'intervals_for_extraction_video_file_list.txt')
