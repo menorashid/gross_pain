@@ -19,7 +19,7 @@ from tqdm import tqdm
 class MultiViewDataset(Dataset):
     """Multi-view surveillance dataset of horses in their box."""
     def __init__(self, data_folder, 
-                 input_types, label_types,
+                 input_types, label_types, subjects,
                  mean=(0.485, 0.456, 0.406),  #TODO update these to horse dataset.
                  stdDev= (0.229, 0.224, 0.225),
                  use_sequential_frames=0,
@@ -47,9 +47,7 @@ class MultiViewDataset(Dataset):
             Image256toTensor(), # torchvision.transforms.ToTensor() the torchvision one behaved differently for different pytorch versions, hence the custom one..
             torchvision.transforms.Normalize(self.mean, self.stdDev)
         ])
-        label_dict = pd.read_csv(data_folder + 'frame_index.csv').to_dict()
-        print('Loading .csv label file to memory')
-        self.label_dict = label_dict
+        self.label_dict = get_label_dict(data_folder, subjects)
 
     def __len__(self):
         return len(self.label_dict['frame'])
@@ -97,7 +95,7 @@ class MultiViewDatasetSampler(Sampler):
         views at t', from the same interval."""
 
     def __init__(self, data_folder, batch_size,
-                 horse_subset=None,
+                 subjects=None,
                  use_subject_batches=0, use_view_batches=0,
                  randomize=True,
                  use_sequential_frames=0,
@@ -107,23 +105,21 @@ class MultiViewDatasetSampler(Sampler):
             setattr(self, arg, val)
 
         # build view/subject datastructure
-        label_dict = pd.read_csv(data_folder + 'frame_index.csv').to_dict()
-        print('Loading .csv label file to memory')
-        self.label_dict = label_dict
-        print('Establishing sequence association. Available labels:', list(label_dict.keys()))
+        self.label_dict = get_label_dict(data_folder, subjects)
+        print('Establishing sequence association. Available labels:', list(self.label_dict.keys()))
         all_keys = set()
         viewsets = {}
         interval_keys = {}
-        data_length = len(label_dict['frame'])
+        data_length = len(self.label_dict['frame'])
         with tqdm(total=data_length) as pbar:
             for index in range(data_length):
                 pbar.update(1)
-                sub_i = label_dict['subject'][index]
-                view_i = label_dict['view'][index]
-                interval_i = label_dict['interval'][index]
-                frame_i = label_dict['frame'][index]
+                sub_i = self.label_dict['subject'][index]
+                view_i = self.label_dict['view'][index]
+                interval_i = self.label_dict['interval'][index]
+                frame_i = self.label_dict['frame'][index]
 
-                if horse_subset is not None and sub_i not in horse_subset:
+                if subjects is not None and sub_i not in subjects:
                     continue
                 # A key is an 'absolute moment in time', regardless of view.
                 key = (sub_i, interval_i, frame_i)
@@ -202,6 +198,17 @@ class MultiViewDatasetSampler(Sampler):
             indices_batched = np.random.permutation(indices_batched)
         indices_batched = indices_batched.reshape([-1])[:(indices_batched.size//self.batch_size)*self.batch_size] # drop last frames
         return iter(indices_batched.reshape([-1,self.batch_size]))
+
+
+def get_label_dict(data_folder, subjects):
+    subject_fi_dfs = []
+    print('Iterating over frame indices per subject (.csv files)')
+    for subject in subjects:
+        subject_frame_index_dataframe = pd.read_csv(data_folder + subject + '_frame_index.csv')
+        subject_fi_dfs.append(subject_frame_index_dataframe)
+    frame_index_df = pd.concat(subject_fi_dfs, ignore_index=True)
+    label_dict = frame_index_df.to_dict()
+    return label_dict
 
 
 if __name__ == '__main__':
