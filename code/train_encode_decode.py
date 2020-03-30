@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import matplotlib.pyplot as plt
@@ -279,14 +280,24 @@ class IgniteTrainNVS:
         return loss_train, loss_test
     
     def get_parameter_description(self, config_dict):#, config_dict):
-        folder = "../output/trainNVS_{note}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}_skipBG{latent_bg}_fg{latent_fg}_3d{skip_background}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}_nth{every_nth_frame}_c{active_cameras}_train{train_subjects}_test{test_subjects}_bs{use_view_batches}_lr{learning_rate}_".format(**config_dict)
+        config_dict['shorter_train_subjects'] = [subject[:2] for subject in config_dict['train_subjects']]
+        config_dict['shorter_test_subjects'] = [subject[:2] for subject in config_dict['test_subjects']]
+        folder = "../output/trainNVS_{note}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}_skipBG{latent_bg}_fg{latent_fg}_3d{skip_background}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}_nth{every_nth_frame}_c{active_cameras}_train{shorter_train_subjects}_test{shorter_test_subjects}_bs{use_view_batches}_lr{learning_rate}_".format(**config_dict)
         folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
         #config_dict['storage_folder'] = folder
         return folder
+
+
+def parse_arguments(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config_file', type=str,
+        help="Python file with config dictionary.")
+    return parser.parse_args(argv)
         
     
 if __name__ == "__main__":
-    config_dict_module = rhodin_utils_io.loadModule("configs/config_train.py")
+    args = parse_arguments(sys.argv[1:])
+    config_dict_module = rhodin_utils_io.loadModule(args.config_file)
     config_dict = config_dict_module.config_dict
     ignite = IgniteTrainNVS()
     ignite.run(config_dict_module.__file__, config_dict)
