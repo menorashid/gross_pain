@@ -30,7 +30,7 @@ config_dict = {
     'image_height'            : 128,
     # 'data_dir_path'           : '../data/frames_test/',
     'data_dir_path'           : '../data/intervals_for_extraction_128_128_2fps/',
-    'train_subjects'          : ['aslan', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger'],
+    'train_subjects'          : ['aslan'],
     'test_subjects'          : ['brava'],
 
     # network parameters
