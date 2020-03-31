@@ -4,14 +4,14 @@ inputDimension = 128
 config_dict = {
     # General parameters
     'dpi'                     : 190,
-    'input_types'             : ['img_crop'],
+    'input_types'             : ['img_crop', 'bg_crop'],
     'output_types'            : ['img_crop'],
     'label_types_train'       : ['img_crop'],
     'label_types_test'        : ['img_crop'],
     'num_workers'             : 4,
 
     # opt parameters    
-    'num_training_iterations' : 600000,
+    'num_epochs'              : 50,
     'save_every'              : 100000,
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
     'test_every'              : 5000,
@@ -28,7 +28,6 @@ config_dict = {
     'views'                   : '[0,1,2,3]',
     'image_width'             : 128,
     'image_height'            : 128,
-    # 'data_dir_path'           : '../data/frames_test/',
     'data_dir_path'           : '../data/intervals_for_extraction_128_128_2fps/',
     'train_subjects'          : ['aslan', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger'],
     'test_subjects'          : ['brava'],
@@ -44,8 +43,7 @@ config_dict = {
     'train_crop_relative' : False,
 
     # dataset
-    # 'dataset_folder_train' : '../data/frames_test/',
-    # 'dataset_folder_test' : '../data/frames_test/',
+    'bg_folder'            : '../data/median_bg/',
     'dataset_folder_train' : '../data/intervals_for_extraction_128_128_2fps/',
     'dataset_folder_test' : '../data/intervals_for_extraction_128_128_2fps/',
     # 'training_set' : 'LPS_frames_test',
@@ -83,7 +81,7 @@ config_dict = {
     'encoderType' : 'UNet',
     'implicit_rotation' : False,
     'predict_rotation' : False,
-    'skip_background' : False,
+    'skip_background' : True,
 
     # From rhodin config
     'note'              : 'resL3'
