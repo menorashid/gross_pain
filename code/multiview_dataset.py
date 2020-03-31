@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 class MultiViewDataset(Dataset):
     """Multi-view surveillance dataset of horses in their box."""
-    def __init__(self, data_folder, 
+    def __init__(self, data_folder, bg_folder,
                  input_types, label_types, subjects,
                  mean=(0.485, 0.456, 0.406),  #TODO update these to horse dataset.
                  stdDev= (0.229, 0.224, 0.225),
@@ -65,21 +65,29 @@ class MultiViewDataset(Dataset):
 
         interval, interval_ind, view, subject, frame = self.get_local_indices(index)
 
-        def get_image_name(key):
+        def get_image_path(key):
             frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
                                 str(view), '%06d'%frame])
             return self.data_folder + '/{}/{}/{}/{}.jpg'.format(subject,
                                                                 interval,
                                                                 view,
                                                                 frame_id)
+        def get_bg_path(view, subject):
+            lookup_viewpoint = pd.read_csv('../metadata/viewpoints.csv').set_index('subject')
+            camera = int(lookup_viewpoint.at[subject, str(view)])
+            bg_path = self.bg_folder + 'median_0.1fps_camera_{}.jpg'.format(camera-1)
+            return bg_path
+
         def load_image(name):
             return np.array(self.transform_in(imageio.imread(name)), dtype='float32')
 
         def load_data(types):
             new_dict = {}
             for key in types:
-                if key in ['img_crop','bg_crop']:
-                    new_dict[key] = load_image(get_image_name(key)) 
+                if key == 'img_crop':
+                    new_dict[key] = load_image(get_image_path(key)) 
+                elif key == 'bg_crop':
+                    new_dict[key] = load_image(get_bg_path(view, subject))
                 else:
                     new_dict[key] = np.array(self.label_dict[key][index], dtype='float32')
             return new_dict
@@ -204,7 +212,7 @@ def get_label_dict(data_folder, subjects):
     subject_fi_dfs = []
     print('Iterating over frame indices per subject (.csv files)')
     for subject in subjects:
-        subject_frame_index_dataframe = pd.read_csv(data_folder + subject + '_frame_index.csv')
+        subject_frame_index_dataframe = pd.read_csv(data_folder + subject + '_reduced_frame_index.csv')
         subject_fi_dfs.append(subject_frame_index_dataframe)
     frame_index_df = pd.concat(subject_fi_dfs, ignore_index=True)
     label_dict = frame_index_df.to_dict()
