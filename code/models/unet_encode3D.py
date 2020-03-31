@@ -270,8 +270,8 @@ class unet(nn.Module):
         for i,v in enumerate(shuffled_pose):
             shuffled_pose_inv[v]=i
             
-        print('self.training',self.training,"shuffled_appearance",shuffled_appearance)
-        print("shuffled_pose      ",shuffled_pose)
+        # print('self.training',self.training,"shuffled_appearance",shuffled_appearance)
+        # print("shuffled_pose      ",shuffled_pose)
             
         shuffled_appearance = torch.LongTensor(shuffled_appearance).to(device)
         shuffled_pose       = torch.LongTensor(shuffled_pose).to(device)
@@ -317,10 +317,10 @@ class unet(nn.Module):
                 latent_fg = self.to_fg(center_flat)
             latent_3d = self.to_3d(center_flat).view(batch_size,-1,3)
         
-        # if self.skip_background:
-        #     input_bg = input_dict['bg_crop'] # TODO take the rotated one/ new view
-        #     input_bg_shuffled = torch.index_select(input_bg, dim=0, index=shuffled_pose)
-        #     conv1_bg_shuffled = getattr(self, 'conv_1_stage_bg' + str(ns))(input_bg_shuffled)
+        if self.skip_background:
+            input_bg = input_dict['bg_crop'] # TODO take the rotated one/ new view
+            input_bg_shuffled = torch.index_select(input_bg, dim=0, index=shuffled_pose)
+            conv1_bg_shuffled = getattr(self, 'conv_1_stage_bg' + str(ns))(input_bg_shuffled)
 
         ###############################################
         # latent rotation (to shuffled view)
