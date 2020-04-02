@@ -4,9 +4,13 @@ inputDimension = 128
 config_dict = {
     # General parameters
     'dpi'                     : 190,
+    # Possible input types    : 'img_crop' | 'bg_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
     'input_types'             : ['img_crop', 'bg_crop'],
+    # Possible output types   :  'img_crop' | '3D'
     'output_types'            : ['img_crop'],
+    # Possible lt train       : 'img_crop' | '3D' | 'bounding_box_cam' | 'intrinsic_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
     'label_types_train'       : ['img_crop'],
+    # Possible lt test        : 'img_crop' | '3D' | 'bounding_box_cam' | 'intrinsic_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
     'label_types_test'        : ['img_crop'],
     'num_workers'             : 4,
 
@@ -29,8 +33,6 @@ config_dict = {
     'image_width'             : 128,
     'image_height'            : 128,
     'data_dir_path'           : '../data/intervals_for_extraction_128_128_2fps/',
-    'train_subjects'          : ['aslan', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger'],
-    'test_subjects'          : ['brava'],
 
     # network parameters
     'batch_size_train' : 16,
@@ -46,7 +48,6 @@ config_dict = {
     'bg_folder'            : '../data/median_bg/',
     'dataset_folder_train' : '../data/intervals_for_extraction_128_128_2fps/',
     'dataset_folder_test' : '../data/intervals_for_extraction_128_128_2fps/',
-    # 'training_set' : 'LPS_frames_test',
     'training_set' : 'LPS_2fps',
     'img_mean' : (0.485, 0.456, 0.406),
     'img_std' : (0.229, 0.224, 0.225),
@@ -81,7 +82,7 @@ config_dict = {
     'encoderType' : 'UNet',
     'implicit_rotation' : False,
     'predict_rotation' : False,
-    'skip_background' : True,
+    'skip_background' : True,  # This means use background
 
     # From rhodin config
     'note'              : 'resL3'

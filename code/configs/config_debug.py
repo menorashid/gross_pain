@@ -28,10 +28,7 @@ config_dict = {
     'views'                   : '[0,1,2,3]',
     'image_width'             : 128,
     'image_height'            : 128,
-    # 'data_dir_path'           : '../data/frames_test/',
     'data_dir_path'           : '../data/intervals_for_extraction_128_128_2fps/',
-    'train_subjects'          : ['aslan'],
-    'test_subjects'          : ['brava'],
 
     # network parameters
     'batch_size_train' : 16,
@@ -47,7 +44,6 @@ config_dict = {
     'bg_folder'            : '../data/median_bg/',
     'dataset_folder_train' : '../data/intervals_for_extraction_128_128_2fps/',
     'dataset_folder_test' : '../data/intervals_for_extraction_128_128_2fps/',
-    # 'training_set' : 'LPS_frames_test',
     'training_set' : 'LPS_2fps',
     'img_mean' : (0.485, 0.456, 0.406),
     'img_std' : (0.229, 0.224, 0.225),
@@ -82,6 +78,6 @@ config_dict = {
     'encoderType' : 'UNet',
     'implicit_rotation' : False,
     'predict_rotation' : False,
-    'skip_background' : True
+    'skip_background' : True  # This means use background
 
 }
