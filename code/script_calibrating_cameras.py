@@ -316,7 +316,7 @@ def script_save_all_intrinsics():
 
         print (mtx, type(mtx))
         print (dist, type(dist))
-        out_file = os.path.join(out_dir,'_'.join([str(val) for val in key_curr])+'.npz')
+        out_file = os.path.join(out_dir_intrinsic,'_'.join([str(val) for val in key_curr])+'.npz')
         print (out_file)
         np.savez(out_file, mtx = mtx, dist = dist)
         # s = input()
@@ -444,6 +444,128 @@ def save_htmls_for_ordered_chessboards():
             # captions = [[str(view)]*len(im_cols[idx_view]) for idx_view, view in enumerate(views)]
             visualize.writeHTML(out_file_html, im_cols, captions)
 
+import math
+def isclose(x, y, rtol=1.e-5, atol=1.e-8):
+    return abs(x-y) <= atol + rtol * abs(y)
+
+def euler_angles_from_rotation_matrix(R):
+    '''
+    From a paper by Gregory G. Slabaugh (undated),
+    "Computing Euler angles from a rotation matrix
+    '''
+    phi = 0.0
+    if isclose(R[2,0],-1.0):
+        theta = math.pi/2.0
+        psi = math.atan2(R[0,1],R[0,2])
+    elif isclose(R[2,0],1.0):
+        theta = -math.pi/2.0
+        psi = math.atan2(-R[0,1],-R[0,2])
+    else:
+        theta = -math.asin(R[2,0])
+        cos_theta = math.cos(theta)
+        psi = math.atan2(R[2,1]/cos_theta, R[2,2]/cos_theta)
+        phi = math.atan2(R[1,0]/cos_theta, R[0,0]/cos_theta)
+
+    # roll, pitch, yaw
+    return psi*180/math.pi, theta*180/math.pi, phi*180/math.pi
+
+
+def script_stereo_calibrate():
+    meta_dir = '../data/camera_calibration_frames_redo'
+    out_dir_chess_det = '../data/camera_calibration_frames_withChessboardDet'
+    util.mkdir(out_dir_chess_det)
+    interval_str = '20200317130703_131800'
+    out_dir = os.path.join(meta_dir, 'ims_to_keep')
+    out_dir_intrinsic = os.path.join(meta_dir, 'intrinsics')
+    out_dir_dets = os.path.join(meta_dir, 'chessboard_dets')
+    check_cols = 7
+    check_rows = 9
+    h = 1520
+    w = 2688
+
+    cell_num = '1'
+    views = ['0','3']
+    im_num = '000152'
+    dets_all = []
+    det_path_meta = os.path.join(out_dir_dets,'cell'+cell_num,interval_str)
+    det_files_all = []
+    for view in views:
+        det_files = np.array([os.path.split(file_curr)[1][-10:-4] for file_curr in glob.glob(os.path.join(det_path_meta,view,'ce_00_'+view+'_*.npy'))])
+        det_files_all.append(det_files)
+
+    bin_keep = np.in1d(det_files_all[0], det_files_all[1])
+    im_nums = det_files_all[0][bin_keep]
+    im_num = im_nums[-1]
+    im_nums = [im_num]
+    im_files = [os.path.join(meta_dir,'cell'+cell_num,interval_str,view_curr,'ce_00_'+view_curr+'_'+im_num+'.jpg') for view_curr in views]
+    dets_all = []
+    for idx_view, view in enumerate(views):
+        dets_curr = []
+        for im_num in im_nums[:1]:
+            dets_path = os.path.join(det_path_meta, view,'ce_00_'+view+'_'+im_num+'.npy')
+            dets = np.load(dets_path)[:1]
+            # assert dets.shape[0]==4
+            dets_curr.append(dets)
+        dets_all.append(np.concatenate(dets_curr,axis = 0))
+
+    # intrinsics 
+    mtxs = []
+    dists = []
+    for view in views:
+        file_int = os.path.join(out_dir_intrinsic,cell_num+'_'+view+'.npz')
+        vals = np.load(file_int)
+        # print (vals['mtx'])
+        # print (vals['dist'])
+        mtxs.append(vals['mtx'])
+        dists.append(vals['dist'])
+
+    # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
+    objp = np.zeros((check_cols*check_rows,3), np.float32)
+    objp[:,:2] = np.mgrid[0:check_cols,0:check_rows].T.reshape(-1,2)
+    objp = objp[np.newaxis,:,:]
+    objp = np.tile(objp,(dets_all[0].shape[0],1,1))
+    print (objp.shape)
+    retval, cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, R, T, E, F = \
+    cv2.stereoCalibrate(objp,dets_all[0],dets_all[1],  mtxs[0],dists[0],mtxs[1],dists[1],(w,h),flags = cv2.CALIB_FIX_INTRINSIC)
+    print (R)
+    print (euler_angles_from_rotation_matrix(R))
+    print (T)
+    print (retval)
+    print (dists[0],distCoeffs1)
+    s = input()
+
+    R1, R2, P1, P2, Q, validPixROI1, validPixROI2 = cv2.stereoRectify(cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, (w,h), R, T, cv2.CALIB_ZERO_DISPARITY)
+
+    print (R1,R2)
+
+    mapxL, mapyL = cv2.initUndistortRectifyMap(cameraMatrix1, distCoeffs1, R1, P1, (w,h), cv2.CV_32FC1)
+    mapxR, mapyR = cv2.initUndistortRectifyMap(cameraMatrix2, distCoeffs2, R2, P2, (w,h), cv2.CV_32FC1)
+
+    frames = [cv2.imread(im_file) for im_file in im_files]
+    dstL = cv2.remap(frames[0], mapxL, mapyL,cv2.INTER_LINEAR)
+    dstR = cv2.remap(frames[1], mapxR, mapyR,cv2.INTER_LINEAR)
+    out_file = '../scratch/0.jpg'
+    cv2.imwrite(out_file, dstL)
+    out_file = '../scratch/1.jpg'
+    cv2.imwrite(out_file, dstR)
+    out_file = '../scratch/0_org.jpg'
+    cv2.imwrite(out_file, frames[0])
+    out_file = '../scratch/1_org.jpg'
+    cv2.imwrite(out_file, frames[1])
+    visualize.writeHTMLForFolder('../scratch')
+
+    # while (True):
+
+    #     cv2.imshow('Left normal',lFrame)
+    #     cv2.imshow('Right normal',rFrame)
+    #     cv2.imshow('Left rectify',dstL)
+    #     cv2.imshow('Right rectify',dstR)
+    #     if cv2.waitKey(1) & 0xFF == ord('q'):
+    #         break
+
+
+    
+
 
 def main():
     # fix_filenames()
@@ -452,35 +574,56 @@ def main():
     # visualize_all_files_with_chessboard()
     # save_common_im_with_chessboard_det()
 
+    script_stereo_calibrate()
 
+    return
     meta_dir = '../data/camera_calibration_frames_redo'
     interval_str = '20200317130703_131800'
     out_dir = os.path.join(meta_dir, 'ims_to_keep')
     out_dir_dets = os.path.join(meta_dir, 'chessboard_dets')
     out_dir_viz = os.path.join(meta_dir, 'chessboard_dets_viz')
 
-    out_dir_copy = os.path.join(meta_dir,'to_copy_local')
+    out_dir_copy = os.path.join(meta_dir,'to_copy_local_manual')
     util.mkdir(out_dir_copy)
     
 
-    common_im_dict = get_common_im(out_dir)
-    for key_curr in common_im_dict:
-        if len(key_curr)<3:
-            continue
-        im_cols = common_im_dict[key_curr]
+    # common_im_dict = get_common_im(out_dir)
+    # for key_curr in common_im_dict:
+    #     if len(key_curr)<3:
+    #         continue
+    #     im_cols = common_im_dict[key_curr]
         
-        if len(im_cols[0])==0:
-            continue
+    #     if len(im_cols[0])==0:
+    #         continue
 
-        print (key_curr, len(im_cols), len(im_cols[0]))
-        for idx_im_col, im_col in enumerate(im_cols):
-            out_dir = os.path.join(out_dir_copy,'_'.join([str(val) for val in key_curr]), str(key_curr[idx_im_col+1]))
-            util.makedirs(out_dir)
-            for idx_im_path, im_path in enumerate(im_col):
-                out_file = os.path.join(out_dir,'%06d'%idx_im_path+'.jpg')
-                shutil.copyfile(im_path, out_file)
+    #     print (key_curr, len(im_cols), len(im_cols[0]))
+    #     for idx_im_col, im_col in enumerate(im_cols):
+    #         out_dir = os.path.join(out_dir_copy,'_'.join([str(val) for val in key_curr]), str(key_curr[idx_im_col+1]))
+    #         util.makedirs(out_dir)
+    #         for idx_im_path, im_path in enumerate(im_col):
+    #             out_file = os.path.join(out_dir,'%06d'%idx_im_path+'.jpg')
+    #             shutil.copyfile(im_path, out_file)
 
-    print (out_dir_copy)
+    # cell_num = str(1)
+    # views = [str(val) for val in [0,3]]
+    # file_nums = [166,283,656,271,293]
+    # # out_dir = '1_0_3'
+
+    # for idx_file_num, file_num in enumerate(file_nums):
+    #     out_dir = os.path.join(out_dir_copy,'_'.join([cell_num]+views))
+    #     util.mkdir(out_dir)
+    #     for view in views:
+    #         out_dir_curr = os.path.join(out_dir,view)
+    #         util.mkdir(out_dir_curr)
+    #         in_dir = os.path.join(meta_dir,'cell'+cell_num,interval_str,view)
+    #         # for idx_file_num,file_num in enumerate(file_nums):
+    #         in_file = os.path.join(in_dir,'ce_00_'+view+'_%06d.jpg'%file_num)
+    #         out_file = os.path.join(out_dir_curr,'%06d.jpg'%idx_file_num)
+    #         print (in_file,out_file,os.path.exists(in_file))
+    #         shutil.copyfile(in_file, out_file)
+
+
+    # print (out_dir_copy)
 
 
 
