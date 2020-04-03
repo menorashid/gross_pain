@@ -270,28 +270,29 @@ class unet(nn.Module):
         for i,v in enumerate(shuffled_pose):
             shuffled_pose_inv[v]=i
             
-        print('self.training',self.training,"shuffled_appearance",shuffled_appearance)
-        print("shuffled_pose      ",shuffled_pose)
+        # print('self.training',self.training,"shuffled_appearance",shuffled_appearance)
+        # print("shuffled_pose      ",shuffled_pose)
             
         shuffled_appearance = torch.LongTensor(shuffled_appearance).to(device)
         shuffled_pose       = torch.LongTensor(shuffled_pose).to(device)
         shuffled_pose_inv   = torch.LongTensor(shuffled_pose_inv).to(device)
 
-        # if rotation_by_user:
-        #     if 'shuffled_appearance' in input_dict.keys():
-        #         shuffled_appearance = input_dict['shuffled_appearance'].long()
+        if rotation_by_user:
+            if 'shuffled_appearance' in input_dict.keys():
+                shuffled_appearance = input_dict['shuffled_appearance'].long()
      
         ###############################################
         # determine shuffled rotation
-        # cam_2_world = input_dict['extrinsic_rot_inv'].view( (batch_size, 3, 3) ).float()
-        # world_2_cam = input_dict['extrinsic_rot'].    view( (batch_size, 3, 3) ).float()
-        # if rotation_by_user:
-        #     external_cam = input_dict['external_rotation_cam'].view(1,3,3).expand( (batch_size, 3, 3) )
-        #     external_glob = input_dict['external_rotation_global'].view(1,3,3).expand( (batch_size, 3, 3) )
-        #     cam2cam = torch.bmm(external_cam,torch.bmm(world_2_cam, torch.bmm(external_glob, cam_2_world)))
-        # else:
-        #     world_2_cam_suffled = torch.index_select(world_2_cam, dim=0, index=shuffled_pose)
-        #     cam2cam = torch.bmm(world_2_cam_suffled, cam_2_world)
+        if 'extrinsic_rot' in input_dict.keys():
+            cam_2_world = input_dict['extrinsic_rot_inv'].view( (batch_size, 3, 3) ).float()
+            world_2_cam = input_dict['extrinsic_rot'].    view( (batch_size, 3, 3) ).float()
+            if rotation_by_user:
+                external_cam = input_dict['external_rotation_cam'].view(1,3,3).expand( (batch_size, 3, 3) )
+                external_glob = input_dict['external_rotation_global'].view(1,3,3).expand( (batch_size, 3, 3) )
+                cam2cam = torch.bmm(external_cam,torch.bmm(world_2_cam, torch.bmm(external_glob, cam_2_world)))
+            else:
+                world_2_cam_suffled = torch.index_select(world_2_cam, dim=0, index=shuffled_pose)
+                cam2cam = torch.bmm(world_2_cam_suffled, cam_2_world)
         
         input_dict_cropped = input_dict # fallback to using crops
             
@@ -317,24 +318,25 @@ class unet(nn.Module):
                 latent_fg = self.to_fg(center_flat)
             latent_3d = self.to_3d(center_flat).view(batch_size,-1,3)
         
-        # if self.skip_background:
-        #     input_bg = input_dict['bg_crop'] # TODO take the rotated one/ new view
-        #     input_bg_shuffled = torch.index_select(input_bg, dim=0, index=shuffled_pose)
-        #     conv1_bg_shuffled = getattr(self, 'conv_1_stage_bg' + str(ns))(input_bg_shuffled)
+        if self.skip_background:
+            input_bg = input_dict['bg_crop'] # TODO take the rotated one/ new view
+            input_bg_shuffled = torch.index_select(input_bg, dim=0, index=shuffled_pose)
+            conv1_bg_shuffled = getattr(self, 'conv_1_stage_bg' + str(ns))(input_bg_shuffled)
 
         ###############################################
         # latent rotation (to shuffled view)
-        # if self.implicit_rotation:
-        #     encoded_angle = self.encode_angle(cam2cam.view(batch_size,-1))
-        #     encoded_latent_and_angle = torch.cat([latent_3d.view(batch_size,-1), encoded_angle], dim=1)
-        #     latent_3d_rotated = self.rotate_implicitely(encoded_latent_and_angle)
-        # else:
-        #     latent_3d_rotated = torch.bmm(latent_3d, cam2cam.transpose(1,2))
+        if 'extrinsic_rot' in input_dict.keys():
+            if self.implicit_rotation:
+                encoded_angle = self.encode_angle(cam2cam.view(batch_size,-1))
+                encoded_latent_and_angle = torch.cat([latent_3d.view(batch_size,-1), encoded_angle], dim=1)
+                latent_3d_rotated = self.rotate_implicitely(encoded_latent_and_angle)
+            else:
+                latent_3d_rotated = torch.bmm(latent_3d, cam2cam.transpose(1,2))
 
-        # if 'shuffled_pose_weight' in input_dict.keys():
-        #     w = input_dict['shuffled_pose_weight']
-        #     # weighted average with the last one
-        #     latent_3d_rotated = (1-w.expand_as(latent_3d))*latent_3d + w.expand_as(latent_3d)*latent_3d_rotated[-1:].expand_as(latent_3d)
+            if 'shuffled_pose_weight' in input_dict.keys():
+                w = input_dict['shuffled_pose_weight']
+                # weighted average with the last one
+                latent_3d_rotated = (1-w.expand_as(latent_3d))*latent_3d + w.expand_as(latent_3d)*latent_3d_rotated[-1:].expand_as(latent_3d)
 
         if has_fg:
             latent_fg_shuffled = torch.index_select(latent_fg, dim=0, index=shuffled_appearance)        

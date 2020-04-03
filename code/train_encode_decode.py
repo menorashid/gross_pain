@@ -1,16 +1,14 @@
 import os
+import re
 import sys
+import argparse
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import matplotlib.pyplot as plt
-
 from multiview_dataset import MultiViewDataset, MultiViewDatasetSampler
-import sys, os, shutil
+import os, shutil
 
 import numpy as np
-#import pickle
 import IPython
-
 
 from models import unet_encode3D
 from rhodin.python.losses import generic as losses_generic
@@ -18,21 +16,12 @@ from rhodin.python.losses import images as losses_images
 from rhodin.python.utils import datasets as rhodin_utils_datasets
 from rhodin.python.utils import io as rhodin_utils_io
 from rhodin.python.utils import training as utils_train
-from rhodin.python.utils import plot_dict_batch as utils_plot_batch
 
 import math
 import torch
-torch.cuda.current_device() # to prevent  "Cannot re-initialize CUDA in forked subprocess." error on some configurations
+# torch.cuda.current_device() # to prevent  "Cannot re-initialize CUDA in forked subprocess." error on some configurations
 import torch.optim
-import torchvision
-import torchvision.transforms as transforms
-import torchvision.models as models_tv
 
-# for loading of training sets
-#sys.path.insert(0,'../pytorch_human_reconstruction')
-#import pytorch_datasets.dataset_factory as dataset_factory
-
-import sys
 # sys.path.insert(0,'./ignite')
 from rhodin.python.ignite._utils import convert_tensor
 from rhodin.python.ignite.engine import Events
@@ -44,8 +33,6 @@ else:
 
 class IgniteTrainNVS:
     def run(self, config_dict_file, config_dict):
-        #config_dict_test = {k:v for k,v in config_dict.items()}
-        #config_dict_cams = {k:v for k,v in config_dict.items()}
         
         # some default values
         config_dict['implicit_rotation'] = config_dict.get('implicit_rotation', False)
@@ -72,7 +59,7 @@ class IgniteTrainNVS:
         rhodin_utils_io.savePythonFile(__file__, save_path)
         
         # now do training stuff
-        epochs = 40
+        epochs = config_dict['num_epochs']
         train_loader = self.load_data_train(config_dict)
         test_loader = self.load_data_test(config_dict)
         model = self.load_network(config_dict)
@@ -216,10 +203,13 @@ class IgniteTrainNVS:
     
     def load_data_train(self,config_dict):
         dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_train'],
-            input_types=config_dict['input_types'], label_types=config_dict['label_types_train'])
+                                   bg_folder=config_dict['bg_folder'],
+                                   input_types=config_dict['input_types'],
+                                   label_types=config_dict['label_types_train'],
+                                   subjects=config_dict['train_subjects'])
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_train'],
-              horse_subset=config_dict['horse_subset'],
+              subjects=config_dict['train_subjects'],
               use_subject_batches=config_dict['use_subject_batches'], use_view_batches=config_dict['use_view_batches'],
               batch_size=config_dict['batch_size_train'],
               randomize=True,
@@ -231,13 +221,18 @@ class IgniteTrainNVS:
     
     def load_data_test(self,config_dict):
         dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_test'],
-            input_types=config_dict['input_types'], label_types=config_dict['label_types_test'])
+                                   bg_folder=config_dict['bg_folder'],
+                                   input_types=config_dict['input_types'],
+                                   label_types=config_dict['label_types_test'],
+                                   subjects=config_dict['test_subjects'])
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_test'],
-            use_subject_batches=0, use_view_batches=config_dict['use_view_batches'],
-            batch_size=config_dict['batch_size_test'],
-            randomize=True,
-            every_nth_frame=config_dict['every_nth_frame'])
+                                                subjects=config_dict['test_subjects'],
+                                                use_subject_batches=0,
+                                                use_view_batches=config_dict['use_view_batches'],
+                                                batch_size=config_dict['batch_size_test'],
+                                                randomize=True,
+                                                every_nth_frame=config_dict['every_nth_frame'])
 
         loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler, num_workers=0, pin_memory=False,
                                              collate_fn=rhodin_utils_datasets.default_collate_with_string)
@@ -272,15 +267,37 @@ class IgniteTrainNVS:
         # annotation and pred is organized as a list, to facilitate multiple output types (e.g. heatmap and 3d loss)
         return loss_train, loss_test
     
-    def get_parameter_description(self, config_dict):#, config_dict):
-        folder = "../output/trainNVS_{note}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}_skipBG{latent_bg}_fg{latent_fg}_3d{skip_background}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}_nth{every_nth_frame}_c{active_cameras}_sub{horse_subset}_bs{use_view_batches}_lr{learning_rate}_".format(**config_dict)
+    def get_parameter_description(self, config_dict):
+        shorter_train_subjects = [subject[:2] for subject in config_dict['train_subjects']]
+        shorter_test_subjects = [subject[:2] for subject in config_dict['test_subjects']]
+        folder = "../output/trainNVS_{job_identifier}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}_skipBG{skip_background}_bg{latent_bg}_fg{latent_fg}_3d{latent_3d}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}_nth{every_nth_frame}_c{active_cameras}_train{}_test{}_bs{use_view_batches}_lr{learning_rate}_".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
         folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
-        #config_dict['storage_folder'] = folder
         return folder
+
+
+def parse_arguments(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config_file', type=str,
+        help="Python file with config dictionary.")
+    parser.add_argument('--train_subjects', type=str,
+        help="Which subjects to train on.")
+    parser.add_argument('--test_subjects', type=str,
+        help="Which subjects to test on.")
+    parser.add_argument('--job_identifier', type=str,
+        help="Slurm job ID, or other identifier, to not overwrite output.")
+    return parser.parse_args(argv)
         
     
 if __name__ == "__main__":
-    config_dict_module = rhodin_utils_io.loadModule("configs/config_train.py")
+    args = parse_arguments(sys.argv[1:])
+    print(args)
+    train_subjects = re.split('/', args.train_subjects)
+    test_subjects = re.split('/',args.test_subjects)
+    config_dict_module = rhodin_utils_io.loadModule(args.config_file)
     config_dict = config_dict_module.config_dict
+    config_dict['job_identifier'] = args.job_identifier
+    config_dict['train_subjects'] = train_subjects
+    config_dict['test_subjects'] = test_subjects
     ignite = IgniteTrainNVS()
     ignite.run(config_dict_module.__file__, config_dict)
+

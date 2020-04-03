@@ -4,14 +4,18 @@ inputDimension = 128
 config_dict = {
     # General parameters
     'dpi'                     : 190,
-    'input_types'             : ['img_crop'],
+    # Possible input types    : 'img_crop' | 'bg_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
+    'input_types'             : ['img_crop', 'bg_crop'],
+    # Possible output types   :  'img_crop' | '3D'
     'output_types'            : ['img_crop'],
+    # Possible lt train       : 'img_crop' | '3D' | 'bounding_box_cam' | 'intrinsic_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
     'label_types_train'       : ['img_crop'],
+    # Possible lt test        : 'img_crop' | '3D' | 'bounding_box_cam' | 'intrinsic_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
     'label_types_test'        : ['img_crop'],
     'num_workers'             : 4,
 
     # opt parameters    
-    'num_training_iterations' : 600000,
+    'num_epochs'              : 50,
     'save_every'              : 100000,
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
     'test_every'              : 5000,
@@ -28,8 +32,7 @@ config_dict = {
     'views'                   : '[0,1,2,3]',
     'image_width'             : 128,
     'image_height'            : 128,
-    'data_dir_path'           : '../data/frames_test/',
-    'train_subjects'          : ['aslan', 'brava'],
+    'data_dir_path'           : '../data/intervals_for_extraction_128_128_2fps/',
 
     # network parameters
     'batch_size_train' : 16,
@@ -42,13 +45,12 @@ config_dict = {
     'train_crop_relative' : False,
 
     # dataset
-    'dataset_folder_train' : '../data/frames_test/',
-    'dataset_folder_test' : '../data/frames_test/',
-    #'dataset_folder' :'/Users/rhodin/H36M-MultiView-test',
-    'training_set' : 'LPS_frames_test',
+    'bg_folder'            : '../data/median_bg/',
+    'dataset_folder_train' : '../data/intervals_for_extraction_128_128_2fps/',
+    'dataset_folder_test' : '../data/intervals_for_extraction_128_128_2fps/',
+    'training_set' : 'LPS_2fps',
     'img_mean' : (0.485, 0.456, 0.406),
     'img_std' : (0.229, 0.224, 0.225),
-    'horse_subset' : ['aslan', 'brava'], # all training subjects
     'active_cameras' : False,
     'inputDimension' : inputDimension,
     'mirror_augmentation' : False,
@@ -80,7 +82,7 @@ config_dict = {
     'encoderType' : 'UNet',
     'implicit_rotation' : False,
     'predict_rotation' : False,
-    'skip_background' : False,
+    'skip_background' : True,  # This means use background
 
     # From rhodin config
     'note'              : 'resL3'

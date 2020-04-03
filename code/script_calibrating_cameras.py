@@ -9,7 +9,9 @@ from scripts_for_visualization import view_multiple_dirs
 import subprocess
 import pandas as pd
 import cv2
-
+import itertools
+import matplotlib.pyplot as plt
+import shutil
 
 def extract_calibration_vid_frames():
     data_path = '../data/camera_calibration_videos'
@@ -108,10 +110,10 @@ def do_intrinsic(im_list, out_dir = False):
                 cv2.imwrite(out_file,dst)
 
     # calibrate the camera
-    # mtx = cv2.initCameraMatrix2D(objpoints, imgpoints, (h,w))
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, (h,w), None, None)
+    mtx = cv2.initCameraMatrix2D(objpoints, imgpoints, (w,h))
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, (w,h), mtx, None, flags = cv2.CALIB_USE_INTRINSIC_GUESS)
     newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),1,(w,h))
-    
+
     if out_dir:
         for idx_fname, fname in enumerate(im_list):
             img = cv2.imread(fname)
@@ -123,10 +125,10 @@ def do_intrinsic(im_list, out_dir = False):
             
             cv2.imwrite(out_file,dst)
 
+    return mtx, dist
 
-def main():
-    # fix_filenames()
-    # extract_calibration_vid_frames()
+
+def get_all_files_with_chessboard():
 
     meta_dir = '../data/camera_calibration_frames_redo'
     interval_str = '20200317130703_131800'
@@ -155,9 +157,48 @@ def main():
             out_file = os.path.join(out_dir,'_'.join([cell_str,str(view)])+'.txt')
             util.writeFile(out_file, ret_vals)
 
+def get_common_im(out_dir, cell_strs = ['cell1','cell2'], views = [0,1,2,3]):
+    common_im_dict = {}
+    info_arr = []
+    im_arr = []
+    for cell_str,view in itertools.product(cell_strs, views):            
+        curr_file = os.path.join(out_dir,'_'.join([cell_str,str(view)+'.txt']))
+        for im_file in util.readLinesFromFile(curr_file):
+            im_num = os.path.split(im_file)[1].split('_')[-1]
+            im_num = int(im_num[:im_num.rindex('.')])
+            info_row = [int(cell_str[-1]),view,im_num]
+            info_arr.append(info_row)
+            im_arr.append(im_file)
 
+    info_arr = np.array(info_arr)
+    im_arr = np.array(im_arr)
+    
+    for cell_num in [int(cell_str[-1]) for cell_str in cell_strs]:
+        combos = [itertools.combinations(views,num_views) for num_views in range(1,len(views)+1)]
+        for combo in combos:
+            for views in combo:
+                views = list(views)
+                key_curr = tuple([cell_num]+views)
+                kept_im = np.unique(info_arr[:,-1])
+                bin_views = []
+                for view in views:
+                    bin_im = np.logical_and(info_arr[:,0]==cell_num,info_arr[:,1]==view)
+                    bin_im_keep = np.in1d(kept_im, info_arr[bin_im,-1])
+                    kept_im = kept_im[bin_im_keep]
+                    bin_views.append(bin_im)
 
-    return
+                bin_kept = np.in1d(info_arr[:,-1],kept_im)
+                im_cols = []
+                for bin_im in bin_views:
+                    bin_im = np.logical_and(bin_im, bin_kept)
+                    im_col = im_arr[bin_im]
+                    im_cols.append(list(im_col))
+
+                common_im_dict[key_curr] = im_cols
+
+    return common_im_dict
+
+def rough_script_intrinsic():
     meta_dir = '../data/camera_calibration_frames_redo'
     out_dir_meta = '../scratch/viewing_intrinsic_calib'
     util.mkdir(out_dir_meta)
@@ -176,22 +217,423 @@ def main():
         do_intrinsic(im_list, out_dir)
         visualize.writeHTMLForFolder(out_dir,height = 506, width = 896)
         print (out_dir)
+
+
+def visualize_all_files_with_chessboard():
+    meta_dir = '../data/camera_calibration_frames_redo'
+    interval_str = '20200317130703_131800'
+    out_dir = os.path.join(meta_dir, 'ims_to_keep')
+    
+
+    out_dir_html = os.path.join(meta_dir,'common_im_html')
+    str_replace = ['..','/gross_pain']
+    util.mkdir(out_dir_html)
+
+    common_im_dict = get_common_im(out_dir)
+    for key_curr in common_im_dict.keys():
+
+        im_cols = common_im_dict[key_curr]
+        print (key_curr, len(im_cols))
+        # im_cols = np.array(im_cols)
+        if len(im_cols[0])>0:
+            out_file_html = os.path.join(out_dir_html,'_'.join([str(val) for val in key_curr])+'.html')
+
+            for idx_im_col in range(len(im_cols)):
+                for idx_im in range(len(im_cols[idx_im_col])):
+                    im_cols[idx_im_col][idx_im] = im_cols[idx_im_col][idx_im].replace(str_replace[0],str_replace[1])
+            views = list(key_curr)[1:]
+            captions = [[str(view)]*len(im_cols[idx_view]) for idx_view, view in enumerate(views)]
+            visualize.writeHTML(out_file_html, im_cols, captions)
+
+def save_common_im_with_chessboard_det():
+    meta_dir = '../data/camera_calibration_frames_redo'
+    out_dir_chess_det = '../data/camera_calibration_frames_withChessboardDet'
+    util.mkdir(out_dir_chess_det)
+    interval_str = '20200317130703_131800'
+    out_dir = os.path.join(meta_dir, 'ims_to_keep')
+    
+
+    out_dir_html = os.path.join(meta_dir,'common_im_withChessboardDet_html')
+    str_replace = [meta_dir,'/gross_pain/data/camera_calibration_frames_withChessboardDet']
+    util.mkdir(out_dir_html)
+
+    common_im_dict = get_common_im(out_dir)
+    for key_curr in common_im_dict.keys():
+        if len(key_curr)==2:
+            continue
         
+        im_cols = common_im_dict[key_curr]
+        for im_col in im_cols:
+            for im_file in im_col:
+                out_file = im_file.replace(meta_dir, out_dir_chess_det)
+                if os.path.exists(out_file):
+                    continue
+                util.makedirs(os.path.split(out_file)[0])
+                
+
+                check_cols = 7
+                check_rows = 9
+                img = cv2.imread(im_file)
+                gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+                # detect chessboard
+                ret, corners = cv2.findChessboardCorners(gray, (check_cols,check_rows),cv2.CALIB_CB_FAST_CHECK)
+                assert ret
+                dst = cv2.drawChessboardCorners(img, (check_cols,check_rows), corners,ret)
+                cv2.imwrite(out_file,dst)
+        
+        if len(im_cols[0])>0:
+            out_file_html = os.path.join(out_dir_html,'_'.join([str(val) for val in key_curr])+'.html')
+            for idx_im_col in range(len(im_cols)):
+                for idx_im in range(len(im_cols[idx_im_col])):
+                    im_cols[idx_im_col][idx_im] = im_cols[idx_im_col][idx_im].replace(str_replace[0],str_replace[1])
+            views = list(key_curr)[1:]
+            captions = [[' '.join([str(views[idx_im_col]),os.path.split(im_file)[1][-10:-4]]) for im_file in im_col] for idx_im_col,im_col in enumerate(im_cols)]
+            # captions = [[str(view)]*len(im_cols[idx_view]) for idx_view, view in enumerate(views)]
+            visualize.writeHTML(out_file_html, im_cols, captions)
+
+def script_save_all_intrinsics():
+    meta_dir = '../data/camera_calibration_frames_redo'
+    out_dir_chess_det = '../data/camera_calibration_frames_withChessboardDet'
+    util.mkdir(out_dir_chess_det)
+    interval_str = '20200317130703_131800'
+    out_dir = os.path.join(meta_dir, 'ims_to_keep')
+    out_dir_intrinsic = os.path.join(meta_dir,'intrinsics')
+    util.mkdir(out_dir_intrinsic)
+
+    common_im_dict = get_common_im(out_dir)
+    for key_curr in common_im_dict:
+        if len(key_curr)>2:
+            continue
+
+        im_files = common_im_dict[key_curr]
+        assert len(im_files)==1
+        im_files = im_files[0]
+        # [:10]
+        print (key_curr, len(im_files))
+        # util.mkdir('../scratch/check_row_col')
+        mtx, dist = do_intrinsic(im_files)
+        # ,out_dir = '../scratch/check_row_col')
+
+        print (mtx, type(mtx))
+        print (dist, type(dist))
+        out_file = os.path.join(out_dir_intrinsic,'_'.join([str(val) for val in key_curr])+'.npz')
+        print (out_file)
+        np.savez(out_file, mtx = mtx, dist = dist)
+        # s = input()
+
+def save_im_chessboard_dets(arg):
+    (im_file, out_file, out_file_viz) = arg
+    num_dets = 4 
+    check_cols = 7 
+    check_rows = 9
+    try:
+        print (im_file)
+        img = cv2.imread(im_file)
+        gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        corners_list = []
+        for det_num in range(num_dets):
+            ret, corners = cv2.findChessboardCorners(gray, (check_cols,check_rows),None)
+            
+            corners = corners.squeeze()
+            corners_list.append(corners)
+
+            min_vals = np.min(corners, axis= 0).astype(int)
+
+            max_vals = np.max(corners, axis = 0).astype(int)
+            gray[min_vals[1]:max_vals[1],min_vals[0]:max_vals[0]] = 0
+            print(out_file_viz)
+            cv2.imwrite(out_file_viz, gray)
+            s = input()
+
+        corners_mean = np.array([np.mean(vals, axis = 0) for vals in corners_list])
+        order = []
+        for to_inc in [[0,1],[2,3]]:
+            y_ord = np.argsort(corners_mean[:,1])[to_inc]
+            top_row = corners_mean[y_ord,:]
+            x_ord = np.argsort(top_row[:,0])
+            order += [y_ord[x_ord[0]],y_ord[x_ord[1]]]
+        
+        corners_list = np.array(corners_list)
+        corners_list = corners_list[order,:,:]
+        np.save(out_file, corners_list)
+
+        if out_file_viz is not None:
+            colors = [(0,0,255),(0,255,0),(255,0,0),(255,255,0)]
+            for idx_idx in range(corners_list.shape[0]):
+                color_curr = colors[idx_idx]
+                corners = corners_list[idx_idx]
+                for corner in corners:
+                    cv2.drawMarker(img, (corner[0],corner[1]),color_curr, markerType=cv2.MARKER_STAR, markerSize=4, thickness=2)
+            cv2.imwrite(out_file_viz, img)
+
+        return True
+    except:
+        return False
+
+
+def save_and_order_all_chessboard_dets():
+    meta_dir = '../data/camera_calibration_frames_redo'
+    out_dir_chess_det = '../data/camera_calibration_frames_withChessboardDet'
+    util.mkdir(out_dir_chess_det)
+    interval_str = '20200317130703_131800'
+    out_dir = os.path.join(meta_dir, 'ims_to_keep')
+    out_dir_dets = os.path.join(meta_dir, 'chessboard_dets')
+    out_dir_viz = os.path.join(meta_dir, 'chessboard_dets_viz')
+    util.mkdir(out_dir_dets)
+    util.mkdir(out_dir_viz)
+
+    out_dir_scratch = os.path.join('../scratch/chessboard_dets')
+    util.mkdir(out_dir_scratch)
+
+    im_files = []
+    for file_curr in glob.glob(os.path.join(out_dir,'*.txt')):
+        im_files+=util.readLinesFromFile(file_curr)
+    assert len(im_files)==len(list(set(im_files)))
+    print (len(im_files))
+
+    args = []
+
+    for idx_im_file, im_file in enumerate(im_files):
+        out_file_corners = im_file.replace(meta_dir,out_dir_dets)[:-4]+'.npy'
+        util.makedirs(os.path.split(out_file_corners)[0])
+
+        out_file_viz = im_file.replace(meta_dir, out_dir_viz)
+        util.makedirs(os.path.split(out_file_viz)[0])
+        
+        if os.path.exists(out_file_corners):
+            continue
+
+        args.append((im_file, out_file_corners, out_file_viz))
+
+    # print (len(im_files),len(args))
+    # for arg in args:
+    #     save_im_chessboard_dets(arg)
+    
+    pool = multiprocessing.Pool(multiprocessing.cpu_count())
+    ret_vals = pool.map(save_im_chessboard_dets,args)
+    ret_vals = np.array(ret_vals)
+    print (ret_vals.shape, np.sum(ret_vals), np.sum(ret_vals==0))
+    out_file = os.path.join(out_dir_dets,'problem_cases.npy')
+    np.save(out_file, ret_vals)
+
+    ret_vals = np.load(out_file)
+    print (ret_vals.shape, np.sum(ret_vals==0))
+
+
+def save_htmls_for_ordered_chessboards():
+    meta_dir = '../data/camera_calibration_frames_redo'
+    interval_str = '20200317130703_131800'
+    out_dir = os.path.join(meta_dir, 'ims_to_keep')
+    out_dir_dets = os.path.join(meta_dir, 'chessboard_dets')
+    out_dir_viz = os.path.join(meta_dir, 'chessboard_dets_viz')
+
+    out_dir_html = os.path.join(meta_dir,'common_im_withChessboardDet_ordered_html')
+    str_replace = [meta_dir,'/gross_pain/data/camera_calibration_frames_redo/chessboard_dets_viz']
+    util.mkdir(out_dir_html)
+
+    common_im_dict = get_common_im(out_dir)
+    for key_curr in common_im_dict.keys():
+        im_cols = common_im_dict[key_curr]
+        if len(im_cols[0])>0:
+            out_file_html = os.path.join(out_dir_html,'_'.join([str(val) for val in key_curr])+'.html')
+            for idx_im_col in range(len(im_cols)):
+                for idx_im in range(len(im_cols[idx_im_col])):
+                    im_cols[idx_im_col][idx_im] = im_cols[idx_im_col][idx_im].replace(str_replace[0],str_replace[1])
+            views = list(key_curr)[1:]
+            captions = [[' '.join([str(views[idx_im_col]),os.path.split(im_file)[1][-10:-4]]) for im_file in im_col] for idx_im_col,im_col in enumerate(im_cols)]
+            # captions = [[str(view)]*len(im_cols[idx_view]) for idx_view, view in enumerate(views)]
+            visualize.writeHTML(out_file_html, im_cols, captions)
+
+import math
+def isclose(x, y, rtol=1.e-5, atol=1.e-8):
+    return abs(x-y) <= atol + rtol * abs(y)
+
+def euler_angles_from_rotation_matrix(R):
+    '''
+    From a paper by Gregory G. Slabaugh (undated),
+    "Computing Euler angles from a rotation matrix
+    '''
+    phi = 0.0
+    if isclose(R[2,0],-1.0):
+        theta = math.pi/2.0
+        psi = math.atan2(R[0,1],R[0,2])
+    elif isclose(R[2,0],1.0):
+        theta = -math.pi/2.0
+        psi = math.atan2(-R[0,1],-R[0,2])
+    else:
+        theta = -math.asin(R[2,0])
+        cos_theta = math.cos(theta)
+        psi = math.atan2(R[2,1]/cos_theta, R[2,2]/cos_theta)
+        phi = math.atan2(R[1,0]/cos_theta, R[0,0]/cos_theta)
+
+    # roll, pitch, yaw
+    return psi*180/math.pi, theta*180/math.pi, phi*180/math.pi
+
+
+def script_stereo_calibrate():
+    meta_dir = '../data/camera_calibration_frames_redo'
+    out_dir_chess_det = '../data/camera_calibration_frames_withChessboardDet'
+    util.mkdir(out_dir_chess_det)
+    interval_str = '20200317130703_131800'
+    out_dir = os.path.join(meta_dir, 'ims_to_keep')
+    out_dir_intrinsic = os.path.join(meta_dir, 'intrinsics')
+    out_dir_dets = os.path.join(meta_dir, 'chessboard_dets')
+    check_cols = 7
+    check_rows = 9
+    h = 1520
+    w = 2688
+
+    cell_num = '1'
+    views = ['0','3']
+    im_num = '000152'
+    dets_all = []
+    det_path_meta = os.path.join(out_dir_dets,'cell'+cell_num,interval_str)
+    det_files_all = []
+    for view in views:
+        det_files = np.array([os.path.split(file_curr)[1][-10:-4] for file_curr in glob.glob(os.path.join(det_path_meta,view,'ce_00_'+view+'_*.npy'))])
+        det_files_all.append(det_files)
+
+    bin_keep = np.in1d(det_files_all[0], det_files_all[1])
+    im_nums = det_files_all[0][bin_keep]
+    im_num = im_nums[-1]
+    im_nums = [im_num]
+    im_files = [os.path.join(meta_dir,'cell'+cell_num,interval_str,view_curr,'ce_00_'+view_curr+'_'+im_num+'.jpg') for view_curr in views]
+    dets_all = []
+    for idx_view, view in enumerate(views):
+        dets_curr = []
+        for im_num in im_nums[:1]:
+            dets_path = os.path.join(det_path_meta, view,'ce_00_'+view+'_'+im_num+'.npy')
+            dets = np.load(dets_path)[:1]
+            # assert dets.shape[0]==4
+            dets_curr.append(dets)
+        dets_all.append(np.concatenate(dets_curr,axis = 0))
+
+    # intrinsics 
+    mtxs = []
+    dists = []
+    for view in views:
+        file_int = os.path.join(out_dir_intrinsic,cell_num+'_'+view+'.npz')
+        vals = np.load(file_int)
+        # print (vals['mtx'])
+        # print (vals['dist'])
+        mtxs.append(vals['mtx'])
+        dists.append(vals['dist'])
+
+    # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
+    objp = np.zeros((check_cols*check_rows,3), np.float32)
+    objp[:,:2] = np.mgrid[0:check_cols,0:check_rows].T.reshape(-1,2)
+    objp = objp[np.newaxis,:,:]
+    objp = np.tile(objp,(dets_all[0].shape[0],1,1))
+    print (objp.shape)
+    retval, cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, R, T, E, F = \
+    cv2.stereoCalibrate(objp,dets_all[0],dets_all[1],  mtxs[0],dists[0],mtxs[1],dists[1],(w,h),flags = cv2.CALIB_FIX_INTRINSIC)
+    print (R)
+    print (euler_angles_from_rotation_matrix(R))
+    print (T)
+    print (retval)
+    print (dists[0],distCoeffs1)
+    s = input()
+
+    R1, R2, P1, P2, Q, validPixROI1, validPixROI2 = cv2.stereoRectify(cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, (w,h), R, T, cv2.CALIB_ZERO_DISPARITY)
+
+    print (R1,R2)
+
+    mapxL, mapyL = cv2.initUndistortRectifyMap(cameraMatrix1, distCoeffs1, R1, P1, (w,h), cv2.CV_32FC1)
+    mapxR, mapyR = cv2.initUndistortRectifyMap(cameraMatrix2, distCoeffs2, R2, P2, (w,h), cv2.CV_32FC1)
+
+    frames = [cv2.imread(im_file) for im_file in im_files]
+    dstL = cv2.remap(frames[0], mapxL, mapyL,cv2.INTER_LINEAR)
+    dstR = cv2.remap(frames[1], mapxR, mapyR,cv2.INTER_LINEAR)
+    out_file = '../scratch/0.jpg'
+    cv2.imwrite(out_file, dstL)
+    out_file = '../scratch/1.jpg'
+    cv2.imwrite(out_file, dstR)
+    out_file = '../scratch/0_org.jpg'
+    cv2.imwrite(out_file, frames[0])
+    out_file = '../scratch/1_org.jpg'
+    cv2.imwrite(out_file, frames[1])
+    visualize.writeHTMLForFolder('../scratch')
+
+    # while (True):
+
+    #     cv2.imshow('Left normal',lFrame)
+    #     cv2.imshow('Right normal',rFrame)
+    #     cv2.imshow('Left rectify',dstL)
+    #     cv2.imshow('Right rectify',dstR)
+    #     if cv2.waitKey(1) & 0xFF == ord('q'):
+    #         break
+
+
     
 
 
+def main():
+    # fix_filenames()
+    # extract_calibration_vid_frames()
+    # get_all_files_with_chessboard()
+    # visualize_all_files_with_chessboard()
+    # save_common_im_with_chessboard_det()
+
+    script_stereo_calibrate()
+
+    return
+    meta_dir = '../data/camera_calibration_frames_redo'
+    interval_str = '20200317130703_131800'
+    out_dir = os.path.join(meta_dir, 'ims_to_keep')
+    out_dir_dets = os.path.join(meta_dir, 'chessboard_dets')
+    out_dir_viz = os.path.join(meta_dir, 'chessboard_dets_viz')
+
+    out_dir_copy = os.path.join(meta_dir,'to_copy_local_manual')
+    util.mkdir(out_dir_copy)
+    
+
+    # common_im_dict = get_common_im(out_dir)
+    # for key_curr in common_im_dict:
+    #     if len(key_curr)<3:
+    #         continue
+    #     im_cols = common_im_dict[key_curr]
+        
+    #     if len(im_cols[0])==0:
+    #         continue
+
+    #     print (key_curr, len(im_cols), len(im_cols[0]))
+    #     for idx_im_col, im_col in enumerate(im_cols):
+    #         out_dir = os.path.join(out_dir_copy,'_'.join([str(val) for val in key_curr]), str(key_curr[idx_im_col+1]))
+    #         util.makedirs(out_dir)
+    #         for idx_im_path, im_path in enumerate(im_col):
+    #             out_file = os.path.join(out_dir,'%06d'%idx_im_path+'.jpg')
+    #             shutil.copyfile(im_path, out_file)
+
+    # cell_num = str(1)
+    # views = [str(val) for val in [0,3]]
+    # file_nums = [166,283,656,271,293]
+    # # out_dir = '1_0_3'
+
+    # for idx_file_num, file_num in enumerate(file_nums):
+    #     out_dir = os.path.join(out_dir_copy,'_'.join([cell_num]+views))
+    #     util.mkdir(out_dir)
+    #     for view in views:
+    #         out_dir_curr = os.path.join(out_dir,view)
+    #         util.mkdir(out_dir_curr)
+    #         in_dir = os.path.join(meta_dir,'cell'+cell_num,interval_str,view)
+    #         # for idx_file_num,file_num in enumerate(file_nums):
+    #         in_file = os.path.join(in_dir,'ce_00_'+view+'_%06d.jpg'%file_num)
+    #         out_file = os.path.join(out_dir_curr,'%06d.jpg'%idx_file_num)
+    #         print (in_file,out_file,os.path.exists(in_file))
+    #         shutil.copyfile(in_file, out_file)
+
+
+    # print (out_dir_copy)
+
+
+
+
+
 
 
     
-
-
-    # out_dir_html = '../data/camera_calibration_frames'
-    # dirs_to_check = [os.path.join(out_dir_html, 'cell1','20200317130703_131800'), os.path.join(out_dir_html,'cell2','20200317130703_131800')]
-    # view_multiple_dirs(dirs_to_check, out_dir_html)
-
-
-
     
+            
     
 
 
