@@ -78,19 +78,26 @@ def main():
     # plt.show()
     dir_curr = os.path.join(meta_dir,'1_0_3')
     sessions = [1,1,3,1,1]
-    sessions = [3,1,1]
+    
+    # [3,1,1]
 
     # for dir_curr in dirs:
     views = os.path.split(dir_curr)[1].split('_')[-2:]
-    im_files = [os.path.split(file_curr)[1] for file_curr in glob.glob(os.path.join(dir_curr,views[0],'*.jpg'))][2:]
+    im_files = [os.path.split(file_curr)[1] for file_curr in glob.glob(os.path.join(dir_curr,views[0],'*.jpg'))]
+    im_files.sort()
+
+    im_files = im_files[3:4]
+    sessions = sessions[3:4]
     print im_files
+
+
     assert len(im_files)==len(sessions)
     for num_session,im_file in zip(sessions, im_files):
         # im_file = im_files[-1]
         im_pair = [os.path.join(dir_curr,view,im_file) for view in views]
         assert os.path.exists(im_pair[1])
         
-        out_file = im_pair[0].replace('.jpg','.npy')
+        out_file = im_pair[0].replace('.jpg','_check.npy')
         print im_file, im_pair, out_file, num_session 
         
         plot_and_save_correspondences(im_pair, out_file, num_session)
