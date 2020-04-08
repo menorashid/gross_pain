@@ -470,6 +470,21 @@ def euler_angles_from_rotation_matrix(R):
     return psi*180/math.pi, theta*180/math.pi, phi*180/math.pi
 
 
+def drawlines(img1,img2,lines,pts1,pts2):
+    ''' img1 - image on which we draw the epilines for the points in img2
+        lines - corresponding epilines '''
+    r,c,_ = img1.shape
+    # img1 = cv.cvtColor(img1,cv.COLOR_GRAY2BGR)
+    # img2 = cv.cvtColor(img2,cv.COLOR_GRAY2BGR)
+    for r,pt1,pt2 in zip(lines,pts1,pts2):
+        color = tuple(np.random.randint(0,255,3).tolist())
+        x0,y0 = map(int, [0, -r[2]/r[1] ])
+        x1,y1 = map(int, [c, -(r[2]+r[0]*c)/r[1] ])
+        img1 = cv2.line(img1, (x0,y0), (x1,y1), color,1)
+        img1 = cv2.circle(img1,tuple(pt1),5,color,-1)
+        img2 = cv2.circle(img2,tuple(pt2),5,color,-1)
+    return img1,img2
+
 def script_stereo_calibrate():
     meta_dir = '../data/camera_calibration_frames_redo'
     out_dir_chess_det = '../data/camera_calibration_frames_withChessboardDet'
@@ -498,6 +513,7 @@ def script_stereo_calibrate():
     im_num = im_nums[-1]
     im_nums = [im_num]
     im_files = [os.path.join(meta_dir,'cell'+cell_num,interval_str,view_curr,'ce_00_'+view_curr+'_'+im_num+'.jpg') for view_curr in views]
+
     dets_all = []
     for idx_view, view in enumerate(views):
         dets_curr = []
@@ -532,39 +548,280 @@ def script_stereo_calibrate():
     print (T)
     print (retval)
     print (dists[0],distCoeffs1)
-    s = input()
+    
+    print ('E',E/E[2,2])
+    print ('F',F)
 
-    R1, R2, P1, P2, Q, validPixROI1, validPixROI2 = cv2.stereoRectify(cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, (w,h), R, T, cv2.CALIB_ZERO_DISPARITY)
+    E_us = np.matmul(cameraMatrix2.T,np.matmul(F,cameraMatrix1))
+    print ('E_us',E_us/E_us[2,2])
 
-    print (R1,R2)
+    R1_us, R2_us, t_us =   cv2.decomposeEssentialMat(E)
+    print ('R',R)
+    print (T.shape)
+    print ('T',T/T[2])
+    print ('R1_us',R1_us)
+    print ('R2_us',R2_us)
+    print ('t_us', t_us/t_us[2])
 
-    mapxL, mapyL = cv2.initUndistortRectifyMap(cameraMatrix1, distCoeffs1, R1, P1, (w,h), cv2.CV_32FC1)
-    mapxR, mapyR = cv2.initUndistortRectifyMap(cameraMatrix2, distCoeffs2, R2, P2, (w,h), cv2.CV_32FC1)
+    return
+
+
+
 
     frames = [cv2.imread(im_file) for im_file in im_files]
-    dstL = cv2.remap(frames[0], mapxL, mapyL,cv2.INTER_LINEAR)
-    dstR = cv2.remap(frames[1], mapxR, mapyR,cv2.INTER_LINEAR)
+    # Find epilines corresponding to points in right image (second image) and
+    # drawing its lines on left image
+    lines1 = cv2.computeCorrespondEpilines(dets_all[1].squeeze(), 2,F)
+    lines1 = lines1.reshape(-1,3)
+    img5,img6 = drawlines(frames[0],frames[1],lines1,dets_all[0].squeeze(),dets_all[1].squeeze())
+    # Find epilines corresponding to points in left image (first image) and
+    # drawing its lines on right image
+    lines2 = cv2.computeCorrespondEpilines(dets_all[0].squeeze(), 1,F)
+    lines2 = lines2.reshape(-1,3)
+    img3,img4 = drawlines(frames[1],frames[0],lines2,dets_all[1].squeeze(),dets_all[0].squeeze())
+
+
+
+
+    # R1, R2, P1, P2, Q, validPixROI1, validPixROI2 = cv2.stereoRectify(cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, (w,h), R, T, cv2.CALIB_ZERO_DISPARITY)
+
+    # print (R1,R2)
+
+    # mapxL, mapyL = cv2.initUndistortRectifyMap(cameraMatrix1, distCoeffs1, R1, P1, (w,h), cv2.CV_32FC1)
+    # mapxR, mapyR = cv2.initUndistortRectifyMap(cameraMatrix2, distCoeffs2, R2, P2, (w,h), cv2.CV_32FC1)
+
+    
+    # dstL = cv2.remap(frames[0], mapxL, mapyL,cv2.INTER_LINEAR)
+    # dstR = cv2.remap(frames[1], mapxR, mapyR,cv2.INTER_LINEAR)
     out_file = '../scratch/0.jpg'
-    cv2.imwrite(out_file, dstL)
+    cv2.imwrite(out_file, img5)
     out_file = '../scratch/1.jpg'
-    cv2.imwrite(out_file, dstR)
+    cv2.imwrite(out_file, img3)
     out_file = '../scratch/0_org.jpg'
     cv2.imwrite(out_file, frames[0])
     out_file = '../scratch/1_org.jpg'
     cv2.imwrite(out_file, frames[1])
     visualize.writeHTMLForFolder('../scratch')
 
-    # while (True):
 
-    #     cv2.imshow('Left normal',lFrame)
-    #     cv2.imshow('Right normal',rFrame)
-    #     cv2.imshow('Left rectify',dstL)
-    #     cv2.imshow('Right rectify',dstR)
-    #     if cv2.waitKey(1) & 0xFF == ord('q'):
-    #         break
+def script_calibrate_manual():
+    meta_dir = '../data/camera_calibration_frames_redo'
+    out_dir_intrinsic = os.path.join(meta_dir, 'intrinsics')
+
+    out_dir = os.path.join(meta_dir, 'manual_corr_int_ext')
+    util.mkdir(out_dir)
+    dir_curr = '../data/camera_calibration_frames_redo/to_copy_local_manual'
+    viz = True
 
 
+    cell_num = '1'
+    views = ['0','3']  
+    views_sort = views[:]
+    views_sort.sort()
+    dir_curr = os.path.join(dir_curr, '_'.join([cell_num]+views_sort))
+    if viz:
+        out_dir_viz = os.path.join(out_dir,'_'.join([cell_num]+views))
+        util.mkdir(out_dir_viz)
+
+
+    pt_files = list(glob.glob(os.path.join(dir_curr,views[0],'*.npy')))
+    pt_files.sort()
+    print(pt_files)
+    pts_all =[]
+    colors = [tuple(np.random.randint(0,255,3).tolist()) for i in range(8)]
+
+    for idx_pt_file, pt_file in enumerate(pt_files):
+        pts = np.load(pt_file)
+        
+        if viz:
+            im_files = [pt_file.replace('.npy','.jpg'),pt_file.replace('/'+views[0]+'/','/'+views[1]+'/').replace('.npy','.jpg')]
+            for idx_im,im_file in enumerate(im_files):
+                out_file = os.path.join(out_dir_viz,str(idx_pt_file)+'_'+str(idx_im)+'.jpg')
+                im = cv2.imread(im_file)
+                for idx_pt, pt in enumerate(pts[idx_im]):
+                    im = cv2.circle(im,tuple(np.int32(pt)),5,colors[idx_pt],-1)
+                cv2.imwrite(out_file, im)
+
+        print (pts.shape)
+        pts_all.append(pts)
+
+
+
+    pts_all = np.concatenate(pts_all,axis = 1)
+    pts_all =[pts_all[0], pts_all[1]]
+
+    F, mask = cv2.findFundamentalMat(pts_all[0],pts_all[1],cv2.FM_RANSAC,5,0.9999)
+
+    # get intrinsics
+    mtxs = []
+    dists = []
+    for view in views:
+        file_int = os.path.join(out_dir_intrinsic,cell_num+'_'+view+'.npz')
+        vals = np.load(file_int)
+        # print (vals['mtx'])
+        # print (vals['dist'])
+        mtxs.append(vals['mtx'])
+        dists.append(vals['dist'])
+
+    E = np.matmul(mtxs[1].T,np.matmul(F,mtxs[0]))
+    print ('E',E/E[2,2])
+
+    R1, R2, T = cv2.decomposeEssentialMat(E)
+    print (R1)
+    print (euler_angles_from_rotation_matrix(R1))
+
+    print (R2)
+    print (euler_angles_from_rotation_matrix(R2))    
+
+    print (T)
+    # R1
+
+    print (F)
+    # We select only inlier points
+    print (mask.shape, pts_all[0].shape)
+    # pts_all[0] = pts_all[0][mask.ravel()==1]
+    # pts_all[1] = pts_all[1][mask.ravel()==1]
+    out_file = os.path.join(out_dir,'_'.join([cell_num]+views)+'.npz')
+    np.savez(out_file,R1 = R1, R2=R2, T = T, K1 = mtxs[0], K2 = mtxs[1], d1 = dists[0], d2 = dists[1])
+
+    if viz:
+        im_files = [os.path.join(dir_curr,view,os.path.split(pt_files[-1])[1][:-4]+'.jpg') for view in views]
+        frames = [cv2.imread(im_file) for im_file in im_files]
+        # Find epilines corresponding to points in right image (second image) and
+        # drawing its lines on left image
+        lines1 = cv2.computeCorrespondEpilines(pts_all[1].squeeze(), 2,F)
+        lines1 = lines1.reshape(-1,3)
+        img5,img6 = drawlines(np.array(frames[0]),np.array(frames[1]),lines1,np.int32(pts_all[0]).squeeze(),np.int32(pts_all[1]).squeeze())
+        # Find epilines corresponding to points in left image (first image) and
+        # drawing its lines on right image
+        lines2 = cv2.computeCorrespondEpilines(pts_all[0].squeeze(), 1,F)
+        lines2 = lines2.reshape(-1,3)
+        img3,img4 = drawlines(np.array(frames[1]),np.array(frames[0]),lines2,np.int32(pts_all[1]).squeeze(),np.int32(pts_all[0]).squeeze())
+        out_file = os.path.join(out_dir_viz,'epilines_0.jpg')
+        cv2.imwrite(out_file, img5)
+        out_file = os.path.join(out_dir_viz,'epilines_1.jpg')
+        cv2.imwrite(out_file, img3)
+        visualize.writeHTMLForFolder(out_dir_viz)
+
+def get_im_path(meta_dir, interval_str, cell_num, view, im_num):
+    cell_num = str(cell_num)
+    view = str(view)
+    im_str= '%06d.jpg'%im_num
+    path = os.path.join(meta_dir, 'cell'+cell_num, interval_str, view, '_'.join(['ce','00',view,im_str]))
+    return path
+
+def script_calibrate_center_board():
+    # from checkerboard import detect_checkerboard
+    # select an image
+    meta_dir = '../data/camera_calibration_frames_redo'
+    out_dir_intrinsic = os.path.join(meta_dir, 'intrinsics')
+    interval_str = '20200317130703_131800'
+    viz = True
+
+    # cell_num = 1
+    # im_num = 271
+    # views = [0,3,1,2]
+    # file_dets = ['../data/camera_calibration_frames_redo/to_copy_local_manual/1_0_3/0/000003_check.npy',
+    #             '../data/camera_calibration_frames_redo/to_copy_local_manual/1_1_2/1/000003_check.npy']
+    # out_dir_calib = '../data/camera_calibration_frames_redo/to_copy_local_manual'
+
+    cell_num = 2
+    im_num = 567
+    views = [0,3,1,2]
+    file_dets = ['../data/camera_calibration_frames_redo/to_copy_local_manual/2_0_1_2_3/0/000000_check.npy',
+                '../data/camera_calibration_frames_redo/to_copy_local_manual/2_0_1_2_3/1/000000_check.npy']
+    out_dir_calib = '../data/camera_calibration_frames_redo/to_copy_local_manual'
     
+    int_files = [os.path.join(out_dir_intrinsic,str(cell_num)+'_'+str(view)+'.npz') for view in views]
+    
+
+    colors = [tuple(np.random.randint(0,255,3).tolist()) for i in range(63)]
+    # 3]
+    # ,1,2,3]
+    # 0 1100,1400,1350,1800
+    # 3 1100, 1400, 1600,2000
+    out_dir = '../scratch/center_box'
+    util.mkdir(out_dir)
+
+    check_rows = 7
+    check_cols = 9
+    objp = np.zeros((check_cols*check_rows,3), np.float32)
+    objp[:,:2] = np.mgrid[0:check_cols,0:check_rows].T.reshape(-1,2)
+    print (objp[:20])
+
+    # look at its detected checks
+    for idx_view,view in enumerate(views):
+        # print (im_num)
+        im_path = get_im_path(meta_dir, interval_str, cell_num, view, im_num)
+        intr = np.load(int_files[idx_view])
+        # print (idx_view, view, int_files[idx_view])
+
+        mtx = intr['mtx']
+        dist = intr['dist']
+        
+        # print (idx_view, idx_view//2)
+        corners = np.load(file_dets[idx_view//2])[idx_view%2,:,:]
+        if cell_num==1:
+            corners = np.reshape(corners,(check_rows,check_cols,2))
+            corners = corners[::-1,:,:]
+            corners = np.reshape(corners,(check_rows*check_cols,2))
+            retval, rvec, tvec  =   cv2.solvePnP(objp[np.newaxis,:,:],  corners[np.newaxis,:,:], mtx, dist)
+        elif view==0:
+            load_dict = np.load(os.path.join(out_dir_calib,'1_'+str(view)+'.npz'))
+            rvec_guess = load_dict['rvec']
+            tvec_guess = load_dict['tvec']
+            # print (rvec_guess,tvec_guess)
+            retval, rvec, tvec  =   cv2.solvePnP(objp[np.newaxis,:,:],  corners[np.newaxis,:,:], mtx, dist, rvec_guess, tvec_guess, True)
+        else:
+            retval, rvec, tvec  =   cv2.solvePnP(objp[np.newaxis,:,:],  corners[np.newaxis,:,:], mtx, dist)
+
+        
+        # print (rvec)
+        rot,jacob = cv2.Rodrigues(rvec)
+        # print (rot)
+        # print (euler_angles_from_rotation_matrix(rot))
+        # print (tvec)
+        
+        camera_pos = np.matmul(-rot.T,tvec)
+        print (view)
+        print (camera_pos)
+        print ('')
+
+        out_file = os.path.join(out_dir_calib,'_'.join([str(val) for val in [cell_num,view]])+'.npz')
+        print (out_file)
+        np.savez(out_file,rvec = rvec, tvec= tvec)
+
+        # ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objp[np.newaxis,:,:], corners[np.newaxis,:,:], (w,h), mtx, None, flags = cv2.CALIB_USE_INTRINSIC_GUESS)
+        # cv2.calibrateCamera(objpoints, imgpoints, (w,h), mtx, None, flags = cv2.CALIB_USE_INTRINSIC_GUESS)
+        
+        
+        
+        if viz:
+            img = cv2.imread(im_path)
+            # gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+            # detect chessboard
+            # ret, corners = cv2.findChessboardCorners(gray, (check_cols,check_rows))
+        
+            out_file = os.path.join(out_dir,'_'.join([str(val) for val in [cell_num,view,check_rows,check_cols]])+'.jpg')
+            # Draw and display the corners
+            # dst = cv2.drawChessboardCorners(img, (check_cols,check_rows), corners,ret)
+            
+            for idx_pt, pt in enumerate(corners):
+                dst = cv2.circle(img,tuple(np.int32(pt)),2,(255,0,int(idx_pt*255/63.)),-1)
+            print('saving',out_file)
+            cv2.imwrite(out_file,dst)
+
+
+    # copy and block
+    # detect
+    # make sure first and last points are same across views
+    # calibrate
+    # cv2.calibrateCamera(objpoints, imgpoints, (w,h), mtx, None, flags = cv2.CALIB_USE_INTRINSIC_GUESS)
+
+    # look at rotation matrices
+    # share with sofia
+    # ask johan to do what's needed with a bigger board
+
 
 
 def main():
@@ -574,7 +831,13 @@ def main():
     # visualize_all_files_with_chessboard()
     # save_common_im_with_chessboard_det()
 
-    script_stereo_calibrate()
+    # script_stereo_calibrate()
+
+    # script_calibrate_manual()
+
+    script_calibrate_center_board()
+
+
 
     return
     meta_dir = '../data/camera_calibration_frames_redo'
@@ -583,7 +846,7 @@ def main():
     out_dir_dets = os.path.join(meta_dir, 'chessboard_dets')
     out_dir_viz = os.path.join(meta_dir, 'chessboard_dets_viz')
 
-    out_dir_copy = os.path.join(meta_dir,'to_copy_local_manual')
+    out_dir_copy = os.path.join(meta_dir,'to_copy_local_manual_2')
     util.mkdir(out_dir_copy)
     
 
@@ -605,25 +868,28 @@ def main():
     #             shutil.copyfile(im_path, out_file)
 
     # cell_num = str(1)
-    # views = [str(val) for val in [0,3]]
+    # views = [str(val) for val in [1,2]]
     # file_nums = [166,283,656,271,293]
-    # # out_dir = '1_0_3'
+    cell_num = str(2)
+    views = [str(val) for val in [0]]
+    file_nums = [561]
+    # out_dir = '1_0_3'
 
-    # for idx_file_num, file_num in enumerate(file_nums):
-    #     out_dir = os.path.join(out_dir_copy,'_'.join([cell_num]+views))
-    #     util.mkdir(out_dir)
-    #     for view in views:
-    #         out_dir_curr = os.path.join(out_dir,view)
-    #         util.mkdir(out_dir_curr)
-    #         in_dir = os.path.join(meta_dir,'cell'+cell_num,interval_str,view)
-    #         # for idx_file_num,file_num in enumerate(file_nums):
-    #         in_file = os.path.join(in_dir,'ce_00_'+view+'_%06d.jpg'%file_num)
-    #         out_file = os.path.join(out_dir_curr,'%06d.jpg'%idx_file_num)
-    #         print (in_file,out_file,os.path.exists(in_file))
-    #         shutil.copyfile(in_file, out_file)
+    for idx_file_num, file_num in enumerate(file_nums):
+        out_dir = os.path.join(out_dir_copy,'_'.join([cell_num]+views))
+        util.mkdir(out_dir)
+        for view in views:
+            out_dir_curr = os.path.join(out_dir,view)
+            util.mkdir(out_dir_curr)
+            in_dir = os.path.join(meta_dir,'cell'+cell_num,interval_str,view)
+            # for idx_file_num,file_num in enumerate(file_nums):
+            in_file = os.path.join(in_dir,'ce_00_'+view+'_%06d.jpg'%file_num)
+            out_file = os.path.join(out_dir_curr,'%06d.jpg'%idx_file_num+1)
+            print (in_file,out_file,os.path.exists(in_file))
+            shutil.copyfile(in_file, out_file)
 
 
-    # print (out_dir_copy)
+    print (out_dir_copy)
 
 
 

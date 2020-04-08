@@ -220,10 +220,11 @@ def main():
     # offsets.to_csv(out_file_final, index = False)
 
     ## step 9 - extract frames with and without offsets and view difference
-    out_dir_testing = '../data/intervals_for_extraction_128_128_2fps'
+    data_selection_path = '../metadata/intervals_for_extraction.csv'
+    out_dir_testing = '../data/intervals_for_extraction_camera_adjusted_128_128_2fps'
     util.mkdir(out_dir_testing)
     mve = MultiViewFrameExtractor(data_path = data_path, width= 128, height = 128, frame_rate = 2., output_dir = out_dir_testing,views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count(), offset_file = out_file_final)
-    mve.extract_frames()
+    mve.extract_frames(replace = False)
 
     # dirs_to_check = [dir_curr for dir_curr in glob.glob(os.path.join(out_dir_testing,'*','*')) if os.path.isdir(dir_curr)]
     # print (dirs_to_check)
