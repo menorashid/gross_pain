@@ -715,15 +715,22 @@ def script_calibrate_center_board():
     # select an image
     meta_dir = '../data/camera_calibration_frames_redo'
     out_dir_intrinsic = os.path.join(meta_dir, 'intrinsics')
-    cell_num = 1
     interval_str = '20200317130703_131800'
-    im_num = 271
+    viz = True
+
+    # cell_num = 1
+    # im_num = 271
+    # views = [0,3,1,2]
+    # file_dets = ['../data/camera_calibration_frames_redo/to_copy_local_manual/1_0_3/0/000003_check.npy',
+    #             '../data/camera_calibration_frames_redo/to_copy_local_manual/1_1_2/1/000003_check.npy']
+    # out_dir_calib = '../data/camera_calibration_frames_redo/to_copy_local_manual'
+
+    cell_num = 2
+    im_num = 567
     views = [0,3,1,2]
-
-    viz = False
-
-    file_dets = ['../data/camera_calibration_frames_redo/to_copy_local_manual/1_0_3/0/000003_check.npy',
-                '../data/camera_calibration_frames_redo/to_copy_local_manual/1_1_2/1/000003_check.npy']
+    file_dets = ['../data/camera_calibration_frames_redo/to_copy_local_manual/2_0_1_2_3/0/000000_check.npy',
+                '../data/camera_calibration_frames_redo/to_copy_local_manual/2_0_1_2_3/1/000000_check.npy']
+    out_dir_calib = '../data/camera_calibration_frames_redo/to_copy_local_manual'
     
     int_files = [os.path.join(out_dir_intrinsic,str(cell_num)+'_'+str(view)+'.npz') for view in views]
     
@@ -754,10 +761,21 @@ def script_calibrate_center_board():
         
         # print (idx_view, idx_view//2)
         corners = np.load(file_dets[idx_view//2])[idx_view%2,:,:]
-        corners = np.reshape(corners,(check_rows,check_cols,2))
-        corners = corners[::-1,:,:]
-        corners = np.reshape(corners,(check_rows*check_cols,2))
-        retval, rvec, tvec  =   cv2.solvePnP(objp[np.newaxis,:,:],  corners[np.newaxis,:,:], mtx, dist)
+        if cell_num==1:
+            corners = np.reshape(corners,(check_rows,check_cols,2))
+            corners = corners[::-1,:,:]
+            corners = np.reshape(corners,(check_rows*check_cols,2))
+            retval, rvec, tvec  =   cv2.solvePnP(objp[np.newaxis,:,:],  corners[np.newaxis,:,:], mtx, dist)
+        elif view==0:
+            load_dict = np.load(os.path.join(out_dir_calib,'1_'+str(view)+'.npz'))
+            rvec_guess = load_dict['rvec']
+            tvec_guess = load_dict['tvec']
+            # print (rvec_guess,tvec_guess)
+            retval, rvec, tvec  =   cv2.solvePnP(objp[np.newaxis,:,:],  corners[np.newaxis,:,:], mtx, dist, rvec_guess, tvec_guess, True)
+        else:
+            retval, rvec, tvec  =   cv2.solvePnP(objp[np.newaxis,:,:],  corners[np.newaxis,:,:], mtx, dist)
+
+        
         # print (rvec)
         rot,jacob = cv2.Rodrigues(rvec)
         # print (rot)
@@ -768,6 +786,10 @@ def script_calibrate_center_board():
         print (view)
         print (camera_pos)
         print ('')
+
+        out_file = os.path.join(out_dir_calib,'_'.join([str(val) for val in [cell_num,view]])+'.npz')
+        print (out_file)
+        np.savez(out_file,rvec = rvec, tvec= tvec)
 
         # ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objp[np.newaxis,:,:], corners[np.newaxis,:,:], (w,h), mtx, None, flags = cv2.CALIB_USE_INTRINSIC_GUESS)
         # cv2.calibrateCamera(objpoints, imgpoints, (w,h), mtx, None, flags = cv2.CALIB_USE_INTRINSIC_GUESS)
@@ -813,11 +835,11 @@ def main():
 
     # script_calibrate_manual()
 
-    # script_calibrate_center_board()
+    script_calibrate_center_board()
 
 
 
-    # return
+    return
     meta_dir = '../data/camera_calibration_frames_redo'
     interval_str = '20200317130703_131800'
     out_dir = os.path.join(meta_dir, 'ims_to_keep')
@@ -849,8 +871,8 @@ def main():
     # views = [str(val) for val in [1,2]]
     # file_nums = [166,283,656,271,293]
     cell_num = str(2)
-    views = [str(val) for val in [0,1,2,3]]
-    file_nums = [567]
+    views = [str(val) for val in [0]]
+    file_nums = [561]
     # out_dir = '1_0_3'
 
     for idx_file_num, file_num in enumerate(file_nums):
@@ -862,7 +884,7 @@ def main():
             in_dir = os.path.join(meta_dir,'cell'+cell_num,interval_str,view)
             # for idx_file_num,file_num in enumerate(file_nums):
             in_file = os.path.join(in_dir,'ce_00_'+view+'_%06d.jpg'%file_num)
-            out_file = os.path.join(out_dir_curr,'%06d.jpg'%idx_file_num)
+            out_file = os.path.join(out_dir_curr,'%06d.jpg'%idx_file_num+1)
             print (in_file,out_file,os.path.exists(in_file))
             shutil.copyfile(in_file, out_file)
 
