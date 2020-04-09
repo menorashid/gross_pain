@@ -72,7 +72,7 @@ class unet(nn.Module):
                  num_encoding_layers=5,
                  dimension_bg=256,
                  dimension_fg=256,
-                 dimension_3d=3*64, # needs to be devidable by 3
+                 dimension_3d=3*64, # needs to be divisible by 3
                  latent_dropout=0.3,
                  shuffle_fg=True,
                  shuffle_3d=True,
@@ -258,11 +258,17 @@ class unet(nn.Module):
         if not rotation_by_user:
             if self.shuffle_fg and self.training==True:
                 for i in range(0,num_pose_subbatches):
+                    # Shuffle appearance samples randomly within subbatches
+                    # For instance:
+                    # [0, 1, 3, 2, 7, 4, 6, 5, 11, 8, 9, 10, 13, 12, 15, 14] 
                     shuffle_segment(shuffled_appearance, i*self.subbatch_size, (i+1)*self.subbatch_size)
-                for i in range(0,num_pose_subbatches//2): # flip first with second subbatch
+                for i in range(0,num_pose_subbatches//2): # Switch first with second subbatch, for each pair of subbatches
+                    # Result for above example:
+                    # [7, 4, 6, 5, 0, 1, 3, 2, 13, 12, 15, 14, 11, 8, 9, 10] 
                     flip_segment(shuffled_appearance, i*2*self.subbatch_size, self.subbatch_size)
             if self.shuffle_3d:
                 for i in range(0,num_pose_subbatches):
+                    # Shuffle pose samples randomly within subbatches
                     shuffle_segment(shuffled_pose, i*self.subbatch_size, (i+1)*self.subbatch_size)
                  
         # infer inverse mapping
@@ -291,15 +297,15 @@ class unet(nn.Module):
                 external_glob = input_dict['external_rotation_global'].view(1,3,3).expand( (batch_size, 3, 3) )
                 cam2cam = torch.bmm(external_cam,torch.bmm(world_2_cam, torch.bmm(external_glob, cam_2_world)))
             else:
-                world_2_cam_suffled = torch.index_select(world_2_cam, dim=0, index=shuffled_pose)
-                cam2cam = torch.bmm(world_2_cam_suffled, cam_2_world)
+                world_2_cam_shuffled = torch.index_select(world_2_cam, dim=0, index=shuffled_pose)
+                cam2cam = torch.bmm(world_2_cam_shuffled, cam_2_world)
         
         input_dict_cropped = input_dict # fallback to using crops
             
         ###############################################
         # encoding stage
         ns=0
-        has_fg = hasattr(self, "to_fg")
+        has_fg = hasattr(self, "to_fg")  # If latent_fg dim > 0
         if self.encoderType == "ResNet":
             #IPython.embed()
             output = self.encoder.forward(input_dict_cropped)['latent_3d']
@@ -312,7 +318,7 @@ class unet(nn.Module):
                 out_enc_conv = getattr(self, 'conv_'+str(li)+'_stage' + str(ns))(out_enc_conv)
                 out_enc_conv = getattr(self, 'pool_'+str(li)+'_stage' + str(ns))(out_enc_conv)
             out_enc_conv = getattr(self, 'conv_'+str(self.num_encoding_layers)+'_stage' + str(ns))(out_enc_conv)
-            # fully-connected
+            # reshape for fully-connected
             center_flat = out_enc_conv.view(batch_size,-1)
             if has_fg:
                 latent_fg = self.to_fg(center_flat)
@@ -337,6 +343,8 @@ class unet(nn.Module):
                 w = input_dict['shuffled_pose_weight']
                 # weighted average with the last one
                 latent_3d_rotated = (1-w.expand_as(latent_3d))*latent_3d + w.expand_as(latent_3d)*latent_3d_rotated[-1:].expand_as(latent_3d)
+        else:
+            latent_3d_rotated = latent_3d
 
         if has_fg:
             latent_fg_shuffled = torch.index_select(latent_fg, dim=0, index=shuffled_appearance)        
@@ -346,7 +354,7 @@ class unet(nn.Module):
 
         ###############################################
         # decoding
-        map_from_3d = self.from_latent(latent_3d.view(batch_size,-1))
+        map_from_3d = self.from_latent(latent_3d_rotated.view(batch_size,-1))
         map_width = self.bottleneck_resolution #out_enc_conv.size()[2]
         map_channels = self.filters[self.num_encoding_layers-1] #out_enc_conv.size()[1]
         if has_fg:
