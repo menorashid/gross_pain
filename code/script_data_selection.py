@@ -145,6 +145,8 @@ def get_all_on_times_in_interval(start, end, on_times):
 def check_if_camera_is_on(query_time, on_times, off_times):
     last_camera_on, _ = get_prev_closest_time(query_time, on_times)
     last_camera_off, _ = get_prev_closest_time(query_time, off_times)
+    if last_camera_on and (last_camera_off is None):
+        return True
     # np.datetime64 > None evaluates to True (if there is no prev off-time)
     return last_camera_on > last_camera_off
     
@@ -256,12 +258,12 @@ def format_intervals_for_csv(horse, pain, intervals_keep):
 
 def main():
     save_dir = '../data/frame_extraction_files/'
-    csv_path =  save_dir + 'overview_stable_nbn_correction.csv'
-    pain_times_file = save_dir + 'peak_pain.txt'
-    injection_times_file = save_dir + 'injection_times.txt'
-    bl_times_file = save_dir + 'pre_bl_cps_time.txt'
+    csv_path =  os.path.join(save_dir, 'overview_stable_nbn_correction.csv')
+    pain_times_file = os.path.join(save_dir, 'peak_pain.txt')
+    injection_times_file = os.path.join(save_dir, 'injection_times.txt')
+    bl_times_file = os.path.join(save_dir, 'pre_bl_cps_time.txt')
 
-    out_file = save_dir + 'pain_no_pain_x{}h_intervals_for_extraction.csv'.format(NB_HOURS)
+    out_file = os.path.join(save_dir, 'pain_no_pain_x{}h_intervals_for_extraction.csv'.format(NB_HOURS))
 
     required_time = np.timedelta64(NB_HOURS,'h')
 
