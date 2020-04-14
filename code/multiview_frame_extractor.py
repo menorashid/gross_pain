@@ -428,6 +428,8 @@ class MultiViewFrameExtractor():
                     vid_time = vid_time +  pd.to_timedelta(-1*offset, unit='s')
                     # print (vid_name, vid_time, offset)
                     # s = input()
+            # else:
+            #     print ('PROBLEM! video offset not found!')
 
         return vid_time
 

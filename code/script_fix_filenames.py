@@ -291,23 +291,32 @@ def main():
     # util.mkdir(out_dir_check)
     # write_md_for_manual_check(offsets, out_dir_check, md_file)
 
-    old_off_df = pd.read_csv(out_file_offsets_old)
+    # old_off_df = pd.read_csv(out_file_offsets_old)
 
-    offsets = pd.read_csv(out_file_offsets_manual)
-    for idx_row, row in offsets.iterrows():
-        offsets.at[idx_row,'im_file'] = os.path.split(row['im_file'])[1][:-4]
+    # offsets = pd.read_csv(out_file_offsets_manual)
+    # for idx_row, row in offsets.iterrows():
+    #     offsets.at[idx_row,'im_file'] = os.path.split(row['im_file'])[1][:-4]
     
-    offsets = offsets.rename(columns={"im_file": "video_name"})
-    print (offsets)
-    print (offsets.iloc[39])
-    offsets = pd.concat([ offsets,old_off_df], axis =0).reset_index()
-    print (offsets)
-    print (offsets.iloc[39])
-    # offsets.to_csv(out_file_offsets_all,columns = ['im_file','offset'], index = False)
-    offsets.to_csv(out_file_final, columns = ['video_name','offset'],index = False)
+    # offsets = offsets.rename(columns={"im_file": "video_name"})
+    # print (offsets)
+    # print (offsets.iloc[39])
+    # offsets = pd.concat([ offsets,old_off_df], axis =0).reset_index()
+    # print (offsets)
+    # print (offsets.iloc[39])
+    # # offsets.to_csv(out_file_offsets_all,columns = ['im_file','offset'], index = False)
+    # offsets.to_csv(out_file_final, columns = ['video_name','offset'],index = False)
 
 
-
+    out_dir_testing = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps'
+    util.mkdir(out_dir_testing)
+    mve = MultiViewFrameExtractor(data_path = data_path, width= 128, height = 128, frame_rate = 2., output_dir = out_dir_testing,views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count(), offset_file = out_file_final)
+    # video_paths = util.readLinesFromFile(out_file)
+    # print (len(video_paths))
+    # mve.get_videos_containing_intervals()
+    # print ('now checking')
+    # for video_path in video_paths:
+    #     mve._get_video_start_time(video_path)
+    mve.extract_frames(replace = False)
 
 
 
