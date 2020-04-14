@@ -68,9 +68,9 @@ def fix_offset_files(offset_files):
 
 def main():
 
-    out_dir = '../scratch/check_first_frames'
-    out_dir_txt = '../scratch/check_first_frames_txt'
-    out_file_offsets = '../metadata/video_offsets_manual.csv'
+    out_dir = '../scratch/check_first_frames_with_cam_on'
+    out_dir_txt = '../scratch/check_first_frames_with_cam_on_txt'
+    out_file_offsets = '../metadata/fixing_offsets_with_cam_on/video_offsets_manual.csv'
     util.mkdir(out_dir_txt)
 
     times_file = os.path.join(out_dir,'times.npy')

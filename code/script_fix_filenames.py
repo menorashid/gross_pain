@@ -14,11 +14,15 @@ import scripts_for_visualization as sfv
 
 def extract_first_frames(vid_files, out_dir):
     # extract first frame
+    # print (len(vid_files))
+    # counter = 0
     for vid_file in vid_files:
         out_file = os.path.join(out_dir, os.path.split(vid_file)[1].replace('.mp4','.jpg'))
-        # if not os.path.exists(out_file):
-        command = ['ffmpeg', '-i', vid_file, '-y', '-vframes', '1', '-f', 'image2', out_file]
-        subprocess.call(command)
+        if not os.path.exists(out_file):
+            # counter+=1
+            command = ['ffmpeg', '-i', vid_file, '-y', '-vframes', '1', '-f', 'image2', out_file]
+            subprocess.call(command)
+    # print ('counter',counter)
         
     # view first frames
     visualize.writeHTMLForFolder(out_dir, height = 506, width = 896)
@@ -121,15 +125,17 @@ def write_md_for_manual_check(offsets, out_dir_check, md_file ):
     util.writeFile(md_file, md_rows)
 
 
-def main():
+def script_for_offsets_original():
     data_path = '../data/lps_data/surveillance_camera'
     
     data_selection_path = '../metadata/intervals_for_debugging.csv'
     
     out_dir_offsets = '../metadata/fixing_offsets'
     out_file = os.path.join(out_dir_offsets,'intervals_for_extraction_video_file_list.txt')
+    
     out_file_offsets_auto = os.path.join(out_dir_offsets,'video_offsets_auto.csv')
     out_file_offsets_manual = os.path.join(out_dir_offsets,'video_offsets_manual.csv')
+
     out_file_offsets_all = os.path.join(out_dir_offsets,'video_offsets_all.csv')
     out_file_corrected_offsets = os.path.join(out_dir_offsets,'corrected_offsets.csv')
     out_file_final =  os.path.join(out_dir_offsets,'video_offsets_final.csv')
@@ -143,14 +149,12 @@ def main():
     util.mkdir(out_dir)
 
     ## step 1 - get videos needed for our intervals
-
     # mve = MultiViewFrameExtractor(data_path = data_path, width= 2688, height = 1520, frame_rate = 1., output_dir = out_dir,
     #              views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count())
     # video_paths = mve.get_videos_containing_intervals()
     # util.writeFile(out_file, video_paths)
 
-    ## step 2 - extract their first frames. make an im list file
-
+    # step 2 - extract their first frames. make an im list file
     # vid_files = util.readLinesFromFile(out_file)
     # vid_files = list(set(vid_files))
     # print (len(vid_files))
@@ -162,7 +166,6 @@ def main():
 
     ## step 3 - do ocr to automatically get first frame times. save time array
     ## time np array is nx3. each row is [file idx, video time (int), frame time (int)]
-
     # im_files = util.readLinesFromFile(im_list_file)
     # arr = []    
     # for idx_im_file, im_file in enumerate(im_files):
@@ -176,10 +179,10 @@ def main():
 
     ## step 4 - make list of files for manual checking
     ## save auto offsets as csv
-
     # im_files = util.readLinesFromFile(im_list_file)
     # times_arr = np.load(times_file)
     # sort_auto_and_manual_checks(im_files, times_arr, out_file_offsets_auto, out_file_manual_check)
+
 
     ## step 5 - do the manual checking . code in script_fix_filenames_local
     ## results of manual offsets are also in a csv now
@@ -220,11 +223,11 @@ def main():
     # offsets.to_csv(out_file_final, index = False)
 
     ## step 9 - extract frames with and without offsets and view difference
-    data_selection_path = '../metadata/intervals_for_extraction.csv'
-    out_dir_testing = '../data/intervals_for_extraction_camera_adjusted_128_128_2fps'
-    util.mkdir(out_dir_testing)
-    mve = MultiViewFrameExtractor(data_path = data_path, width= 128, height = 128, frame_rate = 2., output_dir = out_dir_testing,views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count(), offset_file = out_file_final)
-    mve.extract_frames(replace = False)
+    # data_selection_path = '../metadata/intervals_for_extraction.csv'
+    # out_dir_testing = '../data/intervals_for_extraction_camera_adjusted_128_128_2fps'
+    # util.mkdir(out_dir_testing)
+    # mve = MultiViewFrameExtractor(data_path = data_path, width= 128, height = 128, frame_rate = 2., output_dir = out_dir_testing,views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count(), offset_file = out_file_final)
+    # mve.extract_frames(replace = False)
 
     # dirs_to_check = [dir_curr for dir_curr in glob.glob(os.path.join(out_dir_testing,'*','*')) if os.path.isdir(dir_curr)]
     # print (dirs_to_check)
@@ -245,6 +248,63 @@ def main():
     # mve = MultiViewFrameExtractor(data_path = data_path, width= 2688, height = 1520, frame_rate = 1., output_dir = out_dir,
     #              views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count())
     # mve.extract_frames()
+
+def main():
+    data_path = '../data/lps_data/surveillance_camera'
+    
+    data_selection_path = '../metadata/pain_no_pain_x2h_intervals_for_extraction.csv'
+    
+    out_dir_offsets = '../metadata/fixing_offsets_with_cam_on'
+    out_file = os.path.join(out_dir_offsets,'intervals_for_extraction_video_file_list.txt')
+    
+
+    out_file_offsets_old =  os.path.join('../metadata/fixing_offsets','video_offsets_final.csv')
+    out_file_final =  os.path.join(out_dir_offsets,'video_offsets_final.csv')
+
+    # hack. use old all offsets file as auto offsets for this one.
+    out_file_offsets_manual = os.path.join(out_dir_offsets,'video_offsets_manual.csv')
+
+    out_file_offsets_all = os.path.join(out_dir_offsets,'video_offsets_all.csv')
+    out_file_corrected_offsets = os.path.join(out_dir_offsets,'corrected_offsets.csv')
+    
+    data_selection_path_for_testing = os.path.join(out_dir_offsets, 'intervals_to_test.csv')
+    util.mkdir(out_dir_offsets)
+    
+    out_dir = '../scratch/check_first_frames_with_cam_on'
+    times_file = os.path.join(out_dir,'times.npy')
+    out_file_manual_check = os.path.join(out_dir,'manual_check.txt')
+    im_list_file = os.path.join(out_dir,'im_list.txt')
+    util.mkdir(out_dir)
+
+    # old_off_df = pd.read_csv(out_file_offsets_old)
+    # im_list = util.readLinesFromFile(im_list_file)
+    # im_names = np.array([os.path.split(path)[1][:-4] for path in im_list])
+    # off_vid = np.array(old_off_df['video_name'].values)
+    # to_check = np.in1d(im_names,off_vid,invert = True)
+    # im_list_manual = np.array(im_list)[to_check]
+    # util.writeFile(out_file_manual_check,im_list_manual)
+
+    # offsets = pd.read_csv(out_file_offsets_manual)
+    # print (offsets)
+    # out_dir_check = '../scratch/check_times_with_cam_on'
+    # md_file = os.path.join(out_dir_check,'double_check.md')
+    # util.mkdir(out_dir_check)
+    # write_md_for_manual_check(offsets, out_dir_check, md_file)
+
+    old_off_df = pd.read_csv(out_file_offsets_old)
+
+    offsets = pd.read_csv(out_file_offsets_manual)
+    for idx_row, row in offsets.iterrows():
+        offsets.at[idx_row,'im_file'] = os.path.split(row['im_file'])[1][:-4]
+    
+    offsets = offsets.rename(columns={"im_file": "video_name"})
+    print (offsets)
+    print (offsets.iloc[39])
+    offsets = pd.concat([ offsets,old_off_df], axis =0).reset_index()
+    print (offsets)
+    print (offsets.iloc[39])
+    # offsets.to_csv(out_file_offsets_all,columns = ['im_file','offset'], index = False)
+    offsets.to_csv(out_file_final, columns = ['video_name','offset'],index = False)
 
 
 

@@ -239,7 +239,11 @@ class MultiViewFrameExtractor():
                         video_paths.append(video_path)
 
                     video_end, _, _ = self._find_video_and_its_duration(subject, view, end_interval)
-                    assert (video_end == video_paths[-1])
+                    # print (video_end, video_paths[-1],curr_time,end_interval)
+                    if video_end !=video_paths[-1]:
+                        video_paths.append(video_end)
+                        print ('potential problem', video_paths[-1], video_end, end_interval)
+                    # assert (video_end == video_paths[-1])
 
         return video_paths
                     
