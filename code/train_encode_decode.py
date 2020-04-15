@@ -8,7 +8,6 @@ from multiview_dataset import MultiViewDataset, MultiViewDatasetSampler
 import os, shutil
 
 import numpy as np
-import IPython
 
 from models import unet_encode3D
 from rhodin.python.losses import generic as losses_generic
