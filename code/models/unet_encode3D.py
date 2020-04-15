@@ -3,7 +3,6 @@ from torch.nn import Linear
 from torch.nn import ReLU
 from torch.nn import Dropout
 
-import IPython
 import random
 import torch
 import torch.autograd as A
@@ -307,7 +306,6 @@ class unet(nn.Module):
         ns=0
         has_fg = hasattr(self, "to_fg")  # If latent_fg dim > 0
         if self.encoderType == "ResNet":
-            #IPython.embed()
             output = self.encoder.forward(input_dict_cropped)['latent_3d']
             if has_fg:
                 latent_fg = output[:,:self.dimension_fg]
