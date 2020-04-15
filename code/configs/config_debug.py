@@ -1,14 +1,28 @@
-numJoints = 17
+# Kinematic tree for humans, from h36m
+# num_joints = 17
+# bones = [[0, 1], [1, 2], [2, 3],
+#              [0, 4], [4, 5], [5, 6],
+#              [0, 7], [7, 8], [8, 9], [9, 10],
+#              [8, 14], [14, 15], [15, 16],
+#              [8, 11], [11, 12], [12, 13],
+#             ]
+
+# Kinematic tree for horses
+num_joints = 36
+joint_names = ['pelvis', 'pelvis0', 'spine', 'spine0', 'spine1', 'spine2', 'spine3', 'LLeg1', 'LLeg2', 'LLeg3', 'LFoot', 'RLeg1', 'RLeg2', 'RLeg3', 'RFoot', 'Neck', 'Neck1', 'Head', 'LLegBack1', 'LLegBack2', 'LLegBack3', 'LFootBack', 'RLegBack1', 'RLegBack2', 'RLegBack3', 'RFootBack', 'Tail1', 'Tail2', 'Tail3', 'Tail4', 'Tail5', 'Tail6', 'Tail7', 'Mouth', 'LEar', 'REar']
+bones = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [6, 11], [11, 12], [12, 13], [13, 14], [6, 15], [15, 16], [16, 17], [0, 18], [18, 19], [19, 20], [20, 21], [0, 22], [22, 23], [23, 24], [24, 25], [0, 26], [26, 27], [27, 28], [28, 29], [29, 30], [30, 31], [31, 32], [17, 33], [17, 34], [17, 35]]
+
 inputDimension = 128
 
 config_dict = {
     # General parameters
     'dpi'                     : 190,
     'input_types'             : ['img_crop', 'bg_crop'],
-    'output_types'            : ['img_crop'],
+    'output_types'            : ['img_crop', '3D'],
     'label_types_train'       : ['img_crop'],
     'label_types_test'        : ['img_crop'],
     'num_workers'             : 4,
+    'bones'                   : bones,
 
     # opt parameters    
     'num_epochs'              : 1,
@@ -33,7 +47,7 @@ config_dict = {
     # network parameters
     'batch_size_train' : 16,
     'batch_size_test' : 16, #10 #self.batch_size # Note, needs to be = self.batch_size for multi-view validation
-    'outputDimension_3d' : numJoints * 3,
+    'outputDimension_3d' : num_joints * 3,
     'outputDimension_2d' : inputDimension // 8,
 
     # loss 

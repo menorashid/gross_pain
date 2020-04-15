@@ -14,6 +14,9 @@ bones = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9],
 
 inputDimension = 128
 
+# network_path = '../output/trainNVS_69705_UNet_layers4_implRFalse_w3Dp0_w3D0_wRGB1_wGrad0o01_wImgNet2_skipBGTrue_bg0_fg24_3d600_lh3Dp2_ldrop0o3_billinupper_fscale4_shuffleFGTrue_shuffle3dTrue_LPS_2fps_nth1_cFalse_train[\'as\'_\'br\'_\'he\'_\'in\'_\'ju\'_\'ka\'_\'si\']_test[\'na\']_bs4_lr0o001_'
+network_path = '../output/everynth1_test_on_nbn/dir/'
+
 config_dict = {
     # General parameters
     'dpi'                     : 190,
@@ -27,6 +30,8 @@ config_dict = {
     'label_types_test'        : ['img_crop'],
     'num_workers'             : 4,
     'bones'                   : bones,
+
+    'pretrained_network_path' : network_path + 'models/network_best_val_t1.pth',
 
     # opt parameters    
     'num_epochs'              : 3,
