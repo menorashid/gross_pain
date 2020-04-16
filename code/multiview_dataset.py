@@ -80,10 +80,11 @@ class MultiViewDataset(Dataset):
 
         def load_image(name):
             return np.array(self.transform_in(imageio.imread(name)), dtype='float32')
-
+        
         def load_data(types):
             new_dict = {}
             for key in types:
+                print (key)
                 if key == 'img_crop':
                     new_dict[key] = load_image(get_image_path(key)) 
                 elif key == 'bg_crop':
