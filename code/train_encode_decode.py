@@ -99,7 +99,15 @@ class IgniteTrainNVS:
     
             # save the best model
             utils_train.save_model_state(save_path, trainer, avg_accuracy, model, optimizer, engine.state)
-    
+        
+        @trainer.on(Events.EPOCH_COMPLETED)
+        # @trainer.on(Events.ITERATION_COMPLETED)
+        def save_model(engine):
+            epoch = engine.state.epoch
+            print ('epoch',epoch,'engine.state.iteration',engine.state.iteration)
+            if not epoch % config_dict['save_every']: # +1 to prevent evaluation at iteration 0
+                utils_train.save_model_state_iter(save_path, trainer, model, optimizer, engine.state)
+
         # print test result
         @evaluator.on(Events.ITERATION_COMPLETED)
         def log_test_loss(engine):
@@ -205,7 +213,8 @@ class IgniteTrainNVS:
                                    bg_folder=config_dict['bg_folder'],
                                    input_types=config_dict['input_types'],
                                    label_types=config_dict['label_types_train'],
-                                   subjects=config_dict['train_subjects'])
+                                   subjects=config_dict['train_subjects'],
+                                   rot_folder = config_dict['rot_folder'])
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_train'],
               subjects=config_dict['train_subjects'],
@@ -223,7 +232,8 @@ class IgniteTrainNVS:
                                    bg_folder=config_dict['bg_folder'],
                                    input_types=config_dict['input_types'],
                                    label_types=config_dict['label_types_test'],
-                                   subjects=config_dict['test_subjects'])
+                                   subjects=config_dict['test_subjects'],
+                                   rot_folder = config_dict['rot_folder'])
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_test'],
                                                 subjects=config_dict['test_subjects'],
@@ -269,7 +279,9 @@ class IgniteTrainNVS:
     def get_parameter_description(self, config_dict):
         shorter_train_subjects = [subject[:2] for subject in config_dict['train_subjects']]
         shorter_test_subjects = [subject[:2] for subject in config_dict['test_subjects']]
-        folder = "../output/trainNVS_{job_identifier}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}_skipBG{skip_background}_bg{latent_bg}_fg{latent_fg}_3d{latent_3d}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}_nth{every_nth_frame}_c{active_cameras}_train{}_test{}_bs{use_view_batches}_lr{learning_rate}_".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
+        # folder = "../output/trainNVS_{job_identifier}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}_skipBG{skip_background}_bg{latent_bg}_fg{latent_fg}_3d{latent_3d}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}_nth{every_nth_frame}_c{active_cameras}_train{}_test{}_bs{use_view_batches}_lr{learning_rate}_".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
+
+        folder = "../output/trainNVS_{job_identifier}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}/skipBG{skip_background}_bg{latent_bg}_fg{latent_fg}_3d{latent_3d}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_bs{use_view_batches}_lr{learning_rate}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
         folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
         return folder
 
@@ -297,6 +309,7 @@ if __name__ == "__main__":
     config_dict['job_identifier'] = args.job_identifier
     config_dict['train_subjects'] = train_subjects
     config_dict['test_subjects'] = test_subjects
+    
     ignite = IgniteTrainNVS()
     ignite.run(config_dict_module.__file__, config_dict)
 
