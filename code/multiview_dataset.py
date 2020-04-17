@@ -88,6 +88,10 @@ class MultiViewDataset(Dataset):
                     new_dict[key] = load_image(get_image_path(key)) 
                 elif key == 'bg_crop':
                     new_dict[key] = load_image(get_bg_path(view, subject))
+                elif key == 'pain':
+                    new_dict[key] = int(self.label_dict[key][index])
+                elif key == 'view':
+                    new_dict[key] = int(self.label_dict[key][index])
                 else:
                     new_dict[key] = np.array(self.label_dict[key][index], dtype='float32')
             return new_dict
