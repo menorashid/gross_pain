@@ -19,7 +19,7 @@ from tqdm import tqdm
 class MultiViewDataset(Dataset):
     """Multi-view surveillance dataset of horses in their box."""
     def __init__(self, data_folder, bg_folder,
-                 input_types, label_types, subjects,
+                 input_types, label_types, subjects,rot_folder=None,
                  mean=(0.485, 0.456, 0.406),  #TODO update these to horse dataset.
                  stdDev= (0.229, 0.224, 0.225),
                  use_sequential_frames=0,
@@ -33,6 +33,8 @@ class MultiViewDataset(Dataset):
 
         for arg,val in list(locals().items()):
             setattr(self, arg, val)
+
+        self.lookup_viewpoint = pd.read_csv('../metadata/viewpoints.csv')
 
         class Image256toTensor(object):
             def __call__(self, pic):
@@ -73,10 +75,16 @@ class MultiViewDataset(Dataset):
                                                                 view,
                                                                 frame_id)
         def get_bg_path(view, subject):
-            lookup_viewpoint = pd.read_csv('../metadata/viewpoints.csv').set_index('subject')
+            lookup_viewpoint = self.lookup_viewpoint.set_index('subject')
             camera = int(lookup_viewpoint.at[subject, str(view)])
             bg_path = self.bg_folder + 'median_0.1fps_camera_{}.jpg'.format(camera-1)
             return bg_path
+
+        def get_rot_path(view, subject, key):
+            lookup_viewpoint = self.lookup_viewpoint.set_index('subject')
+            camera = int(lookup_viewpoint.at[subject, str(view)])
+            rot_path = self.rot_folder + '{}_{}.npy'.format(key,camera)
+            return rot_path            
 
         def load_image(name):
             return np.array(self.transform_in(imageio.imread(name)), dtype='float32')
@@ -84,11 +92,14 @@ class MultiViewDataset(Dataset):
         def load_data(types):
             new_dict = {}
             for key in types:
-                print (key)
                 if key == 'img_crop':
                     new_dict[key] = load_image(get_image_path(key)) 
                 elif key == 'bg_crop':
                     new_dict[key] = load_image(get_bg_path(view, subject))
+                elif (key=='extrinsic_rot') or (key=='extrinsic_rot_inv'):
+                    rot_path = get_rot_path(view,subject,key)
+                    new_dict[key] = np.load(rot_path)
+                    # print (new_dict[key])
                 else:
                     new_dict[key] = np.array(self.label_dict[key][index], dtype='float32')
             return new_dict
@@ -221,26 +232,42 @@ def get_label_dict(data_folder, subjects):
 
 
 if __name__ == '__main__':
-    config_dict_module = rhodin_utils_io.loadModule("configs/config_train.py")
+    config_dict_module = rhodin_utils_io.loadModule("configs/config_train_rotation_bl.py")
     config_dict = config_dict_module.config_dict
+    print (config_dict['save_every'])
+    train_subjects = ['aslan','brava','herrera','julia','kastanjett','naughty_but_nice','sir_holger']
+    config_dict['train_subjects'] = train_subjects
+    dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_train'],
+                                   bg_folder=config_dict['bg_folder'],
+                                   input_types=config_dict['input_types'],
+                                   label_types=config_dict['label_types_train'],
+                                   subjects = config_dict['train_subjects'],
+                                   rot_folder = config_dict['rot_folder'])
 
-    dataset = MultiViewDataset(
-                 data_folder=config_dict['data_dir_path'],
-                 input_types=['img_crop'], label_types=['img_crop'])
-
-    batch_sampler = MultiViewDatasetSampler(
-                 data_folder=config_dict['data_dir_path'],
-                 use_subject_batches=1, use_view_batches=2,
-                 batch_size=8,
-                 randomize=True)
+    # batch_sampler = MultiViewDatasetSampler(
+    #              data_folder=config_dict['data_dir_path'],
+    #              use_subject_batches=1, use_view_batches=2,
+    #              batch_size=8,
+    #              randomize=True)
+    
+    batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_train'],
+              subjects=config_dict['train_subjects'],
+              use_subject_batches=config_dict['use_subject_batches'], use_view_batches=config_dict['use_view_batches'],
+              batch_size=config_dict['batch_size_train'],
+              randomize=True,
+              every_nth_frame=config_dict['every_nth_frame'])
+    
+    # loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler, num_workers=0, pin_memory=False,
+                                             # collate_fn=rhodin_utils_datasets.default_collate_with_string)
 
     trainloader = DataLoader(dataset, batch_sampler=batch_sampler,
                              num_workers=0, pin_memory=False,
                              collate_fn=rhodin_utils_datasets.default_collate_with_string)
-    import ipdb; ipdb.set_trace()
+    # import ipdb; ipdb.set_trace()
 
     data_iterator = iter(trainloader)
     input_dict, label_dict = next(data_iterator)
+    print (input_dict.keys(), label_dict.keys())
 
 
     print('Number of frames in dataset: ', len(dataset))

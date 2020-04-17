@@ -823,7 +823,6 @@ def script_calibrate_center_board():
     # ask johan to do what's needed with a bigger board
 
 
-
 def main():
     # fix_filenames()
     # extract_calibration_vid_frames()

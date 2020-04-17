@@ -14,6 +14,7 @@ from rhodin.python.models import resnet_VNECT_3Donly
 
 from rhodin.python.models.unet_utils import *
 from rhodin.python.models import MLP
+raw_input = input
 
 def quatCompact2mat(quat):
     """Convert quaternion coefficients to rotation matrix.
@@ -268,6 +269,7 @@ class unet(nn.Module):
             if self.shuffle_3d:
                 for i in range(0,num_pose_subbatches):
                     # Shuffle pose samples randomly within subbatches
+                    # print("shuffled_pose      in if",shuffled_pose)
                     shuffle_segment(shuffled_pose, i*self.subbatch_size, (i+1)*self.subbatch_size)
                  
         # infer inverse mapping
@@ -277,6 +279,7 @@ class unet(nn.Module):
             
         # print('self.training',self.training,"shuffled_appearance",shuffled_appearance)
         # print("shuffled_pose      ",shuffled_pose)
+        # s = raw_input()
             
         shuffled_appearance = torch.LongTensor(shuffled_appearance).to(device)
         shuffled_pose       = torch.LongTensor(shuffled_pose).to(device)
@@ -298,6 +301,7 @@ class unet(nn.Module):
             else:
                 world_2_cam_shuffled = torch.index_select(world_2_cam, dim=0, index=shuffled_pose)
                 cam2cam = torch.bmm(world_2_cam_shuffled, cam_2_world)
+                # print (cam2cam)
         
         input_dict_cropped = input_dict # fallback to using crops
             
@@ -322,6 +326,9 @@ class unet(nn.Module):
                 latent_fg = self.to_fg(center_flat)
             latent_3d = self.to_3d(center_flat).view(batch_size,-1,3)
         
+        # print (input_dict.keys(), input_dict['bg_crop'].shape)
+        # s = raw_input()
+
         if self.skip_background:
             input_bg = input_dict['bg_crop'] # TODO take the rotated one/ new view
             input_bg_shuffled = torch.index_select(input_bg, dim=0, index=shuffled_pose)
@@ -335,6 +342,7 @@ class unet(nn.Module):
                 encoded_latent_and_angle = torch.cat([latent_3d.view(batch_size,-1), encoded_angle], dim=1)
                 latent_3d_rotated = self.rotate_implicitely(encoded_latent_and_angle)
             else:
+                # print ('LADIES AND GENTLEMEN! WE ARE ROTATING!')
                 latent_3d_rotated = torch.bmm(latent_3d, cam2cam.transpose(1,2))
 
             if 'shuffled_pose_weight' in input_dict.keys():

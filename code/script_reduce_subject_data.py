@@ -28,10 +28,9 @@ def get_counts_indices(sdf, subject, data_dir_path):
                 subject_counter += 1
     return subject_counter, missing_inds 
 
-def main():
+def reduce_csvs():
     subjects = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
     data_dir_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps'
-
     subject_counters = []
     subject_dfs = []
     subject_missing_inds = []
@@ -66,7 +65,30 @@ def main():
         # print (reduced_dfs[ind])
         reduced_dfs[ind].to_csv(os.path.join(data_dir_path, subject + '_reduced_frame_index.csv'))
 
-    
+def sanity_check():
+    subjects = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
+    data_dir_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps'
+    sofia_dir = '../data/sofia_reduced'
+    import glob
+    csvs = glob.glob(os.path.join(sofia_dir,'*.csv'))
+    for csv_file in csvs:
+        m_file = os.path.join(data_dir_path,os.path.split(csv_file)[1])
+        data_all = []
+        for file_curr in [csv_file, m_file]:
+            with open(csv_file,'r') as f:
+                csv_data=f.read()
+                data_all.append(csv_data)
+                print (len(csv_data))
+                print (csv_data[:100])
+
+        assert (data_all[0]==data_all[1])
+
+def main():
+    pass
+
+        
+        
+
 
 if __name__=='__main__':
     main()

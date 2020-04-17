@@ -144,6 +144,24 @@ def save_model_state(save_path, engine, current_loss, model, optimizer, state):
         state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
         pickle.dump(state_variables, open(os.path.join(model_path,"state_best_val_t1.pickle"),'wb'))
 
+def save_model_state_iter(save_path, engine, model, optimizer, state):
+    # update the best value
+    # best_val = engine.state.metrics.get('best_val', 99999999)
+    # engine.state.metrics['best_val'] = np.minimum(current_loss, best_val)
+    
+    print("Saving model at epoch",state.epoch,"iter", state.iteration)
+    model_path = os.path.join(save_path,"models/")
+    if not os.path.exists(model_path):
+        os.makedirs(model_path)
+
+    str_file_name = '%03d'%state.epoch
+    torch.save(model.state_dict(), os.path.join(model_path,"network_"+str_file_name+".pth"))
+    torch.save(optimizer.state_dict(), os.path.join(model_path,"optimizer_"+str_file_name+".pth"))
+    state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
+    pickle.dump(state_variables, open(os.path.join(model_path,"state_"+str_file_name+".pickle"),'wb'))
+    
+
+
 # Fix of original Ignite Loss to not depend on single tensor output but to accept dictionaries
 from rhodin.python.ignite.metrics import Metric
 class AccumulatedLoss(Metric):
