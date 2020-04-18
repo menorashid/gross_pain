@@ -318,6 +318,9 @@ def main():
     #     mve._get_video_start_time(video_path)
     mve.extract_frames(replace = False)
 
+    # width 2688, height = 1520
+    # python extract_frames.py --data_path ../data/lps_data/surveillance_camera --output_dir ../data/intervals_testing_horse_det_w_h_0.01fps --csv_path ../metadata/intervals_testing_horse_det.csv --offset_file ../metadata/fixing_offsets_with_cam_on/video_offsets_final.csv --width 672 --height 380 --frame_rate 0.01 --view [0,1,2,3] 
+
 
 
 
