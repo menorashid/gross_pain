@@ -63,7 +63,7 @@ class IgniteTrainPain(train_encode_decode.IgniteTrainNVS):
     def get_parameter_description(self, config_dict):#, config_dict):
         shorter_train_subjects = [subject[:2] for subject in config_dict['train_subjects']]
         shorter_test_subjects = [subject[:2] for subject in config_dict['test_subjects']]
-        folder = "../output/trainNVSPain_{job_identifier}_{which_cnn}_pretr{pretrained_cnn}/{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_bs{use_view_batches}_lr{learning_rate}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
+        folder = "../output/trainNVSPain_{job_identifier}_{which_cnn}_pretr{pretrained_cnn}/{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_lr{learning_rate}_bstrain{batch_size_train}_bstest{batch_size_test}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
         folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
         return folder
 
@@ -110,6 +110,6 @@ if __name__ == "__main__":
     config_dict['train_subjects'] = train_subjects
     config_dict['test_subjects'] = test_subjects
 
-    ignite = IgniteTrainPose()
+    ignite = IgniteTrainPain()
     ignite.run(config_dict_module.__file__, config_dict)
 
