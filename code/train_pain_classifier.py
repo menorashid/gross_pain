@@ -109,6 +109,9 @@ if __name__ == "__main__":
     config_dict['job_identifier'] = args.job_identifier
     config_dict['train_subjects'] = train_subjects
     config_dict['test_subjects'] = test_subjects
+    config_dict['data_dir_path'] = args.dataset_path
+    config_dict['dataset_folder_train'] = args.dataset_path
+    config_dict['dataset_folder_test'] = args.dataset_path
 
     ignite = IgniteTrainPain()
     ignite.run(config_dict_module.__file__, config_dict)

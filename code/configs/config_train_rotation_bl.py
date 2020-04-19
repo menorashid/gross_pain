@@ -46,7 +46,6 @@ config_dict = {
     'views'                   : '[0,1,2,3]',
     'image_width'             : 128,
     'image_height'            : 128,
-    'data_dir_path'           : '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/',
 
     # network parameters
     'batch_size_train' : 64,
@@ -61,8 +60,6 @@ config_dict = {
     # dataset
     'bg_folder'            : '../data/median_bg/',
     'rot_folder': '../data/rotation_cal_1/',
-    'dataset_folder_train' : '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/',
-    'dataset_folder_test' : '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/',
     'training_set' : 'LPS_2fps',
     'img_mean' : (0.485, 0.456, 0.406),
     'img_std' : (0.229, 0.224, 0.225),

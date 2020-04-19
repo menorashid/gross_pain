@@ -22,12 +22,12 @@ config_dict = {
     'dpi'                     : 190,
     # Possible input types    : 'img_crop' | 'bg_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
     'input_types'             : ['img_crop', 'bg_crop'],
-    # Possible output types   :  'img_crop' | '3D'
-    'output_types'            : ['img_crop', '3D'],
+    # Possible output types   :  'img_crop' | '3D' | 'shuffled_pose' | 'shuffled_appearance' | 'latent_3d'
+    'output_types'            : ['img_crop', '3D', 'latent_3d'],
     # Possible lt train       : 'img_crop' | '3D' | 'bounding_box_cam' | 'intrinsic_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
     'label_types_train'       : ['img_crop'],
     # Possible lt test        : 'img_crop' | '3D' | 'bounding_box_cam' | 'intrinsic_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
-    'label_types_test'        : ['img_crop'],
+    'label_types_test'        : ['img_crop', 'pain', 'view'],
     'num_workers'             : 4,
     'bones'                   : bones,
 
@@ -51,7 +51,6 @@ config_dict = {
     'views'                   : '[0,1,2,3]',
     'image_width'             : 128,
     'image_height'            : 128,
-    'data_dir_path'           : '../data/intervals_for_extraction_128_128_2fps/',
 
     # network parameters
     'batch_size_train' : 16,
@@ -65,9 +64,7 @@ config_dict = {
 
     # dataset
     'bg_folder'            : '../data/median_bg/',
-    'dataset_folder_train' : '../data/intervals_for_extraction_128_128_2fps/',
-    'dataset_folder_test' : '../data/intervals_for_extraction_128_128_2fps/',
-    'training_set' : 'LPS_2fps',
+    'rot_folder'           : '../data/rotation_cal_1/',
     'img_mean' : (0.485, 0.456, 0.406),
     'img_std' : (0.229, 0.224, 0.225),
     'active_cameras' : False,

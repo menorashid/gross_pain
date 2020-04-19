@@ -290,6 +290,8 @@ def parse_arguments(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_file', type=str,
         help="Python file with config dictionary.")
+    parser.add_argument('--dataset_path', type=str,
+        help="Path to root folder for dataset.")
     parser.add_argument('--train_subjects', type=str,
         help="Which subjects to train on.")
     parser.add_argument('--test_subjects', type=str,
@@ -309,6 +311,9 @@ if __name__ == "__main__":
     config_dict['job_identifier'] = args.job_identifier
     config_dict['train_subjects'] = train_subjects
     config_dict['test_subjects'] = test_subjects
+    config_dict['data_dir_path'] = args.dataset_path
+    config_dict['dataset_folder_train'] = args.dataset_path
+    config_dict['dataset_folder_test'] = args.dataset_path
     
     ignite = IgniteTrainNVS()
     ignite.run(config_dict_module.__file__, config_dict)
