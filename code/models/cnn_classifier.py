@@ -18,8 +18,10 @@ class CNNClassifier(nn.Module):
 
         if self.which_cnn == 'resnet50':
             self.model = torchvision.models.resnet50(pretrained=True, progress=True)
-        if self.which_cnn == 'inceptionv3':
-            self.model = torchvision.models.inception_v3(pretrained=True, progress=True)
+        if self.which_cnn == 'inception_v3':
+            self.model = torchvision.models.inception_v3(pretrained=True,
+                                                         progress=True,
+                                                         aux_logits=False)
         num_features = self.model.fc.in_features
         self.model.fc = nn.Linear(num_features, self.num_classes)
 
@@ -31,6 +33,8 @@ class CNNClassifier(nn.Module):
 
     def forward(self, input_dict):
         x = input_dict['img_crop']
+        if self.which_cnn == 'inception_v3':  # Pad to 299x299
+            x = nn.functional.pad(input=x, pad=(85,86,85,86))
         y_pred = self.model(x)
         
         ###############################################
