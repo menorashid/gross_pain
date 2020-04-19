@@ -86,7 +86,6 @@ class IgniteTestNVS(train_encode_decode.IgniteTrainNVS):
                 output_dict_cuda = model(input_dict_cuda)
                 output_dict = rhodin_utils_datasets.nestedDictToDevice(output_dict_cuda, device='cpu')
         predict()
-        import ipdb; ipdb.set_trace()
 
 
 if __name__ == "__main__":
