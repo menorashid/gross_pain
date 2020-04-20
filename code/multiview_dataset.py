@@ -49,7 +49,7 @@ class MultiViewDataset(Dataset):
             Image256toTensor(), # torchvision.transforms.ToTensor() the torchvision one behaved differently for different pytorch versions, hence the custom one..
             torchvision.transforms.Normalize(self.mean, self.stdDev)
         ])
-        self.label_dict = get_label_dict(data_folder, subjects)
+        self.label_dict = get_label_df_for_subjects(data_folder, subjects).to_dict()
 
     def __len__(self):
         return len(self.label_dict['frame'])
@@ -111,6 +111,34 @@ class MultiViewDataset(Dataset):
         return load_data(self.input_types), load_data(self.label_types)
 
 
+class SimpleRandomFrameSampler(Sampler):
+    def __init__(self, data_folder, 
+                 subjects=None,
+                 views=None,
+                 every_nth_frame=1):
+        # Reduce frame index to wanted subjects and views
+        subject_label_df = get_label_df_for_subjects(data_folder, subjects)
+        subject_view_label_df = only_keep_wanted_views(subject_label_df, views)
+        # Get the wanted proportion of the data
+        subject_view_label_df = subject_view_label_df.sample(frac=1/every_nth_frame)
+        subject_view_label_df = subject_view_label_df.reset_index(drop=True)
+
+        self.label_dict = subject_view_label_df.to_dict()
+
+    def __len__(self):
+        return len(self.label_dict['frame'])
+
+    def __iter__(self):
+        index_list = []
+        data_length = len(self.label_dict['frame'])
+        with tqdm(total=data_length) as pbar:
+            for index in range(0, data_length):
+                pbar.update(1)
+                index_list.append(index)
+        return iter(index_list)
+
+
+
 class MultiViewDatasetSampler(Sampler):
     """ This sampler decides how to iterate over the indices in the dataset.
         Prepares batches of sub-batches, where a sub-batch contains
@@ -129,7 +157,7 @@ class MultiViewDatasetSampler(Sampler):
             setattr(self, arg, val)
 
         # build view/subject datastructure
-        self.label_dict = get_label_dict(data_folder, subjects)
+        self.label_dict = get_label_df_for_subjects(data_folder, subjects).to_dict()
         print('Establishing sequence association. Available labels:', list(self.label_dict.keys()))
         all_keys = set()
         viewsets = {}
@@ -168,7 +196,9 @@ class MultiViewDatasetSampler(Sampler):
                               for interval, keyset in interval_keys.items()}
 
         print("DictDataset: Done initializing, listed {} viewsets ({} frames) and {} sequences".format(
-                                            len(self.viewsets), len(self.all_keys), len(interval_keys)))
+                                            len(self.viewsets),
+                                            len(self.all_keys)*self.use_view_batches,
+                                            len(interval_keys)))
 
     def __len__(self):
         return len(self.label_dict['frame'])
@@ -224,15 +254,30 @@ class MultiViewDatasetSampler(Sampler):
         return iter(indices_batched.reshape([-1,self.batch_size]))
 
 
-def get_label_dict(data_folder, subjects):
+def only_keep_wanted_views(label_df, views):
+    all_views = [0,1,2,3]
+    if set(views) == set(all_views):
+        return label_df
+    else:
+        indices_to_drop = []
+        unwanted_views = set(all_views) - set(views)
+        for ind, row in label_df:
+            view = row['view']
+            if view in unwanted_views:
+                indices_to_drop.append(ind)
+        df_reduced = label_df.drop((label_df.index[indices_to_drop]))
+        df_reduced.reset_index(drop=True)
+        return df_reduced
+
+
+def get_label_df_for_subjects(data_folder, subjects):
     subject_fi_dfs = []
     print('Iterating over frame indices per subject (.csv files)')
     for subject in subjects:
         subject_frame_index_dataframe = pd.read_csv(data_folder + subject + '_reduced_frame_index.csv')
         subject_fi_dfs.append(subject_frame_index_dataframe)
     frame_index_df = pd.concat(subject_fi_dfs, ignore_index=True)
-    label_dict = frame_index_df.to_dict()
-    return label_dict
+    return frame_index_df
 
 
 if __name__ == '__main__':

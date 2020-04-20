@@ -12,7 +12,7 @@ import torch.nn
 
 import train_encode_decode
 import models.cnn_classifier as cnn_classifier
-from multiview_dataset import MultiViewDataset
+from multiview_dataset import MultiViewDataset, SimpleRandomFrameSampler
 from rhodin.python.losses import generic as losses_generic
 from rhodin.python.utils import datasets as rhodin_utils_datasets
 
@@ -73,10 +73,16 @@ class IgniteTrainPain(train_encode_decode.IgniteTrainNVS):
                                    input_types=config_dict['input_types'],
                                    label_types=config_dict['label_types_train'],
                                    subjects=config_dict['train_subjects'],
-                                   rot_folder = config_dict['rot_folder'])
+                                   rot_folder=config_dict['rot_folder'])
 
-        loader = torch.utils.data.DataLoader(dataset, batch_size=config_dict['batch_size_train'],
-                                             shuffle=True,
+        sampler = SimpleRandomFrameSampler(data_folder=config_dict['dataset_folder_train'],
+                                           subjects=config_dict['train_subjects'],
+                                           views=config_dict['views'],
+                                           every_nth_frame=config_dict['every_nth_frame'])
+                                           
+        loader = torch.utils.data.DataLoader(dataset,
+                                             batch_size=config_dict['batch_size_train'],
+                                             sampler=sampler,
                                              drop_last=True,
                                              num_workers=0, pin_memory=False,
                                              collate_fn=rhodin_utils_datasets.default_collate_with_string)
@@ -89,12 +95,18 @@ class IgniteTrainPain(train_encode_decode.IgniteTrainNVS):
                                    label_types=config_dict['label_types_test'],
                                    subjects=config_dict['test_subjects'],
                                    rot_folder = config_dict['rot_folder'])
-
-        loader = torch.utils.data.DataLoader(dataset, batch_size=config_dict['batch_size_train'],
-                                             shuffle=False,
+        sampler = SimpleRandomFrameSampler(data_folder=config_dict['dataset_folder_test'],
+                                           subjects=config_dict['test_subjects'],
+                                           views=config_dict['views'],
+                                           every_nth_frame=config_dict['every_nth_frame'])
+                                           
+        loader = torch.utils.data.DataLoader(dataset,
+                                             batch_size=config_dict['batch_size_test'],
+                                             sampler=sampler,
                                              drop_last=True,
                                              num_workers=0, pin_memory=False,
                                              collate_fn=rhodin_utils_datasets.default_collate_with_string)
+
         return loader
     
 

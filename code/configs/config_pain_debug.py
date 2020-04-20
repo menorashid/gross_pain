@@ -23,7 +23,7 @@ config_dict = {
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
     'test_every'              : 1000,
     'plot_every'              : 5000,
-    'print_every'             : 100,
+    'print_every'             : 10,
 
     # LPS dataset parameters
     
@@ -32,7 +32,7 @@ config_dict = {
     #               then clock-wise -- FR=1, BR=2, BL=3. Front being the side facing
     #               the corridor, and R/L as defined from inside of the box.)
 
-    'views'                   : '[0,1,2,3]',
+    'views'                   : [0,1,2,3],
     'image_width'             : 128,
     'image_height'            : 128,
 
@@ -62,7 +62,7 @@ config_dict = {
     'seam_scaling' : 1.0,
     'use_view_batches' : 4,
     'use_subject_batches' : True,
-    'every_nth_frame' : 100,
+    'every_nth_frame' : 10,
 
     # Encoder-decoder
     'latent_bg' : 0,
