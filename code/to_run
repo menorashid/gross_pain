@@ -1,8 +1,10 @@
-python train_encode_decode.py --config_file configs/config_train_rotation_bl.py --train_subjects brava/herrera/inkasso/julia/kastanjett/naughty_but_nice/sir_holger --test_subjects aslan --job_identifier withRot
-python train_encode_decode.py --config_file configs/config_train_rotation_bl.py --train_subjects aslan/herrera/inkasso/julia/kastanjett/naughty_but_nice/sir_holger --test_subjects brava --job_identifier withRot
-python train_encode_decode.py --config_file configs/config_train_rotation_bl.py --train_subjects aslan/brava/inkasso/julia/kastanjett/naughty_but_nice/sir_holger --test_subjects herrera --job_identifier withRot
-python train_encode_decode.py --config_file configs/config_train_rotation_bl.py --train_subjects aslan/brava/herrera/julia/kastanjett/naughty_but_nice/sir_holger --test_subjects inkasso --job_identifier withRot
+python train_encode_decode.py --config_file configs/config_train_rotation_bl.py --dataset_path ../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/ --train_subjects brava/herrera/inkasso/julia/kastanjett/naughty_but_nice/sir_holger --test_subjects aslan --job_identifier withRot
+python train_encode_decode.py --config_file configs/config_train_rotation_bl.py --dataset_path ../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/ --train_subjects aslan/herrera/inkasso/julia/kastanjett/naughty_but_nice/sir_holger --test_subjects brava --job_identifier withRot
+python train_encode_decode.py --config_file configs/config_train_rotation_bl.py --dataset_path ../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/ --train_subjects aslan/brava/inkasso/julia/kastanjett/naughty_but_nice/sir_holger --test_subjects herrera --job_identifier withRot
+python train_encode_decode.py --config_file configs/config_train_rotation_bl.py --dataset_path ../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/ --train_subjects aslan/brava/herrera/julia/kastanjett/naughty_but_nice/sir_holger --test_subjects inkasso --job_identifier withRot
+
 python train_encode_decode.py --config_file configs/config_train_rotation_bl.py --train_subjects aslan/brava/herrera/inkasso/kastanjett/naughty_but_nice/sir_holger --test_subjects julia --job_identifier withRot
 python train_encode_decode.py --config_file configs/config_train_rotation_bl.py --train_subjects aslan/brava/herrera/inkasso/julia/naughty_but_nice/sir_holger --test_subjects kastanjett --job_identifier withRot
 python train_encode_decode.py --config_file configs/config_train_rotation_bl.py --train_subjects aslan/brava/herrera/inkasso/julia/kastanjett/sir_holger --test_subjects naughty_but_nice --job_identifier withRot
 python train_encode_decode.py --config_file configs/config_train_rotation_bl.py --train_subjects aslan/brava/herrera/inkasso/julia/kastanjett/naughty_but_nice --test_subjects sir_holger --job_identifier withRot
+
