@@ -307,9 +307,17 @@ def main():
     # offsets.to_csv(out_file_final, columns = ['video_name','offset'],index = False)
 
 
-    out_dir_testing = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps'
+    # out_dir_testing = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps'
+    # util.mkdir(out_dir_testing)
+    # mve = MultiViewFrameExtractor(data_path = data_path, width= 128, height = 128, frame_rate = 2., output_dir = out_dir_testing,views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count(), offset_file = out_file_final)
+    
+    out_dir_testing = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps'
     util.mkdir(out_dir_testing)
-    mve = MultiViewFrameExtractor(data_path = data_path, width= 128, height = 128, frame_rate = 2., output_dir = out_dir_testing,views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count(), offset_file = out_file_final)
+    mve = MultiViewFrameExtractor(data_path = data_path, width= 672, height = 380, frame_rate = 0.2, output_dir = out_dir_testing,views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count(), offset_file = out_file_final)
+    
+
+
+
     # video_paths = util.readLinesFromFile(out_file)
     # print (len(video_paths))
     # mve.get_videos_containing_intervals()

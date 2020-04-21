@@ -7,6 +7,13 @@ import os;
 # import importlib.util
 import collections
 
+def get_image_name(subject, interval_ind, interval, view, frame, data_dir_path):
+    frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
+                             str(view), '%06d'%frame])
+    return os.path.join(data_dir_path,'{}/{}/{}/{}.jpg'.format(subject,
+                                                        interval,
+                                                        view,
+                                                        frame_id))
 
 def getFilesInFolder(folder,ext):
     list_files=[os.path.join(folder,file_curr) for file_curr in os.listdir(folder) if file_curr.endswith(ext)];
