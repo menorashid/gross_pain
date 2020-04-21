@@ -12,7 +12,7 @@ import detectron2
 from detectron2 import model_zoo
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
-
+from detectron2.data import MetadataCatalog
 
 
 def get_predictor(thresh = 0.3):
@@ -78,10 +78,9 @@ def get_horse_ims(data_path, horse_name, str_aft):
     return im_files
 
 
-
-def main():
+def script_get_dets():
     data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps'
-    horse_names = [['aslan','brava','herrera','inkasso','julia','kastanjett','naughty_but_nice','sir_holger']
+    horse_names = ['aslan','brava','herrera','inkasso','julia','kastanjett','naughty_but_nice','sir_holger']
     str_aft = '_frame_index.csv'
 
     predictor = get_predictor()
@@ -89,6 +88,48 @@ def main():
         im_files = get_horse_ims(data_path, horse_name, str_aft)
         print (horse_name, len(im_files))
         batch_process(predictor, im_files, 16)
+
+
+def script_checking_horse_dets():
+    data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps'
+    horse_names = ['aslan','brava','herrera','inkasso','julia','kastanjett','naughty_but_nice','sir_holger']
+    str_aft = '_frame_index.csv'
+
+    cfg = get_cfg()
+    cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
+    coco_class_names = MetadataCatalog.get(cfg.DATASETS.TRAIN[0]).get("thing_classes", None)
+    # print (coco_class_names.index('horse'))
+
+    for horse_name in horse_names:
+        print (horse_name)
+        im_files = get_horse_ims(data_path, horse_name, str_aft)
+        det_files = [os.path.join(os.path.split(file_curr)[0]+'_dets',os.path.split(file_curr)[1][:-4]+'.npz') for file_curr in im_files]
+        det_dict = {'None':[],'horse':[]}
+        for det_file in det_files:
+            loaded_data = np.load(det_file)
+            pred_classes = loaded_data['pred_classes']
+            scores = loaded_data['scores']
+            if len(pred_classes)==0:
+                det_dict['None'].append(0)
+            elif 17 in pred_classes:
+                idx_horse = np.where(pred_classes==17)[0][0]
+                score_horse = scores[idx_horse]
+                det_dict['horse'].append(score_horse)
+            else:
+                idx_max = np.argmax(scores)
+                pred_class = pred_classes[idx_max]
+                pred_score = scores[idx_max]
+                class_str = coco_class_names[pred_class]
+                if class_str not in det_dict.keys():
+                    det_dict[class_str] = []
+                det_dict[class_str].append(pred_score)
+
+        print ('horse percent',len(det_dict['horse'])/len(im_files))
+
+
+def main():
+    script_checking_horse_dets()
+
     
 
 
