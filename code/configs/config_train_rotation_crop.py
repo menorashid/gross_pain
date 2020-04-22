@@ -32,9 +32,9 @@ config_dict = {
     'num_epochs'              : 50,
     'save_every'              : 5, #in epochs
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
-    'test_every'              : 2510, #251 is size of epoch nth100 in iterations
-    'plot_every'              : 2510,
-    'print_every'             : 100,
+    'test_every'              : 393, #size of epoch nth100 in iterations
+    'plot_every'              : 393,
+    'print_every'             : 10,
 
     # LPS dataset parameters
     
@@ -48,8 +48,8 @@ config_dict = {
     'image_height'            : 128,
 
     # network parameters
-    'batch_size_train' : 64,
-    'batch_size_test' : 64, #10 #self.batch_size # Note, needs to be = self.batch_size for multi-view validation
+    'batch_size_train' : 32,
+    'batch_size_test' : 32, #10 #self.batch_size # Note, needs to be = self.batch_size for multi-view validation
     'outputDimension_3d' : num_joints * 3,
     'outputDimension_2d' : inputDimension // 8,
 
@@ -60,7 +60,7 @@ config_dict = {
     # dataset
     'bg_folder'            : '../data/median_bg/',
     'rot_folder': '../data/rotation_cal_1/',
-    'training_set' : 'LPS_2fps',
+    'training_set' : 'LPS_2fps_crop',
     'img_mean' : (0.485, 0.456, 0.406),
     'img_std' : (0.229, 0.224, 0.225),
     'active_cameras' : False,
@@ -73,7 +73,7 @@ config_dict = {
     'seam_scaling' : 1.0,
     'use_view_batches' : 4,
     'use_subject_batches' : True,
-    'every_nth_frame' : 5,
+    'every_nth_frame' : 10,
 
     # Encoder-decoder
     'latent_bg' : 0,

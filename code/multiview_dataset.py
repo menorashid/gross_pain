@@ -14,7 +14,7 @@ from random import shuffle
 from rhodin.python.utils import datasets as rhodin_utils_datasets
 from rhodin.python.utils import io as rhodin_utils_io
 from tqdm import tqdm
-
+import time
 
 class MultiViewDataset(Dataset):
     """Multi-view surveillance dataset of horses in their box."""
@@ -138,6 +138,76 @@ class SimpleRandomFrameSampler(Sampler):
         return iter(index_list)
 
 
+class MultiViewDatasetCrop(MultiViewDataset):
+    """Multi-view surveillance dataset of horses in their box."""
+    def __init__(self, data_folder, bg_folder,
+                 input_types, label_types, subjects,rot_folder=None,
+                 mean=(0.485, 0.456, 0.406),  #TODO update these to horse dataset.
+                 stdDev= (0.229, 0.224, 0.225),
+                 use_sequential_frames=0,
+                 ):
+        """
+        Args:
+        data_folder: str,
+        input_types: [str],
+        label_types: [str]
+        """
+        super().__init__(data_folder, bg_folder,
+                 input_types, label_types, subjects,rot_folder,
+                 mean,
+                 stdDev,
+                 use_sequential_frames)
+        
+    def __getitem__(self, index):
+
+        interval, interval_ind, view, subject, frame = self.get_local_indices(index)
+
+        def get_image_path(key):
+            frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
+                                str(view), '%06d'%frame])
+            return self.data_folder + '/{}/{}/{}/{}.jpg'.format(subject,
+                                                                interval,
+                                                                view,
+                                                                frame_id)
+        def get_bg_path(key):
+            frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
+                                str(view), '%06d'%frame])
+            return self.data_folder + '/{}/{}/{}_bg/{}.jpg'.format(subject,
+                                                                interval,
+                                                                view,
+                                                                frame_id)
+
+        def get_rot_path(view, subject, key):
+            lookup_viewpoint = self.lookup_viewpoint.set_index('subject')
+            camera = int(lookup_viewpoint.at[subject, str(view)])
+            rot_path = self.rot_folder + '{}_{}.npy'.format(key,camera)
+            return rot_path            
+
+        def load_image(name):
+            return np.array(self.transform_in(imageio.imread(name)), dtype='float32')
+        
+        def load_data(types):
+            new_dict = {}
+            for key in types:
+                if key == 'img_crop':
+                    new_dict[key] = load_image(get_image_path(key)) 
+                elif key == 'bg_crop':
+                    new_dict[key] = load_image(get_bg_path(key))
+                elif key == 'pain':
+                    new_dict[key] = int(self.label_dict[key][index])
+                elif key == 'view':
+                    new_dict[key] = int(self.label_dict[key][index])
+                elif (key=='extrinsic_rot') or (key=='extrinsic_rot_inv'):
+                    rot_path = get_rot_path(view,subject,key)
+                    new_dict[key] = np.load(rot_path)
+                    # print (new_dict[key])
+                else:
+                    new_dict[key] = np.array(self.label_dict[key][index], dtype='float32')
+            return new_dict
+
+        return load_data(self.input_types), load_data(self.label_types)
+
+
 
 class MultiViewDatasetSampler(Sampler):
     """ This sampler decides how to iterate over the indices in the dataset.
@@ -216,18 +286,28 @@ class MultiViewDatasetSampler(Sampler):
                         return x indices for that key,
                         where x = self.use_view_batches."""
                     viewset = self.viewsets[key]
+                    # print ('viewset',viewset)
                     viewset_keys = list(viewset.keys())
+                    # print ('viewset_keys',viewset_keys)
                     assert self.use_view_batches <= len(viewset_keys)
                     if self.randomize:
                         shuffle(viewset_keys)
+                        # print ('viewset_keys',viewset_keys)
                     if self.use_view_batches == 0:
                         view_subset_size = 99
                     else:
                         view_subset_size = self.use_view_batches
                     view_indices = [viewset[k] for k in viewset_keys[:view_subset_size]]
+                    # print ('view_indices',view_indices)
                     return view_indices
 
+                # t = time.time()
                 index_list = index_list + get_view_subbatch(key)
+                # index_list.extend(get_view_subbatch(key))
+                # t = time.time()-t
+                # if index==0:
+                #     first_time = t
+                # print ('line 236',t)
                 if self.use_subject_batches:
                     # Add indices for random moment (t') from the same interval.
                     # These indices can be from any viewpoint.
@@ -236,7 +316,7 @@ class MultiViewDatasetSampler(Sampler):
                     potential_keys = self.interval_keys[interval_i]
                     key_other = potential_keys[np.random.randint(len(potential_keys))]
                     index_list = index_list + get_view_subbatch(key_other)
-
+                # s = input()
         subject_batch_factor = 1 + int(self.use_subject_batches > 0) # either 1 or 2
         view_batch_factor = max(1, self.use_view_batches)
         # The following number should be equal to the number of new indices
@@ -251,6 +331,8 @@ class MultiViewDatasetSampler(Sampler):
             # Randomizes the order of the sub-batches.
             indices_batched = np.random.permutation(indices_batched)
         indices_batched = indices_batched.reshape([-1])[:(indices_batched.size//self.batch_size)*self.batch_size] # drop last frames
+        # print ('first_time',first_time)
+        # s = input()
         return iter(indices_batched.reshape([-1,self.batch_size]))
 
 
