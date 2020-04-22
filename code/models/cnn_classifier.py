@@ -31,18 +31,20 @@ class CNNClassifier(nn.Module):
             for param in self.model.parameters():
                 param.requires_grad = False
 
-    def forward(self, input_dict):
-        x = input_dict['img_crop']
+    def forward(self, x):
+
         if self.which_cnn == 'inception_v3':  # Pad to 299x299
             x = nn.functional.pad(input=x, pad=(85,86,85,86))
         y_pred = self.model(x)
-        
-        ###############################################
-        # Select the right output
-        output_dict_all = {'pain' : y_pred}
-        output_dict = {}
-        for key in self.output_types:
-            output_dict[key] = output_dict_all[key]
 
-        return output_dict
+        return y_pred
+        
+        # ###############################################
+        # # Select the right output
+        # output_dict_all = {'pain' : y_pred}
+        # output_dict = {}
+        # for key in self.output_types:
+        #     output_dict[key] = output_dict_all[key]
+
+        # return output_dict
 

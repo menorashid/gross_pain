@@ -111,33 +111,6 @@ class MultiViewDataset(Dataset):
         return load_data(self.input_types), load_data(self.label_types)
 
 
-class SimpleRandomFrameSampler(Sampler):
-    def __init__(self, data_folder, 
-                 subjects=None,
-                 views=None,
-                 every_nth_frame=1):
-        # Reduce frame index to wanted subjects and views
-        subject_label_df = get_label_df_for_subjects(data_folder, subjects)
-        subject_view_label_df = only_keep_wanted_views(subject_label_df, views)
-        # Get the wanted proportion of the data
-        subject_view_label_df = subject_view_label_df.sample(frac=1/every_nth_frame)
-        subject_view_label_df = subject_view_label_df.reset_index(drop=True)
-
-        self.label_dict = subject_view_label_df.to_dict()
-
-    def __len__(self):
-        return len(self.label_dict['frame'])
-
-    def __iter__(self):
-        index_list = []
-        data_length = len(self.label_dict['frame'])
-        with tqdm(total=data_length) as pbar:
-            for index in range(0, data_length):
-                pbar.update(1)
-                index_list.append(index)
-        return iter(index_list)
-
-
 class MultiViewDatasetCrop(MultiViewDataset):
     """Multi-view surveillance dataset of horses in their box."""
     def __init__(self, data_folder, bg_folder,
@@ -206,8 +179,6 @@ class MultiViewDatasetCrop(MultiViewDataset):
             return new_dict
 
         return load_data(self.input_types), load_data(self.label_types)
-
-
 
 class MultiViewDatasetSampler(Sampler):
     """ This sampler decides how to iterate over the indices in the dataset.
@@ -334,22 +305,6 @@ class MultiViewDatasetSampler(Sampler):
         # print ('first_time',first_time)
         # s = input()
         return iter(indices_batched.reshape([-1,self.batch_size]))
-
-
-def only_keep_wanted_views(label_df, views):
-    all_views = [0,1,2,3]
-    if set(views) == set(all_views):
-        return label_df
-    else:
-        indices_to_drop = []
-        unwanted_views = set(all_views) - set(views)
-        for ind, row in label_df:
-            view = row['view']
-            if view in unwanted_views:
-                indices_to_drop.append(ind)
-        df_reduced = label_df.drop((label_df.index[indices_to_drop]))
-        df_reduced.reset_index(drop=True)
-        return df_reduced
 
 
 def get_label_df_for_subjects(data_folder, subjects):
