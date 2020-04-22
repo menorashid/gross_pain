@@ -29,10 +29,10 @@ config_dict = {
     'bones'                   : bones,
 
     # opt parameters    
-    'num_epochs'              : 5,
-    'save_every'              : 1, #in epochs
+    'num_epochs'              : 50,
+    'save_every'              : 5, #in epochs
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
-    'test_every'              : 25100, #251 is size of epoch nth100 in iterations
+    'test_every'              : 2510, #251 is size of epoch nth100 in iterations
     'plot_every'              : 2510,
     'print_every'             : 100,
 
@@ -73,7 +73,7 @@ config_dict = {
     'seam_scaling' : 1.0,
     'use_view_batches' : 4,
     'use_subject_batches' : True,
-    'every_nth_frame' : 1000,
+    'every_nth_frame' : 10,
 
     # Encoder-decoder
     'latent_bg' : 0,

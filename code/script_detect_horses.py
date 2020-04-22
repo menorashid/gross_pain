@@ -14,6 +14,10 @@ from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 from detectron2.data import MetadataCatalog
 
+import PIL
+from PIL import Image
+
+import multiprocessing
 
 def get_predictor(thresh = 0.3):
     cfg = get_cfg()
@@ -126,10 +130,204 @@ def script_checking_horse_dets():
 
         print ('horse percent',len(det_dict['horse'])/len(im_files))
 
+def save_crop_and_det(arg):
+
+    (im_file, det_file, desired_size, buffer_size, mean_vals, out_im_file, out_crop_info_file) = arg
+    try:
+    # if True:
+        loaded_data = np.load(det_file)
+        pred_classes = loaded_data['pred_classes']
+        scores = loaded_data['scores']
+        pred_boxes = loaded_data['pred_boxes']
+
+        if len(pred_classes)==0 or (17 not in pred_classes):
+            return 2
+
+        im = cv2.imread(im_file)
+        org_im_width = im.shape[1]
+        org_im_height = im.shape[0]
+
+        # pick the best horse
+        idx_sort = np.argsort(scores)[::-1]
+        pred_classes = pred_classes[idx_sort]
+        scores = scores[idx_sort]
+        pred_boxes = pred_boxes[idx_sort,:]
+        idx_horse = np.where(pred_classes==17)[0][0]
+        pred_box = pred_boxes[idx_horse,:]
+
+        # make pred_box square
+        box_size = np.array([pred_box[2]-pred_box[0],pred_box[3]-pred_box[1]])
+        if box_size[0]<box_size[1]:
+            diff = (box_size[1]-box_size[0])/2
+            to_add = np.array([-diff,0,+diff,0])
+        else:
+            diff = (box_size[0]-box_size[1])/2
+            to_add = np.array([0,-diff,0,+diff])
+        pred_box = pred_box+to_add
+        pred_box = pred_box.astype(int)
+        
+        # expand with buffer
+        to_expand = buffer_size*box_size
+        to_expand = np.array([-to_expand[0],-to_expand[1],+to_expand[0],+to_expand[1]]).astype(int)
+        pred_box = pred_box+to_expand
+        
+        # pad image to complete expansion
+        left = -1*min(pred_box[0],0)
+        top =  -1*min(pred_box[1],0)
+        right = max(0,pred_box[2]-(org_im_width-1))
+        bottom = max(0,pred_box[3]-(org_im_height-1))
+        to_pad = np.array([top,bottom,left,right])
+
+        mean_vals = mean_vals[::-1]
+        # print (mean_vals)
+        
+        # im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_REPLICATE)
+        im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value = tuple(mean_vals))
+        im_size = (im.shape[1],im.shape[0])
+
+        # shift pred_box for padded image
+        pred_box = pred_box+np.array([left,top,left,top])
+
+        # double check box in im
+        pred_box[0] = max(0,pred_box[0])
+        pred_box[1] = max(0,pred_box[1])
+        pred_box[2] = min(im_size[0]-1,pred_box[2])
+        pred_box[3] = min(im_size[1]-1,pred_box[3])
+        
+        # crop im
+        im_crop = im[pred_box[1]:pred_box[3],pred_box[0]:pred_box[2]]
+        
+        # resize crop. switch to PIL for better resize
+        im_final = np.array(Image.fromarray(im_crop[:,:,::-1]).resize((desired_size,desired_size), resample=PIL.Image.BICUBIC))
+        
+        cv2.imwrite(out_im_file, im_final[:,:,::-1])    
+        np.savez(out_crop_info_file, to_pad = to_pad, pred_box = pred_box)
+        return 1
+    except:
+        return 0
+
+def save_bg_crop(arg):
+
+    (im_file, crop_info_file, desired_size, mean_vals, out_im_file) = arg
+    try:
+        loaded_data = np.load(crop_info_file)
+        
+        to_pad = loaded_data['to_pad']
+        pred_box = loaded_data['pred_box']
+
+        im = cv2.imread(im_file)
+        
+        # pad im
+        mean_vals = mean_vals[::-1]
+        im = cv2.copyMakeBorder(im, to_pad[0], to_pad[1], to_pad[2], to_pad[3], cv2.BORDER_CONSTANT, value = tuple(mean_vals))
+        
+        # crop im
+        im_crop = im[pred_box[1]:pred_box[3],pred_box[0]:pred_box[2]]
+        
+        # resize crop. switch to PIL for better resize
+        im_final = np.array(Image.fromarray(im_crop[:,:,::-1]).resize((desired_size,desired_size), resample=PIL.Image.BICUBIC))
+        
+        cv2.imwrite(out_im_file, im_final[:,:,::-1])    
+        return 1
+    except:
+        return 0
+
+
+def script_to_save_all_crop_im():
+    data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps'
+    out_data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop'
+    horse_names = ['aslan','brava','herrera','inkasso','julia','kastanjett','naughty_but_nice','sir_holger']
+    str_aft = '_frame_index.csv'
+
+    # return
+    mean_vals = (0.485, 0.456, 0.406)
+    mean_vals = [int(val*256) for val in mean_vals]
+
+    desired_size = 128
+    buffer_size = 0.1
+    org_im_width = 672
+    org_im_height = 380
+
+    for horse_name in horse_names:
+        print (horse_name)
+        im_files = get_horse_ims(data_path, horse_name, str_aft)
+
+        args = []
+        im_files_used = []
+        for idx_im_file, im_file in enumerate(im_files):
+            det_file = os.path.join(os.path.split(im_file)[0]+'_dets',os.path.split(im_file)[1][:-4]+'.npz')
+            
+            out_im_file = im_file.replace(data_path, out_data_path)
+            out_crop_info_file = os.path.join(os.path.split(im_file)[0].replace(data_path,out_data_path)+'_cropbox',os.path.split(im_file)[1][:-4]+'.npz')
+            
+            if os.path.exists(out_im_file) and os.path.exists(out_crop_info_file):
+                continue
+            
+            util.makedirs(os.path.split(out_im_file)[0])
+            util.makedirs(os.path.split(out_crop_info_file)[0])
+            
+            arg_curr = (im_file, det_file, desired_size, buffer_size, mean_vals, out_im_file, out_crop_info_file)
+            args.append(arg_curr)
+            im_files_used.append(im_file)
+        
+        print (len(args),len(im_files))
+        pool = multiprocessing.Pool(multiprocessing.cpu_count())
+        ret_vals = pool.map(save_crop_and_det, args)
+
+        # ret_vals = []
+        # for arg in args:
+        #     ret_vals.append(save_crop_and_det(arg))
+
+        assert len(ret_vals)== len(im_files_used)
+        print ('0:',ret_vals.count(0),', 1:',ret_vals.count(1),', 2:',ret_vals.count(2),', total:',len(ret_vals))
+        out_file_log = os.path.join(out_data_path, horse_name+'_im_crop_log.npz')
+        np.savez(out_file_log, ret_vals = np.array(ret_vals), im_files_used = np.array(im_files_used))
+
+def script_to_save_all_crop_bg():
+    lookup_viewpoint = pd.read_csv('../metadata/viewpoints.csv', index_col='subject')
+    desired_size = 128
+    
+    mean_vals = (0.485, 0.456, 0.406)
+    mean_vals = [int(val*256) for val in mean_vals]
+
+    bg_dir = '../data/median_bg_672_380'
+
+    data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop'
+    horse_names = ['aslan','brava','herrera','inkasso','julia','kastanjett','naughty_but_nice','sir_holger']
+    str_aft = '_frame_index.csv'
+
+    for horse_name in horse_names:
+        im_files = get_horse_ims(data_path, horse_name, str_aft)
+
+        args = []
+        im_files_used = []
+        for idx_im_file, im_file in enumerate(im_files):
+            crop_info_file = os.path.join(os.path.split(im_file)[0]+'_cropbox',os.path.split(im_file)[1][:-4]+'.npz')
+            out_im_file = os.path.join(os.path.split(im_file)[0]+'_bg',os.path.split(im_file)[1])
+
+            view = os.path.split(im_file)[0][-1]
+            camera = lookup_viewpoint.at[horse_name, view]
+            bg_file = os.path.join(bg_dir, 'median_0.1fps_camera_{}.jpg'.format(camera-1))
+
+            if os.path.exists(out_im_file):
+                continue
+            
+            util.makedirs(os.path.split(out_im_file)[0])
+            arg_curr = (bg_file, crop_info_file, desired_size, mean_vals, out_im_file)
+            args.append(arg_curr)
+            im_files_used.append(im_file)
+        
+        print (len(args),len(im_files))
+        pool = multiprocessing.Pool(multiprocessing.cpu_count())
+        ret_vals = pool.map(save_bg_crop, args)
+
+        assert len(ret_vals)== len(im_files_used)
+        print ('0:',ret_vals.count(0),', 1:',ret_vals.count(1),', total:',len(ret_vals))
+        out_file_log = os.path.join(data_path, horse_name+'_bg_crop_log.npz')
+        np.savez(out_file_log, ret_vals = np.array(ret_vals), im_files_used = np.array(im_files_used))
 
 def main():
-    script_checking_horse_dets()
-
+    script_to_save_all_crop_bg()
     
 
 
