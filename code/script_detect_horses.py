@@ -206,6 +206,32 @@ def save_crop_and_det(arg):
     except:
         return 0
 
+def save_bg_crop(arg):
+
+    (im_file, crop_info_file, desired_size, mean_vals, out_im_file) = arg
+    try:
+        loaded_data = np.load(crop_info_file)
+        
+        to_pad = loaded_data['to_pad']
+        pred_box = loaded_data['pred_box']
+
+        im = cv2.imread(im_file)
+        
+        # pad im
+        mean_vals = mean_vals[::-1]
+        im = cv2.copyMakeBorder(im, to_pad[0], to_pad[1], to_pad[2], to_pad[3], cv2.BORDER_CONSTANT, value = tuple(mean_vals))
+        
+        # crop im
+        im_crop = im[pred_box[1]:pred_box[3],pred_box[0]:pred_box[2]]
+        
+        # resize crop. switch to PIL for better resize
+        im_final = np.array(Image.fromarray(im_crop[:,:,::-1]).resize((desired_size,desired_size), resample=PIL.Image.BICUBIC))
+        
+        cv2.imwrite(out_im_file, im_final[:,:,::-1])    
+        return 1
+    except:
+        return 0
+
 
 def script_to_save_all_crop_im():
     data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps'
@@ -257,10 +283,51 @@ def script_to_save_all_crop_im():
         out_file_log = os.path.join(out_data_path, horse_name+'_im_crop_log.npz')
         np.savez(out_file_log, ret_vals = np.array(ret_vals), im_files_used = np.array(im_files_used))
 
+def script_to_save_all_crop_bg():
+    lookup_viewpoint = pd.read_csv('../metadata/viewpoints.csv', index_col='subject')
+    desired_size = 128
+    
+    mean_vals = (0.485, 0.456, 0.406)
+    mean_vals = [int(val*256) for val in mean_vals]
+
+    bg_dir = '../data/median_bg_672_380'
+
+    data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop'
+    horse_names = ['aslan','brava','herrera','inkasso','julia','kastanjett','naughty_but_nice','sir_holger']
+    str_aft = '_frame_index.csv'
+
+    for horse_name in horse_names:
+        im_files = get_horse_ims(data_path, horse_name, str_aft)
+
+        args = []
+        im_files_used = []
+        for idx_im_file, im_file in enumerate(im_files):
+            crop_info_file = os.path.join(os.path.split(im_file)[0]+'_cropbox',os.path.split(im_file)[1][:-4]+'.npz')
+            out_im_file = os.path.join(os.path.split(im_file)[0]+'_bg',os.path.split(im_file)[1])
+
+            view = os.path.split(im_file)[0][-1]
+            camera = lookup_viewpoint.at[horse_name, view]
+            bg_file = os.path.join(bg_dir, 'median_0.1fps_camera_{}.jpg'.format(camera-1))
+
+            if os.path.exists(out_im_file):
+                continue
+            
+            util.makedirs(os.path.split(out_im_file)[0])
+            arg_curr = (bg_file, crop_info_file, desired_size, mean_vals, out_im_file)
+            args.append(arg_curr)
+            im_files_used.append(im_file)
+        
+        print (len(args),len(im_files))
+        pool = multiprocessing.Pool(multiprocessing.cpu_count())
+        ret_vals = pool.map(save_bg_crop, args)
+
+        assert len(ret_vals)== len(im_files_used)
+        print ('0:',ret_vals.count(0),', 1:',ret_vals.count(1),', total:',len(ret_vals))
+        out_file_log = os.path.join(data_path, horse_name+'_bg_crop_log.npz')
+        np.savez(out_file_log, ret_vals = np.array(ret_vals), im_files_used = np.array(im_files_used))
 
 def main():
-    script_to_save_all_crop_im()
-
+    script_to_save_all_crop_bg()
     
 
 
