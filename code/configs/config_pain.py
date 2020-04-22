@@ -13,15 +13,15 @@ config_dict = {
 
 # Classfication
     'num_classes' : 2,
-    'which_cnn'   : 'resnet50',
-    # 'which_cnn'   : 'inception_v3',
+    # 'which_cnn'   : 'resnet50',
+    'which_cnn'   : 'inception_v3',
     'pretrained_cnn' : True,
 
     # opt parameters    
-    'num_epochs'              : 1,
+    'num_epochs'              : 50,
     'save_every'              : 100000,
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
-    'test_every'              : 100,
+    'test_every'              : 1000,
     'plot_every'              : 5000,
     'print_every'             : 100,
 
@@ -47,8 +47,6 @@ config_dict = {
     'train_crop_relative' : False,
 
     # dataset
-    'bg_folder'            : '../data/median_bg/',
-    'rot_folder': '../data/rotation_cal_1/',
     'training_set' : 'LPS_2fps',
     'img_mean' : (0.485, 0.456, 0.406),
     'img_std' : (0.229, 0.224, 0.225),
