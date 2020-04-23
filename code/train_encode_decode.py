@@ -4,7 +4,7 @@ import sys
 import argparse
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from multiview_dataset import MultiViewDataset, MultiViewDatasetSampler
+from multiview_dataset import MultiViewDataset, MultiViewDatasetCrop, MultiViewDatasetSampler
 import os, shutil
 
 import numpy as np
@@ -209,12 +209,20 @@ class IgniteTrainNVS:
         return optimizer
     
     def load_data_train(self,config_dict):
-        dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_train'],
-                                   bg_folder=config_dict['bg_folder'],
-                                   input_types=config_dict['input_types'],
-                                   label_types=config_dict['label_types_train'],
-                                   subjects=config_dict['train_subjects'],
-                                   rot_folder = config_dict['rot_folder'])
+        if config_dict['training_set']=='LPS_2fps_crop':
+            dataset = MultiViewDatasetCrop(data_folder=config_dict['dataset_folder_train'],
+                                       bg_folder=config_dict['bg_folder'],
+                                       input_types=config_dict['input_types'],
+                                       label_types=config_dict['label_types_train'],
+                                       subjects=config_dict['train_subjects'],
+                                       rot_folder = config_dict['rot_folder'])
+        else:
+            dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_train'],
+                                       bg_folder=config_dict['bg_folder'],
+                                       input_types=config_dict['input_types'],
+                                       label_types=config_dict['label_types_train'],
+                                       subjects=config_dict['train_subjects'],
+                                       rot_folder = config_dict['rot_folder'])
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_train'],
               subjects=config_dict['train_subjects'],
@@ -228,12 +236,20 @@ class IgniteTrainNVS:
         return loader
     
     def load_data_test(self,config_dict):
-        dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_test'],
-                                   bg_folder=config_dict['bg_folder'],
-                                   input_types=config_dict['input_types'],
-                                   label_types=config_dict['label_types_test'],
-                                   subjects=config_dict['test_subjects'],
-                                   rot_folder = config_dict['rot_folder'])
+        if config_dict['training_set']=='LPS_2fps_crop':
+            dataset = MultiViewDatasetCrop(data_folder=config_dict['dataset_folder_test'],
+                                       bg_folder=config_dict['bg_folder'],
+                                       input_types=config_dict['input_types'],
+                                       label_types=config_dict['label_types_test'],
+                                       subjects=config_dict['test_subjects'],
+                                       rot_folder = config_dict['rot_folder'])
+        else:
+            dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_test'],
+                                       bg_folder=config_dict['bg_folder'],
+                                       input_types=config_dict['input_types'],
+                                       label_types=config_dict['label_types_test'],
+                                       subjects=config_dict['test_subjects'],
+                                       rot_folder = config_dict['rot_folder'])
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_test'],
                                                 subjects=config_dict['test_subjects'],

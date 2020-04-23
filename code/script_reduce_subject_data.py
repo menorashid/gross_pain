@@ -28,9 +28,8 @@ def get_counts_indices(sdf, subject, data_dir_path):
                 subject_counter += 1
     return subject_counter, missing_inds 
 
-def reduce_csvs():
+def reduce_csvs(data_dir_path):
     subjects = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
-    data_dir_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps'
     subject_counters = []
     subject_dfs = []
     subject_missing_inds = []
@@ -84,7 +83,8 @@ def sanity_check():
         assert (data_all[0]==data_all[1])
 
 def main():
-    pass
+    data_dir_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop'
+    reduce_csvs(data_dir_path)
 
         
         
