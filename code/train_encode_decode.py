@@ -82,23 +82,30 @@ class IgniteTrainNVS:
             iteration = engine.state.iteration - 1
             if iteration % config_dict['print_every'] == 0:
                 utils_train.save_training_error(save_path, engine, vis, vis_windows)
-        
+            if iteration in [0,100]:
+                utils_train.save_training_example(save_path, engine, vis, vis_windows, config_dict)
+
+        @trainer.on(Events.EPOCH_COMPLETED)
+        def plot_training_image(engine):
             # log batch example image
-            if iteration in [0,100] or iteration % config_dict['plot_every'] == 0:
+            print ('plotting')
+            epoch = engine.state.epoch - 1
+            if epoch % config_dict['plot_every'] == 0:
                 utils_train.save_training_example(save_path, engine, vis, vis_windows, config_dict)
                 
-        #@trainer.on(Events.EPOCH_COMPLETED)
-        @trainer.on(Events.ITERATION_COMPLETED)
+        @trainer.on(Events.EPOCH_COMPLETED)
+        # @trainer.on(Events.ITERATION_COMPLETED)
         def validate_model(engine):
-            iteration = engine.state.iteration - 1
-            if (iteration+1) % config_dict['test_every'] != 0: # +1 to prevent evaluation at iteration 0
-                return
-            print("Running evaluation at iteration",iteration)
-            evaluator.run(test_loader)
-            avg_accuracy = utils_train.save_testing_error(save_path, engine, evaluator, vis, vis_windows)
-    
-            # save the best model
-            utils_train.save_model_state(save_path, trainer, avg_accuracy, model, optimizer, engine.state)
+            iteration = engine.state.epoch -1
+            # - 1
+            if (iteration) % config_dict['test_every'] == 0: # +1 to prevent evaluation at iteration 0
+                    # return
+                print("Running evaluation at iteration",iteration)
+                evaluator.run(test_loader)
+                avg_accuracy = utils_train.save_testing_error(save_path, engine, evaluator, vis, vis_windows)
+        
+                # save the best model
+                utils_train.save_model_state(save_path, trainer, avg_accuracy, model, optimizer, engine.state)
         
         @trainer.on(Events.EPOCH_COMPLETED)
         # @trainer.on(Events.ITERATION_COMPLETED)
