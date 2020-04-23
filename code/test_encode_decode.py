@@ -98,5 +98,12 @@ if __name__ == "__main__":
     config_dict['job_identifier'] = args.job_identifier
     config_dict['train_subjects'] = train_subjects
     config_dict['test_subjects'] = test_subjects
+    config_dict['data_dir_path'] = args.dataset_path
+    config_dict['dataset_folder_train'] = args.dataset_path
+    config_dict['dataset_folder_test'] = args.dataset_path
+    root = args.dataset_path.rsplit('/', 2)[0]
+    config_dict['bg_folder'] = os.path.join(root, 'median_bg/')
+    config_dict['rot_folder'] = os.path.join(root, 'rotation_cal_1/')
+    
     ignite = IgniteTestNVS()
     ignite.run(config_dict_module.__file__, config_dict)
