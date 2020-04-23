@@ -212,7 +212,7 @@ def save_training_error(save_path, engine, vis, vis_windows):
     # log training error
     iteration = engine.state.iteration - 1
     loss = engine.state.output
-    print("Epoch[{}] Iteration[{}] Loss: {:.2f}".format(engine.state.epoch, iteration, loss))
+    print("Epoch[{}] Iteration[{}] Batch Loss: {:.2f}".format(engine.state.epoch, iteration, loss))
     title="Training error"
     if vis is not None:
         vis_windows[title] = vis.line(X=np.array([engine.state.iteration]), Y=np.array([loss]),
@@ -227,11 +227,10 @@ def save_training_error(save_path, engine, vis, vis_windows):
     with open(log_name, 'a') as the_file:
         the_file.write('{},{}\n'.format(iteration, loss))
 
-def save_testing_error(save_path, trainer, evaluator, vis, vis_windows):
-    y_pred, y = evaluator.state.output
+def save_testing_error(save_path, trainer, evaluator, vis, vis_windows, dataset_str, save_extension=None):
     metrics = evaluator.state.metrics
     iteration = trainer.state.iteration
-    print("Validation Results - Epoch: {}  Avg accuracy: {}".format(trainer.state.epoch, metrics))
+    print("{} Results - Epoch: {}  Avg accuracy: {}".format(dataset_str, trainer.state.epoch, metrics))
     accuracies = []
     for key in metrics.keys():
         title="Testing error {}".format(key)
@@ -244,7 +243,7 @@ def save_testing_error(save_path, trainer, evaluator, vis, vis_windows):
                          opts=dict(xlabel="# iteration", ylabel="value", title=title))
 
     # also save as .txt for plotting
-    log_name = os.path.join(save_path, 'debug_log_testing.txt')
+    log_name = os.path.join(save_path, save_extension)
     if iteration ==0:
         with open(log_name, 'w') as the_file: # overwrite exiting file
             the_file.write('#iteration,loss1,loss2,...\n')     

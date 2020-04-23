@@ -70,6 +70,23 @@ class IgniteTrainPain(train_encode_decode.IgniteTrainNVS):
                 util.save_training_error(save_path, engine, vis, vis_windows)
         
         #@trainer.on(Events.EPOCH_COMPLETED)
+        @trainer.on(Events.EPOCH_COMPLETED)
+        def log_training_results(trainer):
+            evaluator.run(train_loader)
+            metrics = evaluator.state.metrics
+            _ = util.save_testing_error(save_path, trainer, evaluator,
+                                vis, vis_windows, dataset_str='Training Set',
+                                save_extension='debug_log_training_wholeset.txt')
+            print("Training Results - Epoch: {}  Avg accuracy: {:.2f} Avg loss: {:.2f}"
+                  .format(trainer.state.epoch, metrics['accuracy'], metrics['bceloss']))
+
+        @trainer.on(Events.EPOCH_COMPLETED)
+        def log_validation_results(trainer):
+            evaluator.run(test_loader)
+            metrics = evaluator.state.metrics
+            print("Test Results - Epoch: {}  Avg accuracy: {:.2f} Avg loss: {:.2f}"
+                  .format(trainer.state.epoch, metrics['accuracy'], metrics['bceloss']))
+
         @trainer.on(Events.ITERATION_COMPLETED)
         def validate_model(engine):
             iteration = engine.state.iteration - 1
@@ -77,8 +94,8 @@ class IgniteTrainPain(train_encode_decode.IgniteTrainNVS):
                 return
             print("Running evaluation at iteration",iteration)
             evaluator.run(test_loader)
-            avg_accuracy = util.save_testing_error(save_path, engine, evaluator, vis, vis_windows)
-    
+            avg_accuracy = util.save_testing_error(save_path, engine, evaluator,
+                                vis, vis_windows, dataset_str='Test Set', save_extension='debug_log_testing.txt')
             # save the best model
             rhodin_utils_train.save_model_state(save_path, trainer, avg_accuracy, model, optimizer, engine.state)
         
