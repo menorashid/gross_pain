@@ -112,14 +112,77 @@ def dot_dists(X_rel):
     return dots
 
 def main():
-    
+    test_subject = 'aslan'
     out_dir  = '../scratch/dist_hists'
     out_file = os.path.join(out_dir, 'info.npz')
-    
+    cam_dir = '../data/rotation_cal_1/'
+    rot_str = 'extrinsic_rot_'
+    rot_inv_str = 'extrinsic_rot_inv_'
+
     viewpoints = pd.read_csv('../metadata/viewpoints.csv',index_col = 'subject')
-    # ['aslan']
-    print (viewpoints)
-    print (viewpoints.loc[viewpoints['subject' =='aslan']])
+
+    viewpoints = viewpoints.loc[test_subject,:].values
+
+    rots = [np.load(os.path.join(cam_dir,rot_str+str(val)+'.npy')) for val in viewpoints]
+    rot_invs = [np.load(os.path.join(cam_dir,rot_inv_str+str(val)+'.npy')) for val in viewpoints]
+
+    loaded_data = np.load(out_file)
+    [pains, views, X] = [loaded_data[val] for val in ['pains','views','X']]
+
+    X_t_all = []
+    views_new_all = []
+    for view in range(4):
+        bin_view = views == view
+        
+        X_rel = X[bin_view,:,:]
+        
+        rot_inv = rot_invs[view][np.newaxis,:,:]
+        rot_inv = np.tile(rot_inv, (X_rel.shape[0],1,1))
+
+        X_rel = np.transpose(X_rel,(0,2,1))
+        
+        X_t = np.matmul(rot_inv, X_rel)
+        # X_t = X_rel
+
+        X_t = np.transpose(X_t,(0,2,1))
+        # print (X_t.shape, X_t[:1,:10])
+
+        X_t_all.append(X_t)
+        views_new = np.ones((len(X_t),))*view
+        views_new_all.append(views_new)
+    
+    diffs = []
+    for view in range(4):
+        X_t_1 = X_t_all[view]
+        for view_2 in range(view+1, 4):
+            X_t_2 = X_t_all[view_2]
+            diff_curr = np.sqrt(np.sum(np.power(X_t_1 - X_t_2,2),axis = 2))
+            # mean_per_point = np.mean(diff_curr, axis =1)
+            diffs.append(diff_curr)
+
+    diffs = np.array(diffs)
+    print (diffs.shape)
+
+    print (np.mean(np.mean(diffs,axis = 2), axis = 1))
+    print (np.mean(np.mean(diffs,axis = 2), axis = 0))
+    print (np.mean(np.mean(diffs,axis = 0), axis = 0))
+
+    X_t_all = np.concatenate(X_t_all, axis = 0)
+    views_new = np.concatenate(views_new_all, axis = 0)
+    print (views_new[::10])
+    print (X_t_all.shape, views_new.shape)
+    X_t_all = np.reshape(X_t_all,(X_t_all.shape[0],X_t_all.shape[1]*X_t_all.shape[2]))
+    X_t_all = sklearn.preprocessing.StandardScaler().fit_transform(X_t_all)
+
+    tsne = sklearn.manifold.TSNE(perplexity = 10)
+    X_embedded = tsne.fit_transform(X_t_all)
+
+    # # Plot with relevant labels
+    plot_TSNE(X_embedded, views_new, os.path.join(out_dir, 'world_view_tsne.jpg'))
+    # 
+
+    # print (len(diffs),diffs)
+        
     
 
 
