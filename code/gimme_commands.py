@@ -1,14 +1,21 @@
 from helpers import util
+import os
 
 train_horses = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
-test_horses_all = [ 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
-config_file = 'configs/config_train_rotation_crop.py'
+test_horses_all = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
+# ['herrera','julia','naughty_but_nice']
+# ['inkasso', 'kastanjett', 'sir_holger']
+# 
+config_file = 'configs/config_train_rotation_crop_2.py'
 data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
 job_name = 'withRotCropAblation'
+util.mkdir('to_runs')
 
-for idx in range(4):
-	test_horses = test_horses_all[2*idx:2*idx+2]
-	out_file = 'to_run_'+str(idx)
+num_gpus = 4
+num_per_gpu = 2
+for idx in range(num_gpus):
+	test_horses = test_horses_all[num_per_gpu*idx:num_per_gpu*idx+num_per_gpu]
+	out_file = os.path.join('to_runs','to_run_2_'+job_name+'_'+str(idx))
 	print (out_file)
 # test_horses = ['brava', 'herrera']
 # test_horses = ['inkasso','julia']
