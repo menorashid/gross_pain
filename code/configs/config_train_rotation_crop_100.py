@@ -73,7 +73,7 @@ config_dict = {
     'seam_scaling' : 1.0,
     'use_view_batches' : 4,
     'use_subject_batches' : True,
-    'every_nth_frame' : 4,
+    'every_nth_frame' : 100,
 
     # Encoder-decoder
     'latent_bg' : 0,

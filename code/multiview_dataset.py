@@ -166,10 +166,11 @@ class MultiViewDatasetCrop(MultiViewDataset):
                     new_dict[key] = load_image(get_image_path(key)) 
                 elif key == 'bg_crop':
                     new_dict[key] = load_image(get_bg_path(key))
-                elif key == 'pain':
+                elif key in self.label_dict.keys():
+                 # == 'pain':
                     new_dict[key] = int(self.label_dict[key][index])
-                elif key == 'view':
-                    new_dict[key] = int(self.label_dict[key][index])
+                # elif key == 'view':
+                #     new_dict[key] = int(self.label_dict[key][index])
                 elif (key=='extrinsic_rot') or (key=='extrinsic_rot_inv'):
                     rot_path = get_rot_path(view,subject,key)
                     new_dict[key] = np.load(rot_path)

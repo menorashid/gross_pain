@@ -14,27 +14,33 @@ bones = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9],
 
 inputDimension = 128
 
+# network_path = '../output/trainNVS_69705_UNet_layers4_implRFalse_w3Dp0_w3D0_wRGB1_wGrad0o01_wImgNet2_skipBGTrue_bg0_fg24_3d600_lh3Dp2_ldrop0o3_billinupper_fscale4_shuffleFGTrue_shuffle3dTrue_LPS_2fps_nth1_cFalse_train[\'as\'_\'br\'_\'he\'_\'in\'_\'ju\'_\'ka\'_\'si\']_test[\'na\']_bs4_lr0o001_'
+network_path = 'tbd'
+
 config_dict = {
     # General parameters
     'dpi'                     : 190,
     # Possible input types    : 'img_crop' | 'bg_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
-    'input_types'             : ['img_crop', 'bg_crop','extrinsic_rot', 'extrinsic_rot_inv'],
-    # Possible output types   :  'img_crop' | '3D'
-    'output_types'            : ['img_crop'],
+    'input_types'             : ['img_crop', 'bg_crop'],
+    # Possible output types   :  'img_crop' | '3D' | 'shuffled_pose' | 'shuffled_appearance' | 'latent_3d'
+    'output_types'            : ['img_crop','latent_3d'],
     # Possible lt train       : 'img_crop' | '3D' | 'bounding_box_cam' | 'intrinsic_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
     'label_types_train'       : ['img_crop'],
     # Possible lt test        : 'img_crop' | '3D' | 'bounding_box_cam' | 'intrinsic_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
-    'label_types_test'        : ['img_crop'],
+    'label_types_test'        : ['img_crop', 'pain', 'view'],
     'num_workers'             : 4,
     'bones'                   : bones,
 
+    'pretrained_network_path' : network_path,
+    # + 'models/network_best_val_t1.pth',
+
     # opt parameters    
-    'num_epochs'              : 50,
-    'save_every'              : 50, #in epochs
+    'num_epochs'              : 3,
+    'save_every'              : 100000,
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
-    'test_every'              : 1, #size of epoch nth1 in iterations
-    'plot_every'              : 1,
-    'print_every'             : 10,
+    'test_every'              : 20000,
+    'plot_every'              : 20000,
+    'print_every'             : 100,
 
     # LPS dataset parameters
     
@@ -48,8 +54,8 @@ config_dict = {
     'image_height'            : 128,
 
     # network parameters
-    'batch_size_train' : 64,
-    'batch_size_test' : 64, #10 #self.batch_size # Note, needs to be = self.batch_size for multi-view validation
+    'batch_size_train' : 16,
+    'batch_size_test' : 16, #10 #self.batch_size # Note, needs to be = self.batch_size for multi-view validation
     'outputDimension_3d' : num_joints * 3,
     'outputDimension_2d' : inputDimension // 8,
 
@@ -59,7 +65,7 @@ config_dict = {
 
     # dataset
     'bg_folder'            : '../data/median_bg/',
-    'rot_folder': '../data/rotation_cal_1/',
+    'rot_folder'           : '../data/rotation_cal_1/',
     'training_set' : 'LPS_2fps_crop',
     'img_mean' : (0.485, 0.456, 0.406),
     'img_std' : (0.229, 0.224, 0.225),
@@ -73,7 +79,7 @@ config_dict = {
     'seam_scaling' : 1.0,
     'use_view_batches' : 4,
     'use_subject_batches' : True,
-    'every_nth_frame' : 4,
+    'every_nth_frame' : 10,
 
     # Encoder-decoder
     'latent_bg' : 0,
