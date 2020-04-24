@@ -15,7 +15,7 @@ config_dict = {
     'num_classes' : 2,
     # 'which_cnn'   : 'resnet50',
     'which_cnn'   : 'inception_v3',
-    'pretrained_cnn' : True,
+    'pretrained_cnn' : False,
 
     # opt parameters    
     'num_epochs'              : 50,
