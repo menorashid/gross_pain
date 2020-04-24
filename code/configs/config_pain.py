@@ -19,10 +19,10 @@ config_dict = {
 
     # opt parameters    
     'num_epochs'              : 50,
-    'save_every'              : 100000,
+    'save_every'              : 5,
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
-    'test_every'              : 1000,
-    'plot_every'              : 5000,
+    'test_every'              : 2510,
+    'plot_every'              : 2510,
     'print_every'             : 100,
 
     # LPS dataset parameters
@@ -37,8 +37,8 @@ config_dict = {
     'image_height'            : 128,
 
     # network parameters
-    'batch_size_train' : 48,
-    'batch_size_test' : 48, #10 #self.batch_size # Note, needs to be = self.batch_size for multi-view validation
+    'batch_size_train' : 64,
+    'batch_size_test' : 64, #10 #self.batch_size # Note, needs to be = self.batch_size for multi-view validation
 #     'outputDimension_3d' : num_joints * 3,
     'outputDimension_2d' : inputDimension // 8,
 

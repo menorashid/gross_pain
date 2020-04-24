@@ -41,9 +41,18 @@ class SimpleFrameDataset(Dataset):
             def __repr__(self):
                 return self.__class__.__name__ + '()'
 
+        class EraseTimeStamp(object):
+            def __call__(self, pic):
+                img = torchvision.transforms.functional.erase(pic, 5, 5, 8, 37, v=0)
+                return img
+
+            def __repr__(self):
+                return self.__class__.__name__ + '()'
+
         self.transform_in = torchvision.transforms.Compose([
             Image256toTensor(), # torchvision.transforms.ToTensor() the torchvision one behaved differently for different pytorch versions, hence the custom one..
-            torchvision.transforms.Normalize(self.mean, self.stdDev)
+            torchvision.transforms.Normalize(self.mean, self.stdDev),
+            EraseTimeStamp()
         ])
         self.label_dict = get_label_df_for_subjects(data_folder, subjects).to_dict()
 
