@@ -63,9 +63,10 @@ def get_model_path(config_dict, epoch):
     shorter_test_subjects = [subject[:2] for subject in config_dict['test_subjects']]
 
     folder = "../output/trainNVS_{job_identifier}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}/skipBG{skip_background}_bg{latent_bg}_fg{latent_fg}_3d{latent_3d}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_bs{use_view_batches}_lr{learning_rate}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
-    # folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
+    folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
     model_ext = 'network_0' + epoch + '.pth'
     model_path = os.path.join(folder, 'models', model_ext)
+    print ('Model Path',model_path)
     return model_path
 
 
@@ -102,7 +103,7 @@ if __name__ == "__main__":
     train_subjects_model = re.split('/', args.train_subjects_model)
     test_subjects_model = re.split('/',args.test_subjects_model)
 
-    config_dict_for_saved_model = rhodin_utils_io.loadModule("configs/config_debug.py").config_dict
+    config_dict_for_saved_model = rhodin_utils_io.loadModule(args.config_file_model).config_dict
     config_dict_for_saved_model['implicit_rotation'] = config_dict_for_saved_model.get('implicit_rotation', False)
     config_dict_for_saved_model['skip_background'] = config_dict_for_saved_model.get('skip_background', True)
     config_dict_for_saved_model['loss_weight_pose3D'] = config_dict_for_saved_model.get('loss_weight_pose3D', 0)
