@@ -37,6 +37,20 @@ class PreApplyCriterionListDict(torch.nn.Module):
             return sum(losslist)
         else:
             return losslist
+
+
+class LossLabel(torch.nn.Module):
+    def __init__(self, key, loss_single):
+        super(LossLabelMeanStdNormalized, self).__init__()
+        self.key = key
+        self.loss_single = loss_single
+
+    def forward(self, preds, labels):
+        pred_pose = preds[self.key]
+        label_pose = labels[self.key]
+
+        return self.loss_single.forward(pred_pose, label_pose)
+    
         
 class LossLabelMeanStdNormalized(torch.nn.Module):
     """
