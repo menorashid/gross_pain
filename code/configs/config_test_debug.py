@@ -21,13 +21,13 @@ config_dict = {
     # General parameters
     'dpi'                     : 190,
     # Possible input types    : 'img_crop' | 'bg_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
-    'input_types'             : ['img_crop', 'bg_crop'],
+    'input_types'             : ['img_crop', 'bg_crop', 'extrinsic_rot', 'extrinsic_rot_inv'],
     # Possible output types   :  'img_crop' | '3D' | 'shuffled_pose' | 'shuffled_appearance' | 'latent_3d'
-    'output_types'            : ['img_crop','latent_3d'],
+    'output_types'            : ['img_crop','latent_3d','shuffled_pose','latent_3d_rotated'],
     # Possible lt train       : 'img_crop' | '3D' | 'bounding_box_cam' | 'intrinsic_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
     'label_types_train'       : ['img_crop'],
     # Possible lt test        : 'img_crop' | '3D' | 'bounding_box_cam' | 'intrinsic_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
-    'label_types_test'        : ['img_crop', 'pain', 'view'],
+    'label_types_test'        : ['img_crop', 'pain', 'view', 'frame'],
     'num_workers'             : 4,
     'bones'                   : bones,
 
@@ -72,8 +72,8 @@ config_dict = {
     'active_cameras' : False,
     'inputDimension' : inputDimension,
     'mirror_augmentation' : False,
-    'perspectiveCorrection' : True,
-    'rotation_augmentation' : True,
+    'perspectiveCorrection' : False,
+    'rotation_augmentation' : False,
     'shear_augmentation' : 0,
     'scale_augmentation' : False,
     'seam_scaling' : 1.0,
@@ -88,7 +88,7 @@ config_dict = {
     'latent_dropout' : 0.3,
     'from_latent_hidden_layers' : 0,
     'upsampling_bilinear' : 'upper',
-    'shuffle_fg' : True,
+    'shuffle_fg' : False,
     'shuffle_3d' : True,
     'feature_scale' : 4,
     'num_encoding_layers' : 4,
