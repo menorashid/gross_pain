@@ -16,6 +16,7 @@ from rhodin.python.ignite.metrics import Loss
 from rhodin.python.utils import datasets as rhodin_utils_datasets
 from rhodin.python.utils import io as rhodin_utils_io
 from rhodin.python.utils import training as utils_train
+from helpers import util
 
 import math
 import torch
@@ -93,17 +94,27 @@ class IgniteTrainNVS:
             epoch = engine.state.epoch - 1
             if epoch % config_dict['plot_every'] == 0:
                 utils_train.save_training_example(save_path, engine, vis, vis_windows, config_dict)
-                
+
+        @trainer.on(Events.EPOCH_COMPLETED)
+        def log_training_results(trainer):
+            ep = trainer.state.epoch
+            print("Running evaluation of whole train set at epoch ", ep)
+            evaluator.run(train_loader, metrics=metrics)
+            _ = util.save_testing_error(save_path, trainer, evaluator,
+                                vis, vis_windows, dataset_str='Training Set',
+                                save_extension='debug_log_training_wholeset.txt')
+
         @trainer.on(Events.EPOCH_COMPLETED)
         # @trainer.on(Events.ITERATION_COMPLETED)
         def validate_model(engine):
-            iteration = engine.state.epoch -1
+            ep = engine.state.epoch
             # - 1
-            if (iteration) % config_dict['test_every'] == 0: # +1 to prevent evaluation at iteration 0
+            if (ep) % config_dict['test_every'] == 0: # +1 to prevent evaluation at iteration 0
                     # return
-                print("Running evaluation at iteration",iteration)
+                print("Running evaluation at epoch ", ep)
                 evaluator.run(test_loader, metrics=metrics)
-                avg_accuracy = utils_train.save_testing_error(save_path, engine, evaluator, vis, vis_windows)
+                avg_accuracy = util.save_testing_error(save_path, engine, evaluator,
+                                    vis, vis_windows, dataset_str='Test Set', save_extension='debug_log_testing.txt')
         
                 # save the best model
                 utils_train.save_model_state(save_path, trainer, avg_accuracy, model, optimizer, engine.state)

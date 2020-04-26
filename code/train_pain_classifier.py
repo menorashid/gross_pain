@@ -69,7 +69,6 @@ class IgniteTrainPain(train_encode_decode.IgniteTrainNVS):
             if iteration % config_dict['print_every'] == 0:
                 util.save_training_error(save_path, engine, vis, vis_windows)
         
-        #@trainer.on(Events.EPOCH_COMPLETED)
         @trainer.on(Events.EPOCH_COMPLETED)
         def log_training_results(trainer):
             evaluator.run(train_loader)
