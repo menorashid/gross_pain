@@ -24,10 +24,12 @@ config_dict = {
     # opt parameters    
     'num_epochs'              : 10,
     'save_every'              : 1,
+    'train_test_every'        : 10,
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
     'test_every'              : 1,
     'plot_every'              : 1,
-    'print_every'             : 100,
+    'print_every'             : 10,
+
 
     # LPS dataset parameters
     
@@ -41,8 +43,8 @@ config_dict = {
     'image_height'            : 128,
 
     # network parameters
-    'batch_size_train' : 128,
-    'batch_size_test' : 128, #10 #self.batch_size # Note, needs to be = self.batch_size for multi-view validation
+    'batch_size_train' : 64,
+    'batch_size_test' : 64, #10 #self.batch_size # Note, needs to be = self.batch_size for multi-view validation
     'outputDimension_3d' : num_joints * 3,
     'outputDimension_2d' : inputDimension // 8,
 
@@ -51,8 +53,8 @@ config_dict = {
     'train_crop_relative' : False,
 
     # dataset
-    # 'training_set' : 'LPS_2fps_crop',
-    'training_set' : 'LPS_2fps',
+    'training_set' : 'LPS_2fps_crop',
+    # 'training_set' : 'LPS_2fps',
     'img_mean' : (0.485, 0.456, 0.406),
     'img_std' : (0.229, 0.224, 0.225),
     'active_cameras' : False,
@@ -65,7 +67,7 @@ config_dict = {
     'seam_scaling' : 1.0,
     'use_view_batches' : 4,
     'use_subject_batches' : True,
-    'every_nth_frame' : 10,
+    'every_nth_frame' : 1,
 
     # Encoder-decoder
     'latent_bg' : 0,

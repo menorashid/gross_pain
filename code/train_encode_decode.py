@@ -98,11 +98,12 @@ class IgniteTrainNVS:
         @trainer.on(Events.EPOCH_COMPLETED)
         def log_training_results(trainer):
             ep = trainer.state.epoch
-            print("Running evaluation of whole train set at epoch ", ep)
-            evaluator.run(train_loader, metrics=metrics)
-            _ = util.save_testing_error(save_path, trainer, evaluator,
-                                vis, vis_windows, dataset_str='Training Set',
-                                save_extension='debug_log_training_wholeset.txt')
+            if  'train_test_every' in config_dict.keys() and (ep) % config_dict['train_test_every'] == 0:
+                print("Running evaluation of whole train set at epoch ", ep)
+                evaluator.run(train_loader, metrics=metrics)
+                _ = util.save_testing_error(save_path, trainer, evaluator,
+                                    vis, vis_windows, dataset_str='Training Set',
+                                    save_extension='debug_log_training_wholeset.txt')
 
         @trainer.on(Events.EPOCH_COMPLETED)
         # @trainer.on(Events.ITERATION_COMPLETED)
