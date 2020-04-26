@@ -19,19 +19,19 @@ config_dict = {
     'dpi'                     : 190,
     'input_types'             : ['img_crop', 'bg_crop'],
     # Possible output types   :  'img_crop' | '3D' | 'shuffled_pose' | 'shuffled_appearance' | 'latent_3d'
-    'output_types'            : ['img_crop', '3D'],
+    'output_types'            : ['pain'],
     'label_types_train'       : ['img_crop'],
     'label_types_test'        : ['img_crop'],
     'num_workers'             : 4,
     'bones'                   : bones,
 
     # opt parameters    
-    'num_epochs'              : 1,
-    'save_every'              : 100000,
+    'num_epochs'              : 10,
+    'save_every'              : 1,
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
-    'test_every'              : 251,
-    'plot_every'              : 5000,
-    'print_every'             : 100,
+    'test_every'              : 1,
+    'plot_every'              : 1,
+    'print_every'             : 10,
 
     # LPS dataset parameters
     
@@ -45,8 +45,8 @@ config_dict = {
     'image_height'            : 128,
 
     # network parameters
-    'batch_size_train' : 16,
-    'batch_size_test' : 16, #10 #self.batch_size # Note, needs to be = self.batch_size for multi-view validation
+    'batch_size_train' : 128,
+    'batch_size_test' : 128, #10 #self.batch_size # Note, needs to be = self.batch_size for multi-view validation
     'outputDimension_3d' : num_joints * 3,
     'outputDimension_2d' : inputDimension // 8,
 
@@ -55,7 +55,7 @@ config_dict = {
     'train_crop_relative' : False,
 
     # dataset
-    'training_set' : 'LPS_2fps',
+    'training_set' : 'LPS_2fps_crop',
     'img_mean' : (0.485, 0.456, 0.406),
     'img_std' : (0.229, 0.224, 0.225),
     'active_cameras' : False,
@@ -68,7 +68,7 @@ config_dict = {
     'seam_scaling' : 1.0,
     'use_view_batches' : 4,
     'use_subject_batches' : True,
-    'every_nth_frame' : 100,
+    'every_nth_frame' : 1,
 
     # Encoder-decoder
     'latent_bg' : 0,
