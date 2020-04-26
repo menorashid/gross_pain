@@ -19,8 +19,15 @@ import IPython
 import train_encode_decode
 from rhodin.python.losses import generic as losses_generic
 from rhodin.python.losses import poses as losses_poses
+from metrics.binary_accuracy import BinaryAccuracy
+from rhodin.python.utils import training as utils_train
 
 class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
+    def load_metrics(self, loss_test):
+        metrics = {'loss': utils_train.AccumulatedLoss(loss_test),
+                   'accuracy': BinaryAccuracy()}
+        return metrics
+    
     def loadOptimizer(self, network, config_dict):
         params_all_id = list(map(id, network.parameters()))
         params_painnet_id = list(map(id, network.to_pain.parameters()))

@@ -12,6 +12,7 @@ import numpy as np
 from models import unet_encode3D
 from rhodin.python.losses import generic as losses_generic
 from rhodin.python.losses import images as losses_images
+from rhodin.python.ignite.metrics import Loss
 from rhodin.python.utils import datasets as rhodin_utils_datasets
 from rhodin.python.utils import io as rhodin_utils_io
 from rhodin.python.utils import training as utils_train
@@ -65,11 +66,11 @@ class IgniteTrainNVS:
         model = model.to(device)
         optimizer = self.loadOptimizer(model,config_dict)
         loss_train,loss_test = self.load_loss(config_dict)
+        metrics = self.load_metrics(loss_test)
             
         trainer = utils_train.create_supervised_trainer(model, optimizer, loss_train, device=device)
         evaluator = utils_train.create_supervised_evaluator(model,
-                                                metrics={#'accuracy': CategoricalAccuracy(),
-                                                         'primary': utils_train.AccumulatedLoss(loss_test)},
+                                                metrics=metrics,
                                                 device=device)
     
         #@trainer.on(Events.STARTED)
@@ -101,7 +102,7 @@ class IgniteTrainNVS:
             if (iteration) % config_dict['test_every'] == 0: # +1 to prevent evaluation at iteration 0
                     # return
                 print("Running evaluation at iteration",iteration)
-                evaluator.run(test_loader)
+                evaluator.run(test_loader, metrics=metrics)
                 avg_accuracy = utils_train.save_testing_error(save_path, engine, evaluator, vis, vis_windows)
         
                 # save the best model
@@ -123,7 +124,10 @@ class IgniteTrainNVS:
                 utils_train.save_test_example(save_path, trainer, evaluator, vis, vis_windows, config_dict)
     
         # kick everything off
-        trainer.run(train_loader, max_epochs=epochs)
+        trainer.run(train_loader, max_epochs=epochs, metrics=metrics)
+
+    def load_metrics(self, loss_test):
+        return {'primary': utils_train.AccumulatedLoss(loss_test)}
         
     def load_network(self, config_dict):
         output_types= config_dict['output_types']

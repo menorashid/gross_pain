@@ -187,7 +187,7 @@ class Engine(object):
         else:
             raise e
 
-    def run(self, data, max_epochs=1):
+    def run(self, data, metrics=None, max_epochs=1):
         """Runs the process_function over the passed data.
 
         Args:
@@ -198,7 +198,7 @@ class Engine(object):
             State: output state
         """
 
-        self.state = State(dataloader=data, epoch=0, max_epochs=max_epochs, metrics={})
+        self.state = State(dataloader=data, epoch=0, max_epochs=max_epochs, metrics=metrics)
 
         try:
             self._logger.info("Engine run starting with max_epochs={}".format(max_epochs))
