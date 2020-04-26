@@ -1,6 +1,15 @@
 from rhodin.python.utils import io as rhodin_utils_io
 import os
 
+num_joints = 17
+bones = [[0, 1], [1, 2], [2, 3],
+             [0, 4], [4, 5], [5, 6],
+             [0, 7], [7, 8], [8, 9], [9, 10],
+             [8, 14], [14, 15], [15, 16],
+             [8, 11], [11, 12], [12, 13],
+            ]
+
+inputDimension = 128
 config_dict = {
     # General parameters
     'dpi'                     : 190,
@@ -18,7 +27,7 @@ config_dict = {
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
     'test_every'              : 1,
     'plot_every'              : 1,
-    'print_every'             : 10,
+    'print_every'             : 100,
 
     # LPS dataset parameters
     
@@ -56,7 +65,7 @@ config_dict = {
     'seam_scaling' : 1.0,
     'use_view_batches' : 4,
     'use_subject_batches' : True,
-    'every_nth_frame' : 100,
+    'every_nth_frame' : 10,
 
     # Encoder-decoder
     'latent_bg' : 0,
