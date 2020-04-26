@@ -519,6 +519,24 @@ def plot_confusion_matrix(cm, classes, out_file,
     plt.savefig(out_file)
     plt.close()
 
+
+def markdown_im_table(im_links, col_titles, title, md_file):
+    md_rows =[]
+    md_rows.append('**'+title+'**')
+    md_rows.append(' ')
+    md_rows.append('|'.join(col_titles))
+    x = [':---:']*len(col_titles)
+    md_rows.append('|'.join(x))
+    # md_rows.append(' ')
+    for im_row in im_links:
+        str_arr = []
+        for im in im_row:
+            # print (im)
+            str_arr.append('![]('+im+')')
+        md_rows.append('|'.join(str_arr))
+    util.writeFile(md_file, md_rows)
+
+
 def main():
     print ('hello')
 
