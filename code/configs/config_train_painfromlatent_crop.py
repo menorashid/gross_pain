@@ -53,8 +53,8 @@ config_dict = {
     'train_crop_relative' : False,
 
     # dataset
-    # 'training_set' : 'LPS_2fps_crop',
-    'training_set' : 'LPS_2fps',
+    'training_set' : 'LPS_2fps_crop',
+    # 'training_set' : 'LPS_2fps',
     'img_mean' : (0.485, 0.456, 0.406),
     'img_std' : (0.229, 0.224, 0.225),
     'active_cameras' : False,
@@ -67,7 +67,7 @@ config_dict = {
     'seam_scaling' : 1.0,
     'use_view_batches' : 4,
     'use_subject_batches' : True,
-    'every_nth_frame' : 10,
+    'every_nth_frame' : 1,
 
     # Encoder-decoder
     'latent_bg' : 0,

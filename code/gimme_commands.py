@@ -60,34 +60,29 @@ def pnp_latent_commands():
 	job_name_model = 'withRotCrop'
 	epoch = '50'
 
-	config_file = 'configs/config_train_painfromlatent.py'
-	job_name = 'painWithRotCrop'
+	# config_file = 'configs/config_train_painfromlatent_crop.py'
+	# job_name = 'painWithRotCropwApp'
+	# python_path = 'train_encode_decode_pain_wApp.py'
+
+	config_file = 'configs/config_train_painfromlatent_crop.py'
+	job_name = 'painWithRotCrop512'
+	python_path = 'train_encode_decode_pain_512.py'
 
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
 	
 	util.mkdir('to_runs')
 
-	num_gpus = 4
-	num_per_gpu = 1
+	num_gpus = 1
+	num_per_gpu = 4
 	for idx in range(num_gpus):
 		test_horses = test_horses_all[num_per_gpu*idx:num_per_gpu*idx+num_per_gpu]
 		out_file = os.path.join('to_runs','_'.join(['to_run',to_run_str,job_name,str(idx)]))
 		print (out_file)
-	# test_horses = ['brava', 'herrera']
-	# test_horses = ['inkasso','julia']
-	# test_horses = ['kastanjett', 'naughty_but_nice']
-	# test_horses = ['sir_holger']
-	# 
-	# 
-	# 
-	# , 'inkasso','julia']
-	# , 'kastanjett', 'naughty_but_nice', 'sir_holger']
-	# test_horses = ['aslan', 'brava', 'herrera', 'inkasso']
-		# python train_encode_decode_pain.py --config_file configs/config_train_painfromlatent.py --config_file_model configs/config_train_bl_no_rot.py --dataset_path /local_storage/users/sbroome/SLU_LPS/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/ --train_subjects aslan/brava/herrera/inkasso/julia/kastanjett/naughty_but_nice --test_subjects sir_holger --train_subjects_model aslan/brava/herrera/inkasso/julia/kastanjett/naughty_but_nice --test_subjects_model sir_holger --job_identifier_encdec noRotBL --job_identifier test_longer --epoch_encdec 50
+
 		commands = []
 		for test_subject in test_horses:
 			train_subjects = [x for x in train_horses if x is not test_subject]
-			str_com = ['python','train_encode_decode_pain.py']
+			str_com = ['python',python_path]
 			str_com+= ['--config_file', config_file]
 			str_com+= ['--dataset_path', data_path]
 			str_com+= ['--train_subjects', '/'.join(train_subjects)]
@@ -106,6 +101,7 @@ def pnp_latent_commands():
 
 		# print (commands)
 		util.writeFile(out_file, commands)
+
 
 def main():
 	pnp_latent_commands()
