@@ -4,18 +4,19 @@ import sys
 import argparse
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from multiview_dataset import MultiViewDataset, MultiViewDatasetSampler
+from multiview_dataset import MultiViewDataset, MultiViewDatasetCrop, MultiViewDatasetSampler
 import os, shutil
 
 import numpy as np
-import IPython
 
 from models import unet_encode3D
 from rhodin.python.losses import generic as losses_generic
 from rhodin.python.losses import images as losses_images
+from rhodin.python.ignite.metrics import Loss
 from rhodin.python.utils import datasets as rhodin_utils_datasets
 from rhodin.python.utils import io as rhodin_utils_io
 from rhodin.python.utils import training as utils_train
+from helpers import util
 
 import math
 import torch
@@ -66,11 +67,11 @@ class IgniteTrainNVS:
         model = model.to(device)
         optimizer = self.loadOptimizer(model,config_dict)
         loss_train,loss_test = self.load_loss(config_dict)
+        metrics = self.load_metrics(loss_test)
             
         trainer = utils_train.create_supervised_trainer(model, optimizer, loss_train, device=device)
         evaluator = utils_train.create_supervised_evaluator(model,
-                                                metrics={#'accuracy': CategoricalAccuracy(),
-                                                         'primary': utils_train.AccumulatedLoss(loss_test)},
+                                                metrics=metrics,
                                                 device=device)
     
         #@trainer.on(Events.STARTED)
@@ -83,24 +84,50 @@ class IgniteTrainNVS:
             iteration = engine.state.iteration - 1
             if iteration % config_dict['print_every'] == 0:
                 utils_train.save_training_error(save_path, engine, vis, vis_windows)
-        
-            # log batch example image
-            if iteration in [0,100] or iteration % config_dict['plot_every'] == 0:
+            if iteration in [0,100]:
                 utils_train.save_training_example(save_path, engine, vis, vis_windows, config_dict)
-                
-        #@trainer.on(Events.EPOCH_COMPLETED)
-        @trainer.on(Events.ITERATION_COMPLETED)
+
+        @trainer.on(Events.EPOCH_COMPLETED)
+        def plot_training_image(engine):
+            # log batch example image
+            print ('plotting')
+            epoch = engine.state.epoch - 1
+            if epoch % config_dict['plot_every'] == 0:
+                utils_train.save_training_example(save_path, engine, vis, vis_windows, config_dict)
+
+        @trainer.on(Events.EPOCH_COMPLETED)
+        def log_training_results(trainer):
+            ep = trainer.state.epoch
+            if  'train_test_every' in config_dict.keys() and (ep) % config_dict['train_test_every'] == 0:
+                print("Running evaluation of whole train set at epoch ", ep)
+                evaluator.run(train_loader, metrics=metrics)
+                _ = util.save_testing_error(save_path, trainer, evaluator,
+                                    vis, vis_windows, dataset_str='Training Set',
+                                    save_extension='debug_log_training_wholeset.txt')
+
+        @trainer.on(Events.EPOCH_COMPLETED)
+        # @trainer.on(Events.ITERATION_COMPLETED)
         def validate_model(engine):
-            iteration = engine.state.iteration - 1
-            if (iteration+1) % config_dict['test_every'] != 0: # +1 to prevent evaluation at iteration 0
-                return
-            print("Running evaluation at iteration",iteration)
-            evaluator.run(test_loader)
-            avg_accuracy = utils_train.save_testing_error(save_path, engine, evaluator, vis, vis_windows)
-    
-            # save the best model
-            utils_train.save_model_state(save_path, trainer, avg_accuracy, model, optimizer, engine.state)
-    
+            ep = engine.state.epoch
+            # - 1
+            if (ep) % config_dict['test_every'] == 0: # +1 to prevent evaluation at iteration 0
+                    # return
+                print("Running evaluation at epoch ", ep)
+                evaluator.run(test_loader, metrics=metrics)
+                avg_accuracy = util.save_testing_error(save_path, engine, evaluator,
+                                    vis, vis_windows, dataset_str='Test Set', save_extension='debug_log_testing.txt')
+        
+                # save the best model
+                utils_train.save_model_state(save_path, trainer, avg_accuracy, model, optimizer, engine.state)
+        
+        @trainer.on(Events.EPOCH_COMPLETED)
+        # @trainer.on(Events.ITERATION_COMPLETED)
+        def save_model(engine):
+            epoch = engine.state.epoch
+            print ('epoch',epoch,'engine.state.iteration',engine.state.iteration)
+            if not epoch % config_dict['save_every']: # +1 to prevent evaluation at iteration 0
+                utils_train.save_model_state_iter(save_path, trainer, model, optimizer, engine.state)
+
         # print test result
         @evaluator.on(Events.ITERATION_COMPLETED)
         def log_test_loss(engine):
@@ -109,7 +136,10 @@ class IgniteTrainNVS:
                 utils_train.save_test_example(save_path, trainer, evaluator, vis, vis_windows, config_dict)
     
         # kick everything off
-        trainer.run(train_loader, max_epochs=epochs)
+        trainer.run(train_loader, max_epochs=epochs, metrics=metrics)
+
+    def load_metrics(self, loss_test):
+        return {'primary': utils_train.AccumulatedLoss(loss_test)}
         
     def load_network(self, config_dict):
         output_types= config_dict['output_types']
@@ -202,11 +232,20 @@ class IgniteTrainNVS:
         return optimizer
     
     def load_data_train(self,config_dict):
-        dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_train'],
-                                   bg_folder=config_dict['bg_folder'],
-                                   input_types=config_dict['input_types'],
-                                   label_types=config_dict['label_types_train'],
-                                   subjects=config_dict['train_subjects'])
+        if config_dict['training_set']=='LPS_2fps_crop':
+            dataset = MultiViewDatasetCrop(data_folder=config_dict['dataset_folder_train'],
+                                       bg_folder=config_dict['bg_folder'],
+                                       input_types=config_dict['input_types'],
+                                       label_types=config_dict['label_types_train'],
+                                       subjects=config_dict['train_subjects'],
+                                       rot_folder = config_dict['rot_folder'])
+        else:
+            dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_train'],
+                                       bg_folder=config_dict['bg_folder'],
+                                       input_types=config_dict['input_types'],
+                                       label_types=config_dict['label_types_train'],
+                                       subjects=config_dict['train_subjects'],
+                                       rot_folder = config_dict['rot_folder'])
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_train'],
               subjects=config_dict['train_subjects'],
@@ -220,11 +259,20 @@ class IgniteTrainNVS:
         return loader
     
     def load_data_test(self,config_dict):
-        dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_test'],
-                                   bg_folder=config_dict['bg_folder'],
-                                   input_types=config_dict['input_types'],
-                                   label_types=config_dict['label_types_test'],
-                                   subjects=config_dict['test_subjects'])
+        if config_dict['training_set']=='LPS_2fps_crop':
+            dataset = MultiViewDatasetCrop(data_folder=config_dict['dataset_folder_test'],
+                                       bg_folder=config_dict['bg_folder'],
+                                       input_types=config_dict['input_types'],
+                                       label_types=config_dict['label_types_test'],
+                                       subjects=config_dict['test_subjects'],
+                                       rot_folder = config_dict['rot_folder'])
+        else:
+            dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_test'],
+                                       bg_folder=config_dict['bg_folder'],
+                                       input_types=config_dict['input_types'],
+                                       label_types=config_dict['label_types_test'],
+                                       subjects=config_dict['test_subjects'],
+                                       rot_folder = config_dict['rot_folder'])
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_test'],
                                                 subjects=config_dict['test_subjects'],
@@ -270,7 +318,9 @@ class IgniteTrainNVS:
     def get_parameter_description(self, config_dict):
         shorter_train_subjects = [subject[:2] for subject in config_dict['train_subjects']]
         shorter_test_subjects = [subject[:2] for subject in config_dict['test_subjects']]
-        folder = "../output/trainNVS_{job_identifier}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}_skipBG{skip_background}_bg{latent_bg}_fg{latent_fg}_3d{latent_3d}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}_nth{every_nth_frame}_c{active_cameras}_train{}_test{}_bs{use_view_batches}_lr{learning_rate}_".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
+        # folder = "../output/trainNVS_{job_identifier}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}_skipBG{skip_background}_bg{latent_bg}_fg{latent_fg}_3d{latent_3d}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}_nth{every_nth_frame}_c{active_cameras}_train{}_test{}_bs{use_view_batches}_lr{learning_rate}_".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
+
+        folder = "../output/trainNVS_{job_identifier}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}/skipBG{skip_background}_bg{latent_bg}_fg{latent_fg}_3d{latent_3d}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_bs{use_view_batches}_lr{learning_rate}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
         folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
         return folder
 
@@ -279,6 +329,8 @@ def parse_arguments(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_file', type=str,
         help="Python file with config dictionary.")
+    parser.add_argument('--dataset_path', type=str,
+        help="Path to root folder for dataset.")
     parser.add_argument('--train_subjects', type=str,
         help="Which subjects to train on.")
     parser.add_argument('--test_subjects', type=str,
@@ -298,6 +350,13 @@ if __name__ == "__main__":
     config_dict['job_identifier'] = args.job_identifier
     config_dict['train_subjects'] = train_subjects
     config_dict['test_subjects'] = test_subjects
+    config_dict['data_dir_path'] = args.dataset_path
+    config_dict['dataset_folder_train'] = args.dataset_path
+    config_dict['dataset_folder_test'] = args.dataset_path
+    root = args.dataset_path.rsplit('/', 2)[0]
+    config_dict['bg_folder'] = os.path.join(root, 'median_bg/')
+    config_dict['rot_folder'] = os.path.join(root, 'rotation_cal_1/')
+    
     ignite = IgniteTrainNVS()
     ignite.run(config_dict_module.__file__, config_dict)
 

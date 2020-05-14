@@ -1,7 +1,7 @@
 import matplotlib as mpl
 #mpl.use('Agg')
 import matplotlib.pyplot as plt
-
+import imageio
 import math
 import numpy as np
 
@@ -35,7 +35,22 @@ def tensor_imshow(ax, img):
 
     npimg = np.clip(npimg, 0., 1.)
     ax.imshow(npimg)
-    
+
+def tensor_to_im(img, mean=None, stdDev=None):
+    npimg = img.numpy()
+    npimg = np.swapaxes(npimg, 0, 2)
+    npimg = np.swapaxes(npimg, 0, 1)
+
+    if mean is None:
+        mean = (0.0, 0.0, 0.0)
+    mean = np.array(mean)
+    if stdDev is None:
+        stdDev = np.array([1.0, 1.0, 1.0])
+    stdDev = np.array(stdDev)
+
+    npimg = npimg * stdDev + mean  # unnormalize
+    return np.uint8(np.clip(npimg,0.,1.)*255)
+
 def tensor_imshow_normalized(ax, img, mean=None, stdDev=None, im_plot_handle=None, x_label=None, clip=True):
     npimg = img.numpy()
     npimg = np.swapaxes(npimg, 0, 2)
@@ -133,10 +148,9 @@ def plot_3Dpose_batch(ax, batch_raw, offset_factor_x=None, offset_factor_y=None,
         offset_y = offset_factor_y*(batchi // row_length)
         pose_3d_cat[num_joints*batchi:num_joints*(batchi+1),:] += np.array([[offset_x,offset_y,0]])
     utils_plt.plot_3Dpose(ax, pose_3d_cat.T, bones_cat, radius=radius, colormap=colormap, color_order=color_order_cat, transparentBG=True)
-    
 
 def plot_iol(inputs_raw, labels_raw, outputs_dict, config_dict, keyword, image_name):
-    print("labels_raw.keys() = {}, inputs_raw.keys() = {}, outputs_dict.keys() = {}".format(labels_raw.keys(), inputs_raw.keys(), outputs_dict.keys()))
+    # print("labels_raw.keys() = {}, inputs_raw.keys() = {}, outputs_dict.keys() = {}".format(labels_raw.keys(), inputs_raw.keys(), outputs_dict.keys()))
         
     # init figure grid dimensions in an recursive call
     created_sub_plots = 0
@@ -177,6 +191,9 @@ def plot_iol(inputs_raw, labels_raw, outputs_dict, config_dict, keyword, image_n
         else:
             x_label = ""
         tensor_imshow_normalized(ax_img, grid_t, mean=config_dict['img_mean'], stdDev=config_dict['img_std'], x_label=x_label)
+        out_file = image_name[:-4]+'_in_img.jpg'
+        imageio.imsave( out_file, tensor_to_im(grid_t,mean=config_dict['img_mean'], stdDev=config_dict['img_std']))
+
     # display input images
     if 'bg_crop' in inputs_raw.keys():
         images_bg  = inputs_raw['bg_crop'].cpu().data
@@ -186,6 +203,8 @@ def plot_iol(inputs_raw, labels_raw, outputs_dict, config_dict, keyword, image_n
         grid_t = torchvision.utils.make_grid(images_bg, padding=0)
         x_label = ""
         tensor_imshow_normalized(ax_img, grid_t, mean=config_dict['img_mean'], stdDev=config_dict['img_std'], x_label=x_label)
+        out_file = image_name[:-4]+'_in_bg.jpg'
+        imageio.imsave( out_file, tensor_to_im(grid_t,mean=config_dict['img_mean'], stdDev=config_dict['img_std']))
         
         # difference
         images_diff = torch.abs(images_fg-images_bg)
@@ -392,6 +411,9 @@ def plot_iol(inputs_raw, labels_raw, outputs_dict, config_dict, keyword, image_n
         ax_img.set_title("Output images", size=title_font_size)
         grid_t = torchvision.utils.make_grid(images_out, padding=0)
         tensor_imshow_normalized(ax_img, grid_t, mean=config_dict['img_mean'], stdDev=config_dict['img_std'])
+        out_file = image_name[:-4]+'_out_img.jpg'
+        imageio.imsave( out_file, tensor_to_im(grid_t,mean=config_dict['img_mean'], stdDev=config_dict['img_std']))
+        
         # difference
         images_diff = torch.abs(images_fg-images_out)
         images_diff_max, i = torch.max(images_diff,dim=1,keepdim=True)
@@ -412,7 +434,7 @@ def plot_iol(inputs_raw, labels_raw, outputs_dict, config_dict, keyword, image_n
 
     if plot_iol.created_sub_plots_last[keyword] == created_sub_plots: # Don't save the dummy run that determines the number of plots
         plt.savefig(image_name,  dpi=config_dict['dpi'], transparent=True)
-        print("Written image to {} at dpi={}".format(image_name, config_dict['dpi']))
+        # print("Written image to {} at dpi={}".format(image_name, config_dict['dpi']))
 
     if verbose:
         plt.show()

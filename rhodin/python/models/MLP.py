@@ -26,7 +26,6 @@ class MLP_fromLatent(torch.nn.Module):
     
             self.fully_connected = torch.nn.Sequential(*module_list)
 
-
     def forward(self, inputs):
         input_latent = inputs[self.key]
         batch_size = input_latent.size()[0]

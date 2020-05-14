@@ -3,7 +3,6 @@ from torch.nn import Linear
 from torch.nn import ReLU
 from torch.nn import Dropout
 
-import IPython
 import random
 import torch
 import torch.autograd as A
@@ -15,6 +14,7 @@ from rhodin.python.models import resnet_VNECT_3Donly
 
 from rhodin.python.models.unet_utils import *
 from rhodin.python.models import MLP
+raw_input = input
 
 def quatCompact2mat(quat):
     """Convert quaternion coefficients to rotation matrix.
@@ -149,6 +149,7 @@ class unet(nn.Module):
         setattr(self, 'fc_2_stage' + str(ns), Linear(128, num_joints * nb_dims))
         
         self.to_pose = MLP.MLP_fromLatent(d_in=self.dimension_3d, d_hidden=2048, d_out=51, n_hidden=n_hidden_to3Dpose, dropout=0.5)
+        self.to_pain = MLP.MLP_fromLatent(d_in=self.dimension_3d, d_hidden=2048, d_out=2, n_hidden=n_hidden_to3Dpose, dropout=0.5)
                 
         self.to_3d =  nn.Sequential( Linear(num_output_features, self.dimension_3d),
                                      Dropout(inplace=True, p=self.latent_dropout) # removing dropout degrades results
@@ -269,6 +270,7 @@ class unet(nn.Module):
             if self.shuffle_3d:
                 for i in range(0,num_pose_subbatches):
                     # Shuffle pose samples randomly within subbatches
+                    # print("shuffled_pose      in if",shuffled_pose)
                     shuffle_segment(shuffled_pose, i*self.subbatch_size, (i+1)*self.subbatch_size)
                  
         # infer inverse mapping
@@ -278,6 +280,7 @@ class unet(nn.Module):
             
         # print('self.training',self.training,"shuffled_appearance",shuffled_appearance)
         # print("shuffled_pose      ",shuffled_pose)
+        # s = raw_input()
             
         shuffled_appearance = torch.LongTensor(shuffled_appearance).to(device)
         shuffled_pose       = torch.LongTensor(shuffled_pose).to(device)
@@ -299,6 +302,7 @@ class unet(nn.Module):
             else:
                 world_2_cam_shuffled = torch.index_select(world_2_cam, dim=0, index=shuffled_pose)
                 cam2cam = torch.bmm(world_2_cam_shuffled, cam_2_world)
+                # print (cam2cam)
         
         input_dict_cropped = input_dict # fallback to using crops
             
@@ -307,7 +311,6 @@ class unet(nn.Module):
         ns=0
         has_fg = hasattr(self, "to_fg")  # If latent_fg dim > 0
         if self.encoderType == "ResNet":
-            #IPython.embed()
             output = self.encoder.forward(input_dict_cropped)['latent_3d']
             if has_fg:
                 latent_fg = output[:,:self.dimension_fg]
@@ -324,6 +327,9 @@ class unet(nn.Module):
                 latent_fg = self.to_fg(center_flat)
             latent_3d = self.to_3d(center_flat).view(batch_size,-1,3)
         
+        # print (input_dict.keys(), input_dict['bg_crop'].shape)
+        # s = raw_input()
+
         if self.skip_background:
             input_bg = input_dict['bg_crop'] # TODO take the rotated one/ new view
             input_bg_shuffled = torch.index_select(input_bg, dim=0, index=shuffled_pose)
@@ -337,6 +343,7 @@ class unet(nn.Module):
                 encoded_latent_and_angle = torch.cat([latent_3d.view(batch_size,-1), encoded_angle], dim=1)
                 latent_3d_rotated = self.rotate_implicitely(encoded_latent_and_angle)
             else:
+                # print ('LADIES AND GENTLEMEN! WE ARE ROTATING!')
                 latent_3d_rotated = torch.bmm(latent_3d, cam2cam.transpose(1,2))
 
             if 'shuffled_pose_weight' in input_dict.keys():
@@ -384,11 +391,13 @@ class unet(nn.Module):
         ###############################################
         # 3D pose stage (parallel to image decoder)
         output_pose = self.to_pose.forward({'latent_3d': latent_3d})['3D']
+        output_pain = self.to_pain.forward({'latent_3d': latent_3d})['3D']
 
         ###############################################
         # Select the right output
         output_dict_all = {'3D' : output_pose, 'img_crop' : output_img, 'shuffled_pose' : shuffled_pose,
-                           'shuffled_appearance' : shuffled_appearance, 'latent_3d': latent_3d } 
+                           'shuffled_appearance' : shuffled_appearance, 'latent_3d': latent_3d,
+                           'pain': output_pain } 
         output_dict = {}
         for key in self.output_types:
             output_dict[key] = output_dict_all[key]

@@ -1,7 +1,7 @@
 from __future__ import division
 
 from ignite.exceptions import NotComputableError
-from ignite.metrics.metric import Metric
+from rhodin.python.ignite.metrics.metric import Metric
 
 
 class Loss(Metric):

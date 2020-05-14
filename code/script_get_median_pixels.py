@@ -4,9 +4,17 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 from matplotlib.pyplot import imread, imsave
+from helpers import util
 
 NUM_CAMERAS = 8
-frame_folder = '../data/intervals_for_extraction_128_128_0.1fps/'
+# frame_folder = '../data/intervals_for_extraction_128_128_0.1fps/'
+# out_folder = '../data/median_bg'
+# skip_num = 1
+
+frame_folder = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps/'
+out_folder = '../data/median_bg_672_380'
+skip_num = 2
+util.mkdir(out_folder)
 
 
 def get_all_jpg_paths(frame_folder):
@@ -29,7 +37,7 @@ def get_camera_from_path(path):
     
 
 path_list = get_all_jpg_paths(frame_folder)
-
+path_list = path_list[::skip_num]
 per_cam_lists = []
 
 # Make list of empty lists, one per camera
@@ -52,5 +60,5 @@ with tqdm(total=NUM_CAMERAS) as pbar:
         pbar.update(1)
         ar = np.asarray(per_cam_lists[i])
         med = np.median(ar, axis=0)
-        imsave('median_0.1fps_camera_{}.jpg'.format(i), med.astype('uint8'))
+        imsave(os.path.join(out_folder,'median_0.1fps_camera_{}.jpg'.format(i)), med.astype('uint8'))
     

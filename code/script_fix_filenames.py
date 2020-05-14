@@ -249,7 +249,41 @@ def script_for_offsets_original():
     #              views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count())
     # mve.extract_frames()
 
+def extract_frames():
+
+    folder = '../data/intervals_for_debugging_128_128_2fps_manual/sir_holger/20181104162109_165940_5/1'
+    visualize.writeHTMLForFolder(folder)
+    return
+    data_path = '../data/lps_data/surveillance_camera'
+    data_selection_path = '../metadata/intervals_for_debugging.csv'
+    out_dir_offsets = '../metadata/fixing_offsets_with_cam_on'
+    out_file_final = os.path.join(out_dir_offsets,'video_offsets_final.csv')
+    width = 128
+    height = 128
+    frame_rate = 2
+    out_file_str = [os.path.split(data_selection_path)[1][:-4]]
+    out_file_str.extend([str(val) for val in [width,height]])
+    out_file_str.extend([str(frame_rate)+'fps'])
+    out_dir_testing = os.path.join('../data','_'.join(out_file_str))
+    util.mkdir(out_dir_testing)
+    mve = MultiViewFrameExtractor(data_path = data_path, width=width, height = height, frame_rate = frame_rate, output_dir = out_dir_testing,views = [1], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count(), offset_file = out_file_final)
+    
+
+
+
+    # video_paths = util.readLinesFromFile(out_file)
+    # print (len(video_paths))
+    # mve.get_videos_containing_intervals()
+    # print ('now checking')
+    # for video_path in video_paths:
+    #     mve._get_video_start_time(video_path)
+    mve.extract_frames(replace = False)
+
 def main():
+
+    extract_frames()
+
+    return
     data_path = '../data/lps_data/surveillance_camera'
     
     data_selection_path = '../metadata/pain_no_pain_x2h_intervals_for_extraction.csv'
@@ -307,9 +341,17 @@ def main():
     # offsets.to_csv(out_file_final, columns = ['video_name','offset'],index = False)
 
 
-    out_dir_testing = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps'
+    # out_dir_testing = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps'
+    # util.mkdir(out_dir_testing)
+    # mve = MultiViewFrameExtractor(data_path = data_path, width= 128, height = 128, frame_rate = 2., output_dir = out_dir_testing,views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count(), offset_file = out_file_final)
+    
+    out_dir_testing = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps'
     util.mkdir(out_dir_testing)
-    mve = MultiViewFrameExtractor(data_path = data_path, width= 128, height = 128, frame_rate = 2., output_dir = out_dir_testing,views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count(), offset_file = out_file_final)
+    mve = MultiViewFrameExtractor(data_path = data_path, width= 672, height = 380, frame_rate = 0.2, output_dir = out_dir_testing,views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count(), offset_file = out_file_final)
+    
+
+
+
     # video_paths = util.readLinesFromFile(out_file)
     # print (len(video_paths))
     # mve.get_videos_containing_intervals()
@@ -317,6 +359,9 @@ def main():
     # for video_path in video_paths:
     #     mve._get_video_start_time(video_path)
     mve.extract_frames(replace = False)
+
+    # width 2688, height = 1520
+    # python extract_frames.py --data_path ../data/lps_data/surveillance_camera --output_dir ../data/intervals_testing_horse_det_w_h_0.01fps --csv_path ../metadata/intervals_testing_horse_det.csv --offset_file ../metadata/fixing_offsets_with_cam_on/video_offsets_final.csv --width 672 --height 380 --frame_rate 0.01 --view [0,1,2,3] 
 
 
 

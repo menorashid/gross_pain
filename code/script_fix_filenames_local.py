@@ -101,8 +101,5 @@ def main():
     util.writeFile(out_file_offsets, lines)
 
 
-
-
-
 if __name__=='__main__':
     main()

@@ -14,12 +14,12 @@ from random import shuffle
 from rhodin.python.utils import datasets as rhodin_utils_datasets
 from rhodin.python.utils import io as rhodin_utils_io
 from tqdm import tqdm
-
+import time
 
 class MultiViewDataset(Dataset):
     """Multi-view surveillance dataset of horses in their box."""
     def __init__(self, data_folder, bg_folder,
-                 input_types, label_types, subjects,
+                 input_types, label_types, subjects,rot_folder=None,
                  mean=(0.485, 0.456, 0.406),  #TODO update these to horse dataset.
                  stdDev= (0.229, 0.224, 0.225),
                  use_sequential_frames=0,
@@ -34,6 +34,8 @@ class MultiViewDataset(Dataset):
         for arg,val in list(locals().items()):
             setattr(self, arg, val)
 
+        self.lookup_viewpoint = pd.read_csv('../metadata/viewpoints.csv')
+
         class Image256toTensor(object):
             def __call__(self, pic):
                 img = torch.from_numpy(pic.transpose((2, 0, 1))).float()
@@ -47,7 +49,7 @@ class MultiViewDataset(Dataset):
             Image256toTensor(), # torchvision.transforms.ToTensor() the torchvision one behaved differently for different pytorch versions, hence the custom one..
             torchvision.transforms.Normalize(self.mean, self.stdDev)
         ])
-        self.label_dict = get_label_dict(data_folder, subjects)
+        self.label_dict = get_label_df_for_subjects(data_folder, subjects).to_dict()
 
     def __len__(self):
         return len(self.label_dict['frame'])
@@ -73,14 +75,20 @@ class MultiViewDataset(Dataset):
                                                                 view,
                                                                 frame_id)
         def get_bg_path(view, subject):
-            lookup_viewpoint = pd.read_csv('../metadata/viewpoints.csv').set_index('subject')
+            lookup_viewpoint = self.lookup_viewpoint.set_index('subject')
             camera = int(lookup_viewpoint.at[subject, str(view)])
             bg_path = self.bg_folder + 'median_0.1fps_camera_{}.jpg'.format(camera-1)
             return bg_path
 
+        def get_rot_path(view, subject, key):
+            lookup_viewpoint = self.lookup_viewpoint.set_index('subject')
+            camera = int(lookup_viewpoint.at[subject, str(view)])
+            rot_path = self.rot_folder + '{}_{}.npy'.format(key,camera)
+            return rot_path            
+
         def load_image(name):
             return np.array(self.transform_in(imageio.imread(name)), dtype='float32')
-
+        
         def load_data(types):
             new_dict = {}
             for key in types:
@@ -88,12 +96,96 @@ class MultiViewDataset(Dataset):
                     new_dict[key] = load_image(get_image_path(key)) 
                 elif key == 'bg_crop':
                     new_dict[key] = load_image(get_bg_path(view, subject))
+                elif key == 'pain':
+                    new_dict[key] = int(self.label_dict[key][index])
+                elif key == 'view':
+                    new_dict[key] = int(self.label_dict[key][index])
+                elif key == 'img_path':
+                    interval_int = [int(val) for val in interval.split('_')]
+                    new_dict[key] = np.array(interval_int+[interval_ind, view, frame])
+                elif (key=='extrinsic_rot') or (key=='extrinsic_rot_inv'):
+                    rot_path = get_rot_path(view,subject,key)
+                    new_dict[key] = np.load(rot_path)
+                    # print (new_dict[key])
                 else:
                     new_dict[key] = np.array(self.label_dict[key][index], dtype='float32')
             return new_dict
 
         return load_data(self.input_types), load_data(self.label_types)
 
+
+class MultiViewDatasetCrop(MultiViewDataset):
+    """Multi-view surveillance dataset of horses in their box."""
+    def __init__(self, data_folder, bg_folder,
+                 input_types, label_types, subjects,rot_folder=None,
+                 mean=(0.485, 0.456, 0.406),  #TODO update these to horse dataset.
+                 stdDev= (0.229, 0.224, 0.225),
+                 use_sequential_frames=0,
+                 ):
+        """
+        Args:
+        data_folder: str,
+        input_types: [str],
+        label_types: [str]
+        """
+        super().__init__(data_folder, bg_folder,
+                 input_types, label_types, subjects,rot_folder,
+                 mean,
+                 stdDev,
+                 use_sequential_frames)
+        
+    def __getitem__(self, index):
+
+        interval, interval_ind, view, subject, frame = self.get_local_indices(index)
+
+        def get_image_path(key):
+            frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
+                                str(view), '%06d'%frame])
+            return self.data_folder + '/{}/{}/{}/{}.jpg'.format(subject,
+                                                                interval,
+                                                                view,
+                                                                frame_id)
+        def get_bg_path(key):
+            frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
+                                str(view), '%06d'%frame])
+            return self.data_folder + '/{}/{}/{}_bg/{}.jpg'.format(subject,
+                                                                interval,
+                                                                view,
+                                                                frame_id)
+
+        def get_rot_path(view, subject, key):
+            lookup_viewpoint = self.lookup_viewpoint.set_index('subject')
+            camera = int(lookup_viewpoint.at[subject, str(view)])
+            rot_path = self.rot_folder + '{}_{}.npy'.format(key,camera)
+            return rot_path            
+
+        def load_image(name):
+            return np.array(self.transform_in(imageio.imread(name)), dtype='float32')
+        
+        def load_data(types):
+            new_dict = {}
+            for key in types:
+                if key == 'img_crop':
+                    new_dict[key] = load_image(get_image_path(key)) 
+                elif key == 'bg_crop':
+                    new_dict[key] = load_image(get_bg_path(key))
+                elif key in self.label_dict.keys():
+                 # == 'pain':
+                    new_dict[key] = int(self.label_dict[key][index])
+                elif key == 'img_path':
+                    interval_int = [int(val) for val in interval.split('_')]
+                    new_dict[key] = np.array(interval_int+[interval_ind, view, frame])
+                # elif key == 'view':
+                #     new_dict[key] = int(self.label_dict[key][index])
+                elif (key=='extrinsic_rot') or (key=='extrinsic_rot_inv'):
+                    rot_path = get_rot_path(view,subject,key)
+                    new_dict[key] = np.load(rot_path)
+                    # print (new_dict[key])
+                else:
+                    new_dict[key] = np.array(self.label_dict[key][index], dtype='float32')
+            return new_dict
+
+        return load_data(self.input_types), load_data(self.label_types)
 
 class MultiViewDatasetSampler(Sampler):
     """ This sampler decides how to iterate over the indices in the dataset.
@@ -113,7 +205,7 @@ class MultiViewDatasetSampler(Sampler):
             setattr(self, arg, val)
 
         # build view/subject datastructure
-        self.label_dict = get_label_dict(data_folder, subjects)
+        self.label_dict = get_label_df_for_subjects(data_folder, subjects).to_dict()
         print('Establishing sequence association. Available labels:', list(self.label_dict.keys()))
         all_keys = set()
         viewsets = {}
@@ -152,7 +244,9 @@ class MultiViewDatasetSampler(Sampler):
                               for interval, keyset in interval_keys.items()}
 
         print("DictDataset: Done initializing, listed {} viewsets ({} frames) and {} sequences".format(
-                                            len(self.viewsets), len(self.all_keys), len(interval_keys)))
+                                            len(self.viewsets),
+                                            len(self.all_keys)*self.use_view_batches,
+                                            len(interval_keys)))
 
     def __len__(self):
         return len(self.label_dict['frame'])
@@ -170,18 +264,28 @@ class MultiViewDatasetSampler(Sampler):
                         return x indices for that key,
                         where x = self.use_view_batches."""
                     viewset = self.viewsets[key]
+                    # print ('viewset',viewset)
                     viewset_keys = list(viewset.keys())
+                    # print ('viewset_keys',viewset_keys)
                     assert self.use_view_batches <= len(viewset_keys)
                     if self.randomize:
                         shuffle(viewset_keys)
+                        # print ('viewset_keys',viewset_keys)
                     if self.use_view_batches == 0:
                         view_subset_size = 99
                     else:
                         view_subset_size = self.use_view_batches
                     view_indices = [viewset[k] for k in viewset_keys[:view_subset_size]]
+                    # print ('view_indices',view_indices)
                     return view_indices
 
+                # t = time.time()
                 index_list = index_list + get_view_subbatch(key)
+                # index_list.extend(get_view_subbatch(key))
+                # t = time.time()-t
+                # if index==0:
+                #     first_time = t
+                # print ('line 236',t)
                 if self.use_subject_batches:
                     # Add indices for random moment (t') from the same interval.
                     # These indices can be from any viewpoint.
@@ -190,7 +294,7 @@ class MultiViewDatasetSampler(Sampler):
                     potential_keys = self.interval_keys[interval_i]
                     key_other = potential_keys[np.random.randint(len(potential_keys))]
                     index_list = index_list + get_view_subbatch(key_other)
-
+                # s = input()
         subject_batch_factor = 1 + int(self.use_subject_batches > 0) # either 1 or 2
         view_batch_factor = max(1, self.use_view_batches)
         # The following number should be equal to the number of new indices
@@ -205,41 +309,58 @@ class MultiViewDatasetSampler(Sampler):
             # Randomizes the order of the sub-batches.
             indices_batched = np.random.permutation(indices_batched)
         indices_batched = indices_batched.reshape([-1])[:(indices_batched.size//self.batch_size)*self.batch_size] # drop last frames
+        # print ('first_time',first_time)
+        # s = input()
         return iter(indices_batched.reshape([-1,self.batch_size]))
 
 
-def get_label_dict(data_folder, subjects):
+def get_label_df_for_subjects(data_folder, subjects):
     subject_fi_dfs = []
     print('Iterating over frame indices per subject (.csv files)')
     for subject in subjects:
         subject_frame_index_dataframe = pd.read_csv(data_folder + subject + '_reduced_frame_index.csv')
         subject_fi_dfs.append(subject_frame_index_dataframe)
     frame_index_df = pd.concat(subject_fi_dfs, ignore_index=True)
-    label_dict = frame_index_df.to_dict()
-    return label_dict
+    return frame_index_df
 
 
 if __name__ == '__main__':
-    config_dict_module = rhodin_utils_io.loadModule("configs/config_train.py")
+    config_dict_module = rhodin_utils_io.loadModule("configs/config_train_rotation_bl.py")
     config_dict = config_dict_module.config_dict
+    print (config_dict['save_every'])
+    train_subjects = ['aslan','brava','herrera','julia','kastanjett','naughty_but_nice','sir_holger']
+    config_dict['train_subjects'] = train_subjects
+    dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_train'],
+                                   bg_folder=config_dict['bg_folder'],
+                                   input_types=config_dict['input_types'],
+                                   label_types=config_dict['label_types_train'],
+                                   subjects = config_dict['train_subjects'],
+                                   rot_folder = config_dict['rot_folder'])
 
-    dataset = MultiViewDataset(
-                 data_folder=config_dict['data_dir_path'],
-                 input_types=['img_crop'], label_types=['img_crop'])
-
-    batch_sampler = MultiViewDatasetSampler(
-                 data_folder=config_dict['data_dir_path'],
-                 use_subject_batches=1, use_view_batches=2,
-                 batch_size=8,
-                 randomize=True)
+    # batch_sampler = MultiViewDatasetSampler(
+    #              data_folder=config_dict['data_dir_path'],
+    #              use_subject_batches=1, use_view_batches=2,
+    #              batch_size=8,
+    #              randomize=True)
+    
+    batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_train'],
+              subjects=config_dict['train_subjects'],
+              use_subject_batches=config_dict['use_subject_batches'], use_view_batches=config_dict['use_view_batches'],
+              batch_size=config_dict['batch_size_train'],
+              randomize=True,
+              every_nth_frame=config_dict['every_nth_frame'])
+    
+    # loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler, num_workers=0, pin_memory=False,
+                                             # collate_fn=rhodin_utils_datasets.default_collate_with_string)
 
     trainloader = DataLoader(dataset, batch_sampler=batch_sampler,
                              num_workers=0, pin_memory=False,
                              collate_fn=rhodin_utils_datasets.default_collate_with_string)
-    import ipdb; ipdb.set_trace()
+    # import ipdb; ipdb.set_trace()
 
     data_iterator = iter(trainloader)
     input_dict, label_dict = next(data_iterator)
+    print (input_dict.keys(), label_dict.keys())
 
 
     print('Number of frames in dataset: ', len(dataset))
