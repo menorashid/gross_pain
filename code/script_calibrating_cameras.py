@@ -82,21 +82,18 @@ def fix_filenames():
 
 #  goes through a list of images and returns the ones with visible checkboard
 def get_img_chessboard(fname):
-    # check_cols = 6
-    # check_rows = 9
-    # check_rows = 10
     global check_rows, check_cols
-    print (check_rows, check_cols)
+    # print (check_rows, check_cols)
     img = cv2.imread(fname)
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    
     # detect chessboard
     ret, corners = cv2.findChessboardCorners(gray, (check_cols,check_rows),cv2.CALIB_CB_FAST_CHECK)
-    print (ret)
+    
     if ret == True:
-        
-        out_file = '../scratch/check_cell2.jpg'
-        dst = cv2.drawChessboardCorners(img, (check_cols,check_rows), corners,ret)
-        cv2.imwrite(out_file,dst)
+        # out_file = '../scratch/check_cell2.jpg'
+        # dst = cv2.drawChessboardCorners(img, (check_cols,check_rows), corners,ret)
+        # cv2.imwrite(out_file,dst)
         return fname
         
 
@@ -338,7 +335,7 @@ def script_save_all_intrinsics():
     interval_str = '20200428104445_113700'
 
     out_dir = os.path.join(meta_dir, 'ims_to_keep')
-    out_dir_intrinsic = os.path.join(meta_dir,'intrinsics_10')
+    out_dir_intrinsic = os.path.join(meta_dir,'intrinsics')
     util.mkdir(out_dir_intrinsic)
 
     common_im_dict = get_common_im(out_dir)
@@ -348,13 +345,10 @@ def script_save_all_intrinsics():
 
         im_files = common_im_dict[key_curr]
         assert len(im_files)==1
-        im_files = im_files[0][::10]
-        # [:10]
-        print (key_curr, len(im_files))
-        # util.mkdir('../scratch/check_row_col')
-        mtx, dist = do_intrinsic(im_files)
-        # ,out_dir = '../scratch/check_row_col')
+        im_files = im_files[0][::2] #using every second because of too many images
 
+        mtx, dist = do_intrinsic(im_files)
+        
         print (mtx, type(mtx))
         print (dist, type(dist))
         out_file = os.path.join(out_dir_intrinsic,'_'.join([str(val) for val in key_curr])+'.npz')
