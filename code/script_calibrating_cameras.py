@@ -264,46 +264,73 @@ def visualize_all_files_with_chessboard():
     for key_curr in common_im_dict.keys():
 
         im_cols = common_im_dict[key_curr]
-        # im_cols = [im_col[-300:-200] for im_col in im_cols]
+        im_cols = [im_col[::5] for im_col in im_cols]
         print (key_curr, len(im_cols),len(im_cols[0]))
         # im_cols = np.array(im_cols)
-        if len(im_cols[0])>0:
-            out_file_html = os.path.join(out_dir_html,'_'.join([str(val) for val in key_curr])+'.html')
-            captions =[]
-            for idx_im_col in range(len(im_cols)):
-                captions.append([])
-                for idx_im in range(len(im_cols[idx_im_col])):
-                    # print (im_cols[idx_im_col][idx_im])
-                    # s = input()
-                    im_cols[idx_im_col][idx_im] = im_cols[idx_im_col][idx_im].replace(str_replace[0],str_replace[1])
-                    captions[idx_im_col].append(os.path.split(im_cols[idx_im_col][idx_im])[1])
-            views = list(key_curr)[1:]
-            # captions = [[str(view)]*len(im_cols[idx_view]) for idx_view, view in enumerate(views)]
-            visualize.writeHTML(out_file_html, im_cols, captions)
+        write_common_html(im_cols, out_dir_html, str_replace, key_curr)
+        # if len(im_cols[0])>0:
+        #     out_file_html = os.path.join(out_dir_html,'_'.join([str(val) for val in key_curr])+'.html')
+        #     captions =[]
+        #     for idx_im_col in range(len(im_cols)):
+        #         captions.append([])
+        #         for idx_im in range(len(im_cols[idx_im_col])):
+        #             # print (im_cols[idx_im_col][idx_im])
+        #             # s = input()
+        #             im_cols[idx_im_col][idx_im] = im_cols[idx_im_col][idx_im].replace(str_replace[0],str_replace[1])
+        #             captions[idx_im_col].append(os.path.split(im_cols[idx_im_col][idx_im])[1])
+        #     views = list(key_curr)[1:]
+        #     # captions = [[str(view)]*len(im_cols[idx_view]) for idx_view, view in enumerate(views)]
+        #     visualize.writeHTML(out_file_html, im_cols, captions)
+
+def write_common_html(im_cols, out_dir_html, str_replace, key_curr):
+    if len(im_cols[0])>0:
+        out_file_html = os.path.join(out_dir_html,'_'.join([str(val) for val in key_curr])+'.html')
+        captions =[]
+        for idx_im_col in range(len(im_cols)):
+            captions.append([])
+            for idx_im in range(len(im_cols[idx_im_col])):
+                # print (im_cols[idx_im_col][idx_im])
+                # s = input()
+                im_cols[idx_im_col][idx_im] = im_cols[idx_im_col][idx_im].replace(str_replace[0],str_replace[1])
+                captions[idx_im_col].append(os.path.split(im_cols[idx_im_col][idx_im])[1])
+        # views = list(key_curr)[1:]
+        # captions = [[str(view)]*len(im_cols[idx_view]) for idx_view, view in enumerate(views)]
+        visualize.writeHTML(out_file_html, im_cols, captions)
+
 
 def save_common_im_with_chessboard_det():
     meta_dir = '../data/camera_calibration_frames_redo'
     out_dir_chess_det = '../data/camera_calibration_frames_withChessboardDet'
-    util.mkdir(out_dir_chess_det)
     interval_str = '20200317130703_131800'
-    out_dir = os.path.join(meta_dir, 'ims_to_keep')
-    
-
-    out_dir_html = os.path.join(meta_dir,'common_im_withChessboardDet_html')
     str_replace = [meta_dir,'/gross_pain/data/camera_calibration_frames_withChessboardDet']
+    
+    meta_dir = '../data/camera_calibration_frames_try2'
+    out_dir_chess_det = os.path.join(meta_dir, 'common_im_withChessboardDet')
+    interval_str = '20200428104445_113700'
+    str_replace = [meta_dir,out_dir_chess_det.replace('..','/gross_pain')]
+
+    out_dir = os.path.join(meta_dir, 'ims_to_keep')
+    out_dir_html = os.path.join(meta_dir,'common_im_withChessboardDet_html')
+    util.mkdir(out_dir_chess_det)
     util.mkdir(out_dir_html)
+
+    global check_cols, check_rows
 
     common_im_dict = get_common_im(out_dir)
     for key_curr in common_im_dict.keys():
-        if len(key_curr)==2:
+        # print (key_curr, len(key_curr))
+        if len(key_curr)<4:
             continue
         
         im_cols = common_im_dict[key_curr]
-        for im_col in im_cols:
-            for im_file in im_col:
+        for idx_im_col, im_col in enumerate(im_cols):
+            print (len(im_col))
+            for idx_im_file, im_file in enumerate(im_col):
+                print (key_curr, idx_im_col, idx_im_file, len(im_col))
                 out_file = im_file.replace(meta_dir, out_dir_chess_det)
-                if os.path.exists(out_file):
-                    continue
+                # if os.path.exists(out_file):
+                #     continue
+
                 util.makedirs(os.path.split(out_file)[0])
                 
 
@@ -313,19 +340,23 @@ def save_common_im_with_chessboard_det():
                 gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
                 # detect chessboard
                 ret, corners = cv2.findChessboardCorners(gray, (check_cols,check_rows),cv2.CALIB_CB_FAST_CHECK)
-                assert ret
+                # print (corners.shape)
+                np.save(out_file.replace('.jpg','.npy'),corners)
+                # assert ret
                 dst = cv2.drawChessboardCorners(img, (check_cols,check_rows), corners,ret)
                 cv2.imwrite(out_file,dst)
-        
-        if len(im_cols[0])>0:
-            out_file_html = os.path.join(out_dir_html,'_'.join([str(val) for val in key_curr])+'.html')
-            for idx_im_col in range(len(im_cols)):
-                for idx_im in range(len(im_cols[idx_im_col])):
-                    im_cols[idx_im_col][idx_im] = im_cols[idx_im_col][idx_im].replace(str_replace[0],str_replace[1])
-            views = list(key_curr)[1:]
-            captions = [[' '.join([str(views[idx_im_col]),os.path.split(im_file)[1][-10:-4]]) for im_file in im_col] for idx_im_col,im_col in enumerate(im_cols)]
-            # captions = [[str(view)]*len(im_cols[idx_view]) for idx_view, view in enumerate(views)]
-            visualize.writeHTML(out_file_html, im_cols, captions)
+                # s = input()
+
+        write_common_html(im_cols, out_dir_html, str_replace, key_curr)
+        # if len(im_cols[0])>0:
+        #     out_file_html = os.path.join(out_dir_html,'_'.join([str(val) for val in key_curr])+'.html')
+        #     for idx_im_col in range(len(im_cols)):
+        #         for idx_im in range(len(im_cols[idx_im_col])):
+        #             im_cols[idx_im_col][idx_im] = im_cols[idx_im_col][idx_im].replace(str_replace[0],str_replace[1])
+        #     views = list(key_curr)[1:]
+        #     captions = [[' '.join([str(views[idx_im_col]),os.path.split(im_file)[1][-10:-4]]) for im_file in im_col] for idx_im_col,im_col in enumerate(im_cols)]
+        #     # captions = [[str(view)]*len(im_cols[idx_view]) for idx_view, view in enumerate(views)]
+        #     visualize.writeHTML(out_file_html, im_cols, captions)
 
 def script_save_all_intrinsics():
     meta_dir = '../data/camera_calibration_frames_redo'
@@ -857,13 +888,330 @@ def script_calibrate_center_board():
     # share with sofia
     # ask johan to do what's needed with a bigger board
 
+def viz_chess(im_path, check_path, just_two = False, out_file = None):
+
+    img = cv2.imread(im_path)
+    # out_file = os.path.join(out_dir,'_'.join([str(val) for val in [cell_num,view,check_rows,check_cols]])+'.jpg')
+    # Draw and display the corners
+    # dst = cv2.drawChessboardCorners(img, (check_cols,check_rows), corners,ret)
+    if type(check_path)==str:
+        c = np.load(check_path)
+        print (c.shape)
+        s = input()
+        corners = np.load(check_path).squeeze()
+    else:
+        corners = check_path
+    
+    if just_two:
+        corners = corners[[0,-1]]
+
+    for idx_pt, pt in enumerate(corners):
+        dst = cv2.circle(img,tuple(np.int32(pt)),10,(0,int(idx_pt*255/float(corners.shape[0])),0),-1)
+    # print('saving',out_file)
+    if out_file is not None:
+        cv2.imwrite(out_file,dst)
+    else:
+        return img[:,:,::-1]
+
+
+def script_check_chess_order():
+    
+    meta_dir = '../data/camera_calibration_frames_try2'
+    out_dir_chess_det = os.path.join(meta_dir, 'common_im_withChessboardDet')
+    interval_str = '20200428104445_113700'
+    str_replace = [meta_dir,out_dir_chess_det.replace('..','/gross_pain')]
+
+    out_dir = os.path.join(meta_dir, 'ims_to_keep')
+    out_dir_html = os.path.join(meta_dir,'common_im_withChessboardDet_html')
+    util.mkdir(out_dir_chess_det)
+    util.mkdir(out_dir_html)
+
+    out_dir_viz = os.path.join('../scratch','check_ord')
+    util.mkdir(out_dir_viz)
+
+    global check_cols, check_rows
+    common_im_dict = get_common_im(out_dir)
+    for key_curr in common_im_dict.keys():
+        # print (key_curr, len(key_curr))
+        if len(key_curr)<4:
+            continue
+        
+        im_cols = common_im_dict[key_curr]
+        if len(im_cols[0])==0:
+            continue
+        print (im_cols)
+        s = input()
+        for idx_im in range(len(im_cols[0])):
+            for idx_view in range(len(im_cols)):
+                im_file = im_cols[idx_view][idx_im]
+                chess_file = im_file.replace(meta_dir, out_dir_chess_det).replace('.jpg','.npy')
+
+                out_file = os.path.join(out_dir_viz,'_'.join(['%02d'%val for val in [idx_view,idx_im]])+'.jpg')
+                viz_chess(im_file, chess_file, out_file = out_file)
+                chess = np.load(chess_file).squeeze()
+                chess = chess[::-1,:]
+                out_file = os.path.join(out_dir_viz,'_'.join(['%02d'%val for val in [idx_view,idx_im]])+'_flip.jpg')
+                viz_chess(im_file, chess, out_file = out_file)
+            visualize.writeHTMLForFolder(out_dir_viz,height = 380, width = 672)
+            break
+        break
+        # print (len(im_cols),len(im_cols[0]))
+        # for idx_im_col, im_col in enumerate(im_cols):
+        #     # print (len(im_col))
+        #     for idx_im_file, im_file in enumerate(im_col):
+        #         # print (key_curr, idx_im_col, idx_im_file, len(im_col))
+        #         chess_file = im_file.replace(meta_dir, out_dir_chess_det).replace('.jpg','.npy')
+        #         out_file = '../scratch/check_ord.jpg'
+        #         viz_chess(im_file, chess_file, out_file = out_file)
+        #         print (out_file)
+        #         s = input()
+
+
+def get_calib_im_lists(calib_im_file, meta_dir, interval_str):
+    # meta_dir = '../data/camera_calibration_frames_try2'
+    # interval_str = '20200428104445_113700'
+
+    # calib_im_file = '../metadata/select_ims'
+    lines = util.readLinesFromFile(calib_im_file)
+    key_curr = None
+
+    calib_im = {}
+    for line in lines:
+        if '.html' in line:
+            # if key_curr is not None:
+            #     print (key_curr)
+            #     print (calib_im[key_curr])
+
+            key_curr = tuple([int(val) for val in line[:-5].split('_')])
+            calib_im[key_curr] = []
+        else:
+            # print (line)
+            assert line.endswith('.jpg')
+            im = line[:-4].split('_')
+            im_num = int(im[-1])
+            list_im = []
+            for idx in range(len(key_curr)-1):
+                im_path = get_im_path(meta_dir, interval_str, key_curr[0], key_curr[idx+1], im_num)
+                # print (im_path)
+                assert os.path.exists(im_path)
+                list_im.append(im_path)
+            calib_im[key_curr].append(list_im)
+
+    return calib_im
+
+
+def script_calibrate_big_board():
+    # from checkerboard import detect_checkerboard
+    # select an image
+
+    meta_dir = '../data/camera_calibration_frames_try2'
+    interval_str = '20200428104445_113700'
+    out_dir_dets = os.path.join(meta_dir, 'calib_im_fix_dets')
+    out_dir_intrinsic = os.path.join(meta_dir, 'intrinsics')
+    out_dir_calib =  os.path.join(meta_dir, 'extrinsics')
+    util.mkdir(out_dir_calib)
+    
+    cell_num = 2
+    views = [0,1,2,3]
+
+    dets = glob.glob(os.path.join(out_dir_dets, 'cell'+str(cell_num), interval_str, '*','*.npy'))
+    im_nums = [int(os.path.split(det)[1][:-4].split('_')[-1]) for det in dets]
+    im_nums = list(set(im_nums))
+    print (im_nums)
+    return
+
+    # print (len(dets))
+    # for det in dets:
+    #     print (det)
+
+
+    # file_dets = ['../data/camera_calibration_frames_redo/to_copy_local_manual/2_0_1_2_3/0/000000_check.npy',
+    #             '../data/camera_calibration_frames_redo/to_copy_local_manual/2_0_1_2_3/1/000000_check.npy']
+    # out_dir_calib = '../data/camera_calibration_frames_redo/to_copy_local_manual'
+    
+    # int_files = [os.path.join(out_dir_intrinsic,str(cell_num)+'_'+str(view)+'.npz') for view in views]
+    
+    print (check_rows, check_cols)
+    objp = []
+    for row in range(check_rows):
+        for col in range(check_cols):
+            objp.append([row,col, 0])
+    objp = np.array(objp,dtype= np.float)
+    objp = objp[:,np.newaxis,:]
+    print (objp.shape)
+
+    for im_num in im_nums:
+        for idx_view,view in enumerate(views):
+            det_path = get_im_path(out_dir_dets, interval_str, cell_num, view, im_num).replace('.jpg','.npy')
+            if not os.path.exists(det_path):
+                continue
+            corners = np.load(det_path)[:,np.newaxis,:]
+            print (im_num, view, corners.shape)
+    
+            int_file = os.path.join(out_dir_intrinsic,str(cell_num)+'_'+str(view)+'.npz')
+            intr = np.load(int_file)
+        
+            mtx = intr['mtx']
+            dist = intr['dist']
+            
+            retval, rvec, tvec  =   cv2.solvePnP(objp,  corners, mtx, dist)
+
+            rot,jacob = cv2.Rodrigues(rvec)
+
+            camera_pos = np.matmul(-rot.T,tvec)
+            print (view)
+            print (camera_pos)
+            print ('')
+
+            out_file = os.path.join(out_dir_calib,'_'.join([str(val) for val in [cell_num, view, im_num]])+'.npz')
+            print (out_file)
+            np.savez(out_file,rvec = rvec, tvec= tvec)
+
+
+
+def script_format_for_bundler():
+    meta_dir = '../data/camera_calibration_frames_try2'
+    interval_str = '20200428104445_113700'
+    out_dir_dets = os.path.join(meta_dir, 'calib_im_fix_dets')
+    out_dir_intrinsic = os.path.join(meta_dir, 'intrinsics')
+    out_dir_calib =  os.path.join(meta_dir, 'extrinsics')
+
+    cell_num = 2
+    views = [0,1,2,3]
+    common_view = 3
+    im_num_select = 2976
+
+    # get all image sets
+    dets = glob.glob(os.path.join(out_dir_dets, 'cell'+str(cell_num), interval_str, '*','*.npy'))
+    views_all = [int(os.path.split(det)[1][:-4].split('_')[-2]) for det in dets]
+    im_nums_all = [int(os.path.split(det)[1][:-4].split('_')[-1]) for det in dets]
+    im_nums = list(set(im_nums_all))
+
+    # get their view sets
+    view_sets = [[] for r in range(len(im_nums))]
+    for idx_im_num, im_num in enumerate(im_nums_all):
+        view_curr = views_all[idx_im_num]
+        idx_im_nums = im_nums.index(im_num)
+        view_sets[idx_im_nums].append(view_curr)
+        view_sets[idx_im_nums].sort()
+    
+    print (view_sets)
+    # return
+
+    # get board points 
+    objp = []
+    for row in range(check_rows):
+        for col in range(check_cols):
+            objp.append([row,col, 0])
+    objp = np.array(objp,dtype= np.float)
+    # print ('objp.shape',objp.shape)
+    num_pts = objp.shape[0]
+
+    # set up camera camera_ind, point_ind, and points_2d
+    camera_ind = []
+    point_ind = []
+    points_2d = []
+    points_3d = []
+
+    for im_num, view_set in zip(im_nums, view_sets):
+        point_ind += [len(points_3d)*num_pts+val for val in range(num_pts)]
+        points_3d.append(np.array(objp))
+        for view in view_set:
+            det_file = get_im_path(out_dir_dets, interval_str, cell_num, view, im_num).replace('.jpg','.npy')
+            # print (det_file)
+            dets = np.load(det_file)
+            # print (dets.shape)
+            assert dets.shape[0]==num_pts
+            points_2d.append(dets)
+            camera_ind += [view for val in range(num_pts)]
+    points_2d = np.concatenate(points_2d, axis = 0)
+    [point_ind, camera_ind ] = [np.array(val) for val in [point_ind, camera_ind]]
+    points_3d = np.array(points_3d)
+    # print (points_3d.shape, points_2d.shape, point_ind.shape, camera_ind.shape)
+
+    # print (points_3d[0][:10])
+    # transform obj pt to common view for each image set
+    # transform obj pt sets to selected image set world coordinate frame (cam 3 is the origin)
+    for idx_im_num, im_num in enumerate(im_nums):
+        vals_file = [cell_num,common_view, im_num]        
+        ext_file = os.path.join(out_dir_calib,'_'.join([str(val) for val in vals_file])+'.npz')
+        loaded = np.load(ext_file)
+        [rvec, tvec] = [loaded[key] for key in ['rvec','tvec']]
+        rot, jacob = cv2.Rodrigues(rvec)
+        pts_curr = points_3d[idx_im_num].T
+        pts_curr = np.matmul(rot, pts_curr)+tvec
+        pts_curr = pts_curr.T
+        # print (pts_curr.shape)
+        points_3d[idx_im_num] = pts_curr
+
+
+    # print (points_3d[0][:10])
+
+    # # transform obj pt sets to selected image set world coordinate frame
+    tforms = [[] for r in views]
+
+    for numtopick in [0,1]:
+        im_num_curr = im_nums[numtopick]
+        view_set_curr = [val for val in view_sets[numtopick] if val is not common_view]
+        if numtopick==1:
+            view_set_curr = [0]
+
+        vals_file = [cell_num,common_view, im_num_curr]        
+        ext_file = os.path.join(out_dir_calib,'_'.join([str(val) for val in vals_file])+'.npz')
+        loaded = np.load(ext_file)
+        [rvec0, tvec0] = [loaded[key] for key in ['rvec','tvec']]
+        rot_inv = cv2.Rodrigues(cv2.Rodrigues(rvec0)[0].T)[0]
+        print (view_set_curr)
+        for view in view_set_curr:
+            vals_file = [cell_num,view, im_num_curr]        
+            ext_file = os.path.join(out_dir_calib,'_'.join([str(val) for val in vals_file])+'.npz')
+            loaded = np.load(ext_file)
+            [rvec, tvec] = [loaded[key] for key in ['rvec','tvec']]
+            rot_inv_curr = cv2.Rodrigues(cv2.Rodrigues(rvec)[0].T)[0]
+            rvecf,tvecf, _, _, _, _, _, _, _, _ =  cv2.composeRT(rvec*0, -tvec0,rot_inv, tvec0*0) 
+            rvect, tvect, _, _, _, _, _, _, _, _ = cv2.composeRT(rvecf, tvecf,rvec, tvec) 
+
+            tforms[view]=[rvect,tvect]
+    # print (tforms)
+    tforms[common_view] = [tforms[common_view-1][0]*0,tforms[common_view-1][1]*0]
+    # print (tforms)
+    
+
+
+    intrinsics = []
+    # format intrinsics
+    for view in views:
+        int_file = os.path.join(out_dir_intrinsic,str(cell_num)+'_'+str(view)+'.npz')
+        intr = np.load(int_file)
+        mtx = intr['mtx']
+        dist = intr['dist']
+        print (mtx.shape, dist.shape)
+        intrinsics.append([mtx, dist])
+
+    for idx_im_num, im_num in enumerate(im_nums):
+        for view in view_sets[idx_im_num]:
+            im_pts_ac = np.load(get_im_path(out_dir_dets, interval_str, cell_num, view, im_num).replace('.jpg','.npy'))
+
+            im_pts, _ = cv2.projectPoints(points_3d[idx_im_num][:,np.newaxis,:], tforms[view][0], tforms[view][1], intrinsics[view][0], intrinsics[view][1])
+
+            im_pts = im_pts.squeeze()
+            diffs = np.abs(im_pts_ac-im_pts)
+            
+    # save bundle
+
+
+
 
 def main():
+    script_format_for_bundler()
+    # script_calibrate_big_board()
+    # get_calib_gim_lists()
     # fix_filenames()
     # extract_calibration_vid_frames()
     # get_all_files_with_chessboard()
     # visualize_all_files_with_chessboard()
-    script_save_all_intrinsics()
+
+    # script_save_all_intrinsics()
     # save_common_im_with_chessboard_det()
 
     # script_stereo_calibrate()
@@ -872,7 +1220,7 @@ def main():
 
     # script_calibrate_center_board()
 
-
+    # script_check_chess_order()
 
     
     # fname = '../data/camera_calibration_frames_try2/cell1/20200428104445_113700/0/ce_00_0_000998.jpg'
