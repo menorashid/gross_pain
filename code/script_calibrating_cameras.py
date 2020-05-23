@@ -1077,15 +1077,21 @@ def script_format_for_bundler():
     out_dir_calib =  os.path.join(meta_dir, 'extrinsics')
 
     cell_num = 2
+    im_num_select = 2976
+    numtopicks = [0,1]
+
+    cell_num = 1
+    numtopicks = [2,0]
+
     views = [0,1,2,3]
     common_view = 3
-    im_num_select = 2976
-
+    
     # get all image sets
     dets = glob.glob(os.path.join(out_dir_dets, 'cell'+str(cell_num), interval_str, '*','*.npy'))
     views_all = [int(os.path.split(det)[1][:-4].split('_')[-2]) for det in dets]
     im_nums_all = [int(os.path.split(det)[1][:-4].split('_')[-1]) for det in dets]
     im_nums = list(set(im_nums_all))
+    # print (im_nums)
 
     # get their view sets
     view_sets = [[] for r in range(len(im_nums))]
@@ -1095,7 +1101,7 @@ def script_format_for_bundler():
         view_sets[idx_im_nums].append(view_curr)
         view_sets[idx_im_nums].sort()
     
-    print (view_sets)
+    # print (view_sets)
     # return
 
     # get board points 
@@ -1114,9 +1120,12 @@ def script_format_for_bundler():
     points_3d = []
 
     for im_num, view_set in zip(im_nums, view_sets):
-        point_ind += [len(points_3d)*num_pts+val for val in range(num_pts)]
+        # print (point_ind)
+        # s = input()
         points_3d.append(np.array(objp))
         for view in view_set:
+            point_ind += [(len(points_3d)-1)*num_pts+val for val in range(num_pts)]
+        
             det_file = get_im_path(out_dir_dets, interval_str, cell_num, view, im_num).replace('.jpg','.npy')
             # print (det_file)
             dets = np.load(det_file)
@@ -1126,8 +1135,9 @@ def script_format_for_bundler():
             camera_ind += [view for val in range(num_pts)]
     points_2d = np.concatenate(points_2d, axis = 0)
     [point_ind, camera_ind ] = [np.array(val) for val in [point_ind, camera_ind]]
-    points_3d = np.array(points_3d)
+    # points_3d = np.array(points_3d)
     # print (points_3d.shape, points_2d.shape, point_ind.shape, camera_ind.shape)
+    # s = input()
 
     # print (points_3d[0][:10])
     # transform obj pt to common view for each image set
@@ -1150,7 +1160,7 @@ def script_format_for_bundler():
     # # transform obj pt sets to selected image set world coordinate frame
     tforms = [[] for r in views]
 
-    for numtopick in [0,1]:
+    for numtopick in numtopicks:
         im_num_curr = im_nums[numtopick]
         view_set_curr = [val for val in view_sets[numtopick] if val is not common_view]
         if numtopick==1:
@@ -1172,11 +1182,9 @@ def script_format_for_bundler():
             rvect, tvect, _, _, _, _, _, _, _, _ = cv2.composeRT(rvecf, tvecf,rvec, tvec) 
 
             tforms[view]=[rvect,tvect]
-    # print (tforms)
     tforms[common_view] = [tforms[common_view-1][0]*0,tforms[common_view-1][1]*0]
-    # print (tforms)
-    
-
+    tforms = np.array(tforms)
+    tforms = np.reshape(tforms, (tforms.shape[0],-1))
 
     intrinsics = []
     # format intrinsics
@@ -1185,19 +1193,47 @@ def script_format_for_bundler():
         intr = np.load(int_file)
         mtx = intr['mtx']
         dist = intr['dist']
-        print (mtx.shape, dist.shape)
-        intrinsics.append([mtx, dist])
+        mtx = mtx.ravel()[[0,2,4,5]]
+        ints = np.concatenate([mtx,dist.ravel()])
+        intrinsics.append(ints)
+        # intrinsics.append([mtx,dist])
 
+    intrinsics = np.array(intrinsics)
+    camera_params = np.concatenate([tforms,intrinsics], axis = 1)
+    
     for idx_im_num, im_num in enumerate(im_nums):
         for view in view_sets[idx_im_num]:
             im_pts_ac = np.load(get_im_path(out_dir_dets, interval_str, cell_num, view, im_num).replace('.jpg','.npy'))
 
-            im_pts, _ = cv2.projectPoints(points_3d[idx_im_num][:,np.newaxis,:], tforms[view][0], tforms[view][1], intrinsics[view][0], intrinsics[view][1])
+            cam = camera_params[view]
+            [rvec,tvec] = [vec[:,np.newaxis] for vec in [cam[:3],cam[3:6]]]
+            mtx = np.eye(3).ravel()
+            mtx[[0,2,4,5]] = cam[6:10]
+            mtx = np.reshape(mtx,(3,3))
+            dist = cam[10:15]
+            dist = dist[np.newaxis,:]
+
+            # (3, 1) (3, 1) (3, 3) (1, 5)
+            im_pts, _ = cv2.projectPoints(points_3d[idx_im_num][:,np.newaxis,:], rvec, tvec, mtx, dist)
+            # im_pts, _ = cv2.projectPoints(points_3d[idx_im_num][:,np.newaxis,:], tforms[view][0], tforms[view][1], intrinsics[view][0], intrinsics[view][1])
 
             im_pts = im_pts.squeeze()
             diffs = np.abs(im_pts_ac-im_pts)
-            
+            print (im_num, view, np.min(diffs), np.max(diffs))
+    
+    points_3d = np.concatenate(points_3d, axis = 0)
+    # print (camera_ind[:100])
+    # print (camera_ind[-100:])
+    # print (camera_ind.shape)
+
+    # print (points_3d.shape)
+    # print (point_ind[-100:])
+    # print (points_2d.shape)
+
     # save bundle
+    out_file = os.path.join(out_dir_calib, str(cell_num)+'_bundle.npz')
+    np.savez(out_file, points_3d = points_3d, points_2d = points_2d, point_ind = point_ind, camera_params = camera_params, camera_ind = camera_ind)
+
 
 
 
