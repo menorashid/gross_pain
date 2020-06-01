@@ -1,7 +1,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
+import scipy.io as scio
 import pandas as pd
 import numpy as np
 import torchvision
@@ -16,9 +16,9 @@ from rhodin.python.utils import io as rhodin_utils_io
 from tqdm import tqdm
 
 
-class SimpleFrameDataset(Dataset):
+class TreadmillDataset(Dataset):
     """Single frame surveillance dataset of horses in their box."""
-    def __init__(self, data_folder, 
+    def __init__(self, mocap_folder, rgb_folder, 
                  subjects, input_types, label_types,
                  mean=(0.485, 0.456, 0.406),  #TODO update these to horse dataset.
                  stdDev= (0.229, 0.224, 0.225),
@@ -41,18 +41,9 @@ class SimpleFrameDataset(Dataset):
             def __repr__(self):
                 return self.__class__.__name__ + '()'
 
-        class EraseTimeStamp(object):
-            def __call__(self, pic):
-                img = torchvision.transforms.functional.erase(pic, 5, 5, 8, 37, v=0)
-                return img
-
-            def __repr__(self):
-                return self.__class__.__name__ + '()'
-
         self.transform_in = torchvision.transforms.Compose([
             Image256toTensor(), # torchvision.transforms.ToTensor() the torchvision one behaved differently for different pytorch versions, hence the custom one..
-            torchvision.transforms.Normalize(self.mean, self.stdDev),
-            EraseTimeStamp()
+            torchvision.transforms.Normalize(self.mean, self.stdDev)
         ])
         self.label_dict = get_label_df_for_subjects(data_folder, subjects).to_dict()
 
@@ -61,32 +52,39 @@ class SimpleFrameDataset(Dataset):
 
     def get_local_indices(self, index):
         input_dict = {}
-        interval = self.label_dict['interval'][index]
-        interval_ind = self.label_dict['interval_ind'][index]
-        subject = self.label_dict['subject'][index]
-        frame = self.label_dict['frame'][index]
-        return interval, interval_ind, subject, frame
+        clip_id = self.label_dict['clip_id'][index]
+        mocap_ind = self.label_dict['mocap_ind'][index]
+        rgb_ind = self.label_dict['rgb_ind'][index]
+        subject = clip_id[:3]
+        return clip_id, mocap_ind, rgb_ind, subject
 
     def __getitem__(self, index):
 
-        interval, interval_ind, subject, frame = self.get_local_indices(index)
+        clip_id, mocap_ind, rgb_ind, subject = self.get_local_indices(index)
 
         def get_image_path(key):
-            frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
-                                str(view), '%06d'%frame])
-            return self.data_folder + '/{}/{}/{}/{}.jpg'.format(subject,
-                                                                interval,
-                                                                view,
-                                                                frame_id)
-        def load_image(name):
-            return np.array(self.transform_in(imageio.imread(name)), dtype='float32')
+            frame_index =  '%04d'%rgb_ind
+            return self.rgb_folder + '/{}/{}_01/{}.png'.format(clip_id,
+                                                               clip_id,
+                                                               frame_index)
+        def get_mocap_path(key):
+            return self.mocap_folder + '/{}.mat'.format(clip_id)
+
+        def load_image(path):
+            return np.array(self.transform_in(imageio.imread(path)), dtype='float32')
+
+        def load_pose(path):
+            nested_mocap = scio.loadmat(path)
+            mocap_4d = nested_mocap[clip_id]['Trajectories'][0][0][0][0][0][0]['Data'][0]
+            mocap_3d = mocap[:,:3,:]
+            return mocap_3d
         
         def load_data(input_types):
             for key in input_types:
                 if key == 'img_crop':
                     data = load_image(get_image_path(key)) 
                 if key == 'pose':
-                    data = int(self.label_dict[key][index])
+                    data = load_pose(get_mocap_path(key))
             return data
 
         return load_data(self.input_types), load_data(self.label_types)
@@ -99,7 +97,6 @@ class SimpleRandomFrameSampler(Sampler):
                  every_nth_frame=1):
         # Reduce frame index to wanted subjects and views
         subject_label_df = get_label_df_for_subjects(data_folder, subjects)
-        subject_view_label_df = only_keep_wanted_views(subject_label_df, views)
 
         # Get the wanted proportion of the data
         subject_view_label_df = subject_view_label_df.sample(frac=1/every_nth_frame)
@@ -115,40 +112,27 @@ class SimpleRandomFrameSampler(Sampler):
         return iter(self.sample_index)
 
 
-def only_keep_wanted_views(label_df, views):
-    all_views = [0,1,2,3]
-    if set(views) == set(all_views):
-        return label_df
-    else:
-        indices_to_drop = []
-        unwanted_views = set(all_views) - set(views)
-        for ind, row in label_df:
-            view = row['view']
-            if view in unwanted_views:
-                indices_to_drop.append(ind)
-        df_reduced = label_df.drop((label_df.index[indices_to_drop]))
-        df_reduced.reset_index(drop=True)
-        return df_reduced
-
-
 def get_label_df_for_subjects(data_folder, subjects):
     subject_fi_dfs = []
     print('Iterating over frame indices per subject (.csv files)')
     for subject in subjects:
-        subject_frame_index_dataframe = pd.read_csv(data_folder + subject + '_reduced_frame_index.csv')
+        subject_frame_index_dataframe = pd.read_csv(data_folder + 'treadmill_frame_index_'  + subject + '.csv')
         subject_fi_dfs.append(subject_frame_index_dataframe)
     frame_index_df = pd.concat(subject_fi_dfs, ignore_index=True)
     return frame_index_df
 
 
 if __name__ == '__main__':
-    config_dict_module = rhodin_utils_io.loadModule("configs/config_pain_debug.py")
+    config_dict_module = rhodin_utils_io.loadModule("configs/config_pose_debug.py")
     config_dict = config_dict_module.config_dict
     print (config_dict['save_every'])
     train_subjects = ['ART', 'HOR', 'LAC', 'LAR', 'LAZ', 'LEA', 'LOR', 'PRA']
     config_dict['train_subjects'] = train_subjects
-    config_dict['dataset_folder_train'] = '/Midgard/home/sbroome/lameness/treadmill_lameness_mocap_ci_may11/mocap/'
-    dataset = SimpleFrameDataset(data_folder=config_dict['dataset_folder_train'],
+    config_dict['dataset_folder_train'] = '/Midgard/home/sbroome/lameness/'
+    config_dict['dataset_folder_train_mocap'] = '/Midgard/home/sbroome/lameness/treadmill_lameness_mocap_ci_may11/mocap/'
+    config_dict['dataset_folder_train_rgb'] = '/Midgard/home/sbroome/lameness/animals_data/'
+    dataset = TreadmillDataset(rgb_folder=config_dict['dataset_folder_train_rgb'],
+                               mocap_folder=config_dict['dataset_folder_train_mocap'],
                                  subjects = config_dict['train_subjects'],
                                  input_types=config_dict['input_types'],
                                  label_types=config_dict['label_types_train'])
