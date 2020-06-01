@@ -65,6 +65,7 @@ models-master
 
 # Output
 output/
+logs/
 
 # more
 Release-v1.2/
