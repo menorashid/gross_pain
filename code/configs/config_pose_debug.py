@@ -12,7 +12,7 @@ config_dict = {
 #     'bones'                   : bones,
 
 # Classfication
-    'num_joints' : 51,
+    'num_joints' : 50,
 
     # opt parameters    
     'num_epochs'              : 1,
@@ -57,6 +57,6 @@ config_dict = {
     'seam_scaling' : 1.0,
     'use_view_batches' : 4,
     'use_subject_batches' : True,
-    'every_nth_frame' : 10,
+    'every_nth_frame' : 1,
 
 }
