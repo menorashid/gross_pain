@@ -41,8 +41,19 @@ class TreadmillDataset(Dataset):
             def __repr__(self):
                 return self.__class__.__name__ + '()'
 
+        class ResizeTensor(object):
+            def __call__(self, img_tensor):
+                img_tensor_batch = torch.unsqueeze(img_tensor, 0)
+                img_batch = torch.nn.functional.interpolate(img_tensor_batch, size=(128,128))
+                img = torch.squeeze(img_batch)
+                return img
+
+            def __repr__(self):
+                return self.__class__.__name__ + '()'
+
         self.transform_in = torchvision.transforms.Compose([
             Image256toTensor(), # torchvision.transforms.ToTensor() the torchvision one behaved differently for different pytorch versions, hence the custom one..
+            ResizeTensor(),
             torchvision.transforms.Normalize(self.mean, self.stdDev)
         ])
         self.label_dict = get_label_df_for_subjects(subjects).to_dict()
@@ -71,7 +82,9 @@ class TreadmillDataset(Dataset):
             return self.mocap_folder + '/{}.mat'.format(clip_id)
 
         def load_image(path):
-            return np.array(self.transform_in(imageio.imread(path)), dtype='float32')
+            image = np.array(self.transform_in(imageio.imread(path)), dtype='float32')
+            print(image.shape)
+            return image
 
         def load_pose(path):
             nested_mocap = scio.loadmat(path)
@@ -84,18 +97,19 @@ class TreadmillDataset(Dataset):
             return mocap_3d
         
         def load_data(input_types):
+            new_dict = {}
             for key in input_types:
                 if key == 'img_crop':
-                    data = load_image(get_image_path(key)) 
+                    new_dict[key] = load_image(get_image_path(key)) 
                 if key == 'pose':
-                    data = load_pose(get_mocap_path(key))
-            return data
+                    new_dict[key] = load_pose(get_mocap_path(key))
+            return new_dict
 
         return load_data(self.input_types), load_data(self.label_types)
 
 
-class SimpleRandomFrameSampler(Sampler):
-    def __init__(self, data_folder, 
+class TreadmillRandomFrameSampler(Sampler):
+    def __init__(self,
                  subjects=None,
                  every_nth_frame=1):
         # Reduce frame index to wanted subjects and views
@@ -141,7 +155,6 @@ if __name__ == '__main__':
                                label_types=config_dict['label_types_train'])
 
     sampler = SimpleRandomFrameSampler(
-              data_folder=config_dict['dataset_folder_train'],
               subjects=config_dict['train_subjects'],
               every_nth_frame=config_dict['every_nth_frame'])
     
