@@ -41,20 +41,31 @@ class TreadmillDataset(Dataset):
             def __repr__(self):
                 return self.__class__.__name__ + '()'
 
+        class ResizeTensor(object):
+            def __call__(self, img_tensor):
+                img_tensor_batch = torch.unsqueeze(img_tensor, 0)
+                img_batch = torch.nn.functional.interpolate(img_tensor_batch, size=(128,128))
+                img = torch.squeeze(img_batch)
+                return img
+
+            def __repr__(self):
+                return self.__class__.__name__ + '()'
+
         self.transform_in = torchvision.transforms.Compose([
             Image256toTensor(), # torchvision.transforms.ToTensor() the torchvision one behaved differently for different pytorch versions, hence the custom one..
+            ResizeTensor(),
             torchvision.transforms.Normalize(self.mean, self.stdDev)
         ])
-        self.label_dict = get_label_df_for_subjects(data_folder, subjects).to_dict()
+        self.label_dict = get_label_df_for_subjects(subjects).to_dict()
 
     def __len__(self):
-        return len(self.label_dict['frame'])
+        return len(self.label_dict['rgb_index'])
 
     def get_local_indices(self, index):
         input_dict = {}
         clip_id = self.label_dict['clip_id'][index]
-        mocap_ind = self.label_dict['mocap_ind'][index]
-        rgb_ind = self.label_dict['rgb_ind'][index]
+        mocap_ind = self.label_dict['mocap_index'][index]
+        rgb_ind = self.label_dict['rgb_index'][index]
         subject = clip_id[:3]
         return clip_id, mocap_ind, rgb_ind, subject
 
@@ -64,46 +75,52 @@ class TreadmillDataset(Dataset):
 
         def get_image_path(key):
             frame_index =  '%04d'%rgb_ind
-            return self.rgb_folder + '/{}/{}_01/{}.png'.format(clip_id,
+            return self.rgb_folder + '/{}/{}_01/frame{}.png'.format(clip_id,
                                                                clip_id,
                                                                frame_index)
         def get_mocap_path(key):
             return self.mocap_folder + '/{}.mat'.format(clip_id)
 
         def load_image(path):
-            return np.array(self.transform_in(imageio.imread(path)), dtype='float32')
+            image = np.array(self.transform_in(imageio.imread(path)), dtype='float32')
+            print(image.shape)
+            return image
 
         def load_pose(path):
             nested_mocap = scio.loadmat(path)
+            # Mocap XYZ with residual
             mocap_4d = nested_mocap[clip_id]['Trajectories'][0][0][0][0][0][0]['Data'][0]
-            mocap_3d = mocap[:,:3,:]
+            mocap_3d = mocap_4d[:,:3,:]  # Just mocap
+            # Some are 50, some are 51 long
+            if mocap_3d.shape[0] == 51:  # Remove the first mocap joint "CristaFac_L"
+                mocap_3d = mocap_3d[1:,:,:]
             return mocap_3d
         
         def load_data(input_types):
+            new_dict = {}
             for key in input_types:
                 if key == 'img_crop':
-                    data = load_image(get_image_path(key)) 
+                    new_dict[key] = load_image(get_image_path(key)) 
                 if key == 'pose':
-                    data = load_pose(get_mocap_path(key))
-            return data
+                    new_dict[key] = load_pose(get_mocap_path(key))
+            return new_dict
 
         return load_data(self.input_types), load_data(self.label_types)
 
 
-class SimpleRandomFrameSampler(Sampler):
-    def __init__(self, data_folder, 
+class TreadmillRandomFrameSampler(Sampler):
+    def __init__(self,
                  subjects=None,
-                 views=None,
                  every_nth_frame=1):
         # Reduce frame index to wanted subjects and views
-        subject_label_df = get_label_df_for_subjects(data_folder, subjects)
+        subject_label_df = get_label_df_for_subjects(subjects)
 
-        # Get the wanted proportion of the data
-        subject_view_label_df = subject_view_label_df.sample(frac=1/every_nth_frame)
+        # Get the wanted proportion of the data. This shuffles the rows of the df.
+        subject_label_df = subject_label_df.sample(frac=1/every_nth_frame)
 
-        self.sample_index = subject_view_label_df.index.tolist()
+        self.sample_index = subject_label_df.index.tolist()
 
-        self.label_dict = subject_view_label_df.to_dict()
+        self.label_dict = subject_label_df.to_dict()
 
     def __len__(self):
         return len(self.label_dict['frame'])
@@ -112,11 +129,11 @@ class SimpleRandomFrameSampler(Sampler):
         return iter(self.sample_index)
 
 
-def get_label_df_for_subjects(data_folder, subjects):
+def get_label_df_for_subjects(subjects):
     subject_fi_dfs = []
     print('Iterating over frame indices per subject (.csv files)')
     for subject in subjects:
-        subject_frame_index_dataframe = pd.read_csv(data_folder + 'treadmill_frame_index_'  + subject + '.csv')
+        subject_frame_index_dataframe = pd.read_csv('../metadata/treadmill_frame_index_'  + subject + '.csv')
         subject_fi_dfs.append(subject_frame_index_dataframe)
     frame_index_df = pd.concat(subject_fi_dfs, ignore_index=True)
     return frame_index_df
@@ -133,14 +150,12 @@ if __name__ == '__main__':
     config_dict['dataset_folder_train_rgb'] = '/Midgard/home/sbroome/lameness/animals_data/'
     dataset = TreadmillDataset(rgb_folder=config_dict['dataset_folder_train_rgb'],
                                mocap_folder=config_dict['dataset_folder_train_mocap'],
-                                 subjects = config_dict['train_subjects'],
-                                 input_types=config_dict['input_types'],
-                                 label_types=config_dict['label_types_train'])
+                               subjects = config_dict['train_subjects'],
+                               input_types=config_dict['input_types'],
+                               label_types=config_dict['label_types_train'])
 
     sampler = SimpleRandomFrameSampler(
-              data_folder=config_dict['dataset_folder_train'],
               subjects=config_dict['train_subjects'],
-              views=config_dict['views'],
               every_nth_frame=config_dict['every_nth_frame'])
     
     trainloader = DataLoader(dataset, sampler=sampler,

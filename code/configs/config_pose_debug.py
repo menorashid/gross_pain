@@ -12,7 +12,7 @@ config_dict = {
 #     'bones'                   : bones,
 
 # Classfication
-    'num_joints' : 51,
+    'num_joints' : 50,
 
     # opt parameters    
     'num_epochs'              : 1,
@@ -30,6 +30,8 @@ config_dict = {
     #               the corridor, and R/L as defined from inside of the box.)
 
     'views'                   : [0,1,2,3],
+    # 'image_width'             : 720,
+    # 'image_height'            : 576,
     'image_width'             : 128,
     'image_height'            : 128,
 
@@ -57,6 +59,27 @@ config_dict = {
     'seam_scaling' : 1.0,
     'use_view_batches' : 4,
     'use_subject_batches' : True,
-    'every_nth_frame' : 10,
+    'every_nth_frame' : 1,
+
+    # Encoder-decoder
+    'latent_bg' : 0,
+    'latent_fg' : 24,
+    'latent_3d' : 200*3,
+    'latent_dropout' : 0.3,
+    'from_latent_hidden_layers' : 0,
+    'upsampling_bilinear' : 'upper',
+    'shuffle_fg' : True,
+    'shuffle_3d' : True,
+    'feature_scale' : 4,
+    'num_encoding_layers' : 4,
+    'loss_weight_rgb' : 1,
+    'loss_weight_gradient' : 0.01,
+    'loss_weight_imageNet' : 2,
+    'loss_weight_3d' : 0,
+    'do_maxpooling' : False,
+    'encoderType' : 'UNet',
+    'implicit_rotation' : False,
+    'predict_rotation' : False,
+    'skip_background' : True  # This means use background
 
 }

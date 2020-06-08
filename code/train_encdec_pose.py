@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import sys, os, shutil
 
 from rhodin.python.utils import io as rhodin_utils_io
+from rhodin.python.utils import datasets as rhodin_utils_datasets
 import numpy as np
 import torch
 torch.cuda.current_device() # to prevent  "Cannot re-initialize CUDA in forked subprocess." error on some configurations
@@ -21,8 +22,9 @@ from rhodin.python.losses import generic as losses_generic
 from rhodin.python.losses import poses as losses_poses
 from metrics.binary_accuracy import BinaryAccuracy
 from rhodin.python.utils import training as utils_train
+from treadmill_dataset import TreadmillDataset, TreadmillRandomFrameSampler
 
-class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
+class IgniteTrainPoseFromLatent(train_encode_decode.IgniteTrainNVS):
     def load_metrics(self, loss_test):
         metrics = {'loss': utils_train.AccumulatedLoss(loss_test),
                    'accuracy': BinaryAccuracy()}
@@ -60,46 +62,44 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
     def get_parameter_description(self, config_dict):#, config_dict):
         shorter_train_subjects = [subject[:2] for subject in config_dict['train_subjects']]
         shorter_test_subjects = [subject[:2] for subject in config_dict['test_subjects']]
-        folder = "../output/trainNVSPainFromLatent_{job_identifier}_{job_identifier_encdec}/{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_lr{learning_rate}_bstrain{batch_size_train}_bstest{batch_size_test}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
+        folder = "../output/trainNVSPoseFromLatent_{job_identifier}_{job_identifier_encdec}/{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_lr{learning_rate}_bstrain{batch_size_train}_bstest{batch_size_test}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
         folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
         return folder
 
-    def load_data_train(self,config_dict):
-        dataset = MultiViewDatasetCrop(data_folder=config_dict['dataset_folder_train'],
-                                   bg_folder=config_dict['bg_folder'],
+    def load_data_train(self, config_dict):
+        dataset = TreadmillDataset(rgb_folder=config_dict['dataset_folder_rgb'],
+                                   mocap_folder=config_dict['dataset_folder_mocap'],
+                                   subjects = config_dict['train_subjects'],
                                    input_types=config_dict['input_types'],
-                                   label_types=config_dict['label_types_train'],
-                                   subjects=config_dict['train_subjects'],
-                                   rot_folder = config_dict['rot_folder'])
-        batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_train'],
-              subjects=config_dict['train_subjects'],
-              use_subject_batches=config_dict['use_subject_batches'], use_view_batches=config_dict['use_view_batches'],
-              batch_size=config_dict['batch_size_train'],
-              randomize=True,
-              every_nth_frame=config_dict['every_nth_frame'])
+                                   label_types=config_dict['label_types_train'])
 
-        loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler, num_workers=0, pin_memory=False,
-                                             collate_fn=rhodin_utils_datasets.default_collate_with_string)
+        sampler = TreadmillRandomFrameSampler(
+                  subjects=config_dict['train_subjects'],
+                  every_nth_frame=config_dict['every_nth_frame'])
+        
+        loader = torch.utils.data.DataLoader(dataset, sampler=sampler,
+                            batch_size=config_dict['batch_size_train'],
+                            num_workers=0, pin_memory=False,
+                            collate_fn=rhodin_utils_datasets.default_collate_with_string)
+
         return loader
     
-    def load_data_test(self,config_dict):
-        dataset = MultiViewDatasetCrop(data_folder=config_dict['dataset_folder_test'],
-                                   bg_folder=config_dict['bg_folder'],
+    def load_data_test(self, config_dict):
+        dataset = TreadmillDataset(rgb_folder=config_dict['dataset_folder_rgb'],
+                                   mocap_folder=config_dict['dataset_folder_mocap'],
+                                   subjects = config_dict['test_subjects'],
                                    input_types=config_dict['input_types'],
-                                   label_types=config_dict['label_types_test'],
-                                   subjects=config_dict['test_subjects'],
-                                   rot_folder = config_dict['rot_folder'])
+                                   label_types=config_dict['label_types_test'])
 
-        batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_test'],
-                                                subjects=config_dict['test_subjects'],
-                                                use_subject_batches=0,
-                                                use_view_batches=config_dict['use_view_batches'],
-                                                batch_size=config_dict['batch_size_test'],
-                                                randomize=True,
-                                                every_nth_frame=config_dict['every_nth_frame'])
+        sampler = TreadmillRandomFrameSampler(
+                  subjects=config_dict['test_subjects'],
+                  every_nth_frame=config_dict['every_nth_frame'])
+        
+        loader = torch.utils.data.DataLoader(dataset, sampler=sampler,
+                            batch_size=config_dict['batch_size_test'],
+                            num_workers=0, pin_memory=False,
+                            collate_fn=rhodin_utils_datasets.default_collate_with_string)
 
-        loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler, num_workers=0, pin_memory=False,
-                                             collate_fn=rhodin_utils_datasets.default_collate_with_string)
         return loader
     
 
@@ -167,12 +167,14 @@ if __name__ == "__main__":
     config_dict['data_dir_path'] = args.dataset_path
     config_dict['dataset_folder_train'] = args.dataset_path
     config_dict['dataset_folder_test'] = args.dataset_path
+    config_dict['dataset_folder_mocap'] = os.path.join(args.dataset_path, 'treadmill_lameness_mocap_ci_may11/mocap/')
+    config_dict['dataset_folder_rgb'] = os.path.join(args.dataset_path, 'animals_data/')
     root = args.dataset_path.rsplit('/', 2)[0]
     config_dict['bg_folder'] = os.path.join(root, 'median_bg/')
     config_dict['rot_folder'] = os.path.join(root, 'rotation_cal_1/')
 
     config_dict['pretrained_network_path'] = get_model_path(config_dict_for_saved_model, epoch=args.epoch_encdec)
 
-    ignite = IgniteTrainPainFromLatent()
+    ignite = IgniteTrainPoseFromLatent()
     ignite.run(config_dict_module.__file__, config_dict)
 
