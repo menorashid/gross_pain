@@ -3,11 +3,11 @@ inputDimension = 128
 config_dict = {
     # General parameters
     'dpi'                     : 190,
-    'input_types'             : ['img_crop'],
+    'input_types'             : ['img_crop', 'bg_crop'],
     # Possible output types   :  'img_crop' | '3D' | 'shuffled_pose' | 'shuffled_appearance' | 'latent_3d'
-    'output_types'            : ['pose'],
-    'label_types_train'       : ['pose'],
-    'label_types_test'        : ['pose'],
+    'output_types'            : ['3D'],
+    'label_types_train'       : ['3D', 'pose_mean'],
+    'label_types_test'        : ['3D', 'pose_mean'],
     'num_workers'             : 4,
 #     'bones'                   : bones,
 

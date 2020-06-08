@@ -51,11 +51,10 @@ class IgniteTrainPoseFromLatent(train_encode_decode.IgniteTrainNVS):
         return optimizer
 
     def load_loss(self, config_dict):
-    
-        pose_key = 'pose'
-        loss_train = losses_generic.LossLabel(pose_key, torch.nn.CrossEntropyLoss())
-        loss_test = losses_generic.LossLabel(pose_key, torch.nn.CrossEntropyLoss())
-
+        weight = 1 
+        pose_key = '3D'
+        loss_train = losses_generic.LossLabelMeanStdNormalized(pose_key, torch.nn.MSELoss())
+        loss_test = losses_generic.LossLabelMeanStdUnNormalized(pose_key, losses_poses.Criterion3DPose_leastQuaresScaled(losses_poses.MPJPECriterion(weight)), scale_normalized=False)
         # annotation and pred is organized as a list, to facilitate multiple output types (e.g. heatmap and 3d loss)
         return loss_train, loss_test
 
@@ -69,6 +68,7 @@ class IgniteTrainPoseFromLatent(train_encode_decode.IgniteTrainNVS):
     def load_data_train(self, config_dict):
         dataset = TreadmillDataset(rgb_folder=config_dict['dataset_folder_rgb'],
                                    mocap_folder=config_dict['dataset_folder_mocap'],
+                                   bg_folder=config_dict['bg_folder'],
                                    subjects = config_dict['train_subjects'],
                                    input_types=config_dict['input_types'],
                                    label_types=config_dict['label_types_train'])
@@ -87,6 +87,7 @@ class IgniteTrainPoseFromLatent(train_encode_decode.IgniteTrainNVS):
     def load_data_test(self, config_dict):
         dataset = TreadmillDataset(rgb_folder=config_dict['dataset_folder_rgb'],
                                    mocap_folder=config_dict['dataset_folder_mocap'],
+                                   bg_folder=config_dict['bg_folder'],
                                    subjects = config_dict['test_subjects'],
                                    input_types=config_dict['input_types'],
                                    label_types=config_dict['label_types_test'])
@@ -169,9 +170,8 @@ if __name__ == "__main__":
     config_dict['dataset_folder_test'] = args.dataset_path
     config_dict['dataset_folder_mocap'] = os.path.join(args.dataset_path, 'treadmill_lameness_mocap_ci_may11/mocap/')
     config_dict['dataset_folder_rgb'] = os.path.join(args.dataset_path, 'animals_data/')
-    root = args.dataset_path.rsplit('/', 2)[0]
-    config_dict['bg_folder'] = os.path.join(root, 'median_bg/')
-    config_dict['rot_folder'] = os.path.join(root, 'rotation_cal_1/')
+    config_dict['bg_folder'] = '../data/median_bg/'
+    config_dict['rot_folder'] = '../data/rotation_cal_1/'
 
     config_dict['pretrained_network_path'] = get_model_path(config_dict_for_saved_model, epoch=args.epoch_encdec)
 

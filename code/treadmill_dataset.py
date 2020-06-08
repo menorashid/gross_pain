@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 class TreadmillDataset(Dataset):
     """Single frame surveillance dataset of horses in their box."""
-    def __init__(self, mocap_folder, rgb_folder, 
+    def __init__(self, mocap_folder, rgb_folder, bg_folder,
                  subjects, input_types, label_types,
                  mean=(0.485, 0.456, 0.406),  #TODO update these to horse dataset.
                  stdDev= (0.229, 0.224, 0.225),
@@ -57,6 +57,11 @@ class TreadmillDataset(Dataset):
             torchvision.transforms.Normalize(self.mean, self.stdDev)
         ])
         self.label_dict = get_label_df_for_subjects(subjects).to_dict()
+        self.label_dict['pose_mean'] = self.load_mean_pose('../data/treadmill_pose_mean.npy')
+
+    def load_mean_pose(self, path):
+        pose_mean = np.load(path)
+        return pose_mean
 
     def __len__(self):
         return len(self.label_dict['rgb_index'])
@@ -83,9 +88,12 @@ class TreadmillDataset(Dataset):
 
         def load_image(path):
             image = np.array(self.transform_in(imageio.imread(path)), dtype='float32')
-            print(image.shape)
             return image
 
+        def get_bg_path():
+            bg_path = self.bg_folder + 'median_0.1fps_camera_0.jpg'
+            return bg_path
+    
         def load_pose(path):
             nested_mocap = scio.loadmat(path)
             # Mocap XYZ with residual
@@ -100,9 +108,13 @@ class TreadmillDataset(Dataset):
             new_dict = {}
             for key in input_types:
                 if key == 'img_crop':
-                    new_dict[key] = load_image(get_image_path(key)) 
-                if key == 'pose':
+                    new_dict[key] = load_image(get_image_path(key))
+                if key == 'bg_crop':
+                    new_dict[key] = load_image(get_bg_path())
+                if key == '3D':
                     new_dict[key] = load_pose(get_mocap_path(key))
+                if key == 'pose_mean':
+                    new_dict[key] = self.label_dict['pose_mean']
             return new_dict
 
         return load_data(self.input_types), load_data(self.label_types)
