@@ -57,11 +57,12 @@ class TreadmillDataset(Dataset):
             torchvision.transforms.Normalize(self.mean, self.stdDev)
         ])
         self.label_dict = get_label_df_for_subjects(subjects).to_dict()
-        self.label_dict['pose_mean'] = self.load_mean_pose('../data/treadmill_pose_mean.npy')
+        self.label_dict['pose_mean'] = self.load_np_array('../metadata/treadmill_pose_mean.npy')
+        self.label_dict['pose_std'] = self.load_np_array('../metadata/treadmill_pose_mean.npy')
 
-    def load_mean_pose(self, path):
-        pose_mean = np.load(path)
-        return pose_mean
+    def load_np_array(self, path):
+        ar = np.load(path)
+        return ar.astype(np.float32)
 
     def __len__(self):
         return len(self.label_dict['rgb_index'])
@@ -78,12 +79,12 @@ class TreadmillDataset(Dataset):
 
         clip_id, mocap_ind, rgb_ind, subject = self.get_local_indices(index)
 
-        def get_image_path(key):
+        def get_image_path():
             frame_index =  '%04d'%rgb_ind
             return self.rgb_folder + '/{}/{}_01/frame{}.png'.format(clip_id,
                                                                clip_id,
                                                                frame_index)
-        def get_mocap_path(key):
+        def get_mocap_path():
             return self.mocap_folder + '/{}.mat'.format(clip_id)
 
         def load_image(path):
@@ -98,23 +99,26 @@ class TreadmillDataset(Dataset):
             nested_mocap = scio.loadmat(path)
             # Mocap XYZ with residual
             mocap_4d = nested_mocap[clip_id]['Trajectories'][0][0][0][0][0][0]['Data'][0]
-            mocap_3d = mocap_4d[:,:3,:]  # Just mocap
+            mocap_3d = mocap_4d[:,:3,mocap_ind]  # Just mocap
             # Some are 50, some are 51 long
             if mocap_3d.shape[0] == 51:  # Remove the first mocap joint "CristaFac_L"
-                mocap_3d = mocap_3d[1:,:,:]
-            return mocap_3d
+                mocap_3d = mocap_3d[1:,:]
+            mocap_3d = np.nan_to_num(mocap_3d, nan=0)
+            return mocap_3d.astype(np.float32)
         
         def load_data(input_types):
             new_dict = {}
             for key in input_types:
                 if key == 'img_crop':
-                    new_dict[key] = load_image(get_image_path(key))
+                    new_dict[key] = load_image(get_image_path())
                 if key == 'bg_crop':
                     new_dict[key] = load_image(get_bg_path())
                 if key == '3D':
-                    new_dict[key] = load_pose(get_mocap_path(key))
+                    new_dict[key] = load_pose(get_mocap_path())
                 if key == 'pose_mean':
                     new_dict[key] = self.label_dict['pose_mean']
+                if key == 'pose_std':
+                    new_dict[key] = self.label_dict['pose_std']
             return new_dict
 
         return load_data(self.input_types), load_data(self.label_types)

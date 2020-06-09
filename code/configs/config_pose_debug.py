@@ -1,3 +1,9 @@
+# Kinematic tree for horses
+num_joints = 36
+joint_names = ['pelvis', 'pelvis0', 'spine', 'spine0', 'spine1', 'spine2', 'spine3', 'LLeg1', 'LLeg2', 'LLeg3', 'LFoot', 'RLeg1', 'RLeg2', 'RLeg3', 'RFoot', 'Neck', 'Neck1', 'Head', 'LLegBack1', 'LLegBack2', 'LLegBack3', 'LFootBack', 'RLegBack1', 'RLegBack2', 'RLegBack3', 'RFootBack', 'Tail1', 'Tail2', 'Tail3', 'Tail4', 'Tail5', 'Tail6', 'Tail7', 'Mouth', 'LEar', 'REar']
+bones = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [6, 11], [11, 12], [12, 13], [13, 14], [6, 15], [15, 16], [16, 17], [0, 18], [18, 19], [19, 20], [20, 21], [0, 22], [22, 23], [23, 24], [24, 25], [0, 26], [26, 27], [27, 28], [28, 29], [29, 30], [30, 31], [31, 32], [17, 33], [17, 34], [17, 35]]
+
+
 inputDimension = 128
 
 config_dict = {
@@ -6,10 +12,10 @@ config_dict = {
     'input_types'             : ['img_crop', 'bg_crop'],
     # Possible output types   :  'img_crop' | '3D' | 'shuffled_pose' | 'shuffled_appearance' | 'latent_3d'
     'output_types'            : ['3D'],
-    'label_types_train'       : ['3D', 'pose_mean'],
-    'label_types_test'        : ['3D', 'pose_mean'],
+    'label_types_train'       : ['3D', 'pose_mean', 'pose_std'],
+    'label_types_test'        : ['3D', 'pose_mean', 'pose_std'],
     'num_workers'             : 4,
-#     'bones'                   : bones,
+    'bones'                   : bones,
 
 # Classfication
     'num_joints' : 50,
