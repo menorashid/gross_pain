@@ -83,10 +83,13 @@ class TreadmillDataset(Dataset):
 
         def load_image(path):
             image = np.array(self.transform_in(imageio.imread(path)), dtype='float32')
-            print(image.shape)
+            # print(image.shape)
             return image
 
         def load_pose(path):
+            mocap_3d = np.zeros((3,50))
+            return mocap_3d
+            
             nested_mocap = scio.loadmat(path)
             # Mocap XYZ with residual
             mocap_4d = nested_mocap[clip_id]['Trajectories'][0][0][0][0][0][0]['Data'][0]

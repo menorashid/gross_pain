@@ -41,6 +41,9 @@ class IgniteTrainNVS:
         config_dict['loss_weight_pose3D'] = config_dict.get('loss_weight_pose3D', 0)
         config_dict['n_hidden_to3Dpose'] = config_dict.get('n_hidden_to3Dpose', 2)
         
+        print (config_dict['rot_folder'])
+        # s = input()
+
         # create visualization windows
         try:
             import visdom
@@ -354,8 +357,8 @@ if __name__ == "__main__":
     config_dict['dataset_folder_train'] = args.dataset_path
     config_dict['dataset_folder_test'] = args.dataset_path
     root = args.dataset_path.rsplit('/', 2)[0]
-    config_dict['bg_folder'] = os.path.join(root, 'median_bg/')
-    config_dict['rot_folder'] = os.path.join(root, 'rotation_cal_1/')
+    # config_dict['bg_folder'] = os.path.join(root, 'median_bg/')
+    # config_dict['rot_folder'] = os.path.join(root, 'rotation_cal_1/')
     
     ignite = IgniteTrainNVS()
     ignite.run(config_dict_module.__file__, config_dict)

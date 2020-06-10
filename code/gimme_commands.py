@@ -7,16 +7,17 @@ def back_bone_commands():
 	# ['herrera','julia','naughty_but_nice']
 	# ['inkasso', 'kastanjett', 'sir_holger']
 	# 
-	config_file = 'configs/config_train_rotation_crop.py'
-	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
-	job_name = 'withRotCrop'
+	config_file = 'configs/config_train_rotation_newCal.py'
+	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
+	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
+	job_name = 'withRotNewCal'
 	util.mkdir('to_runs')
 
-	num_gpus = 1
-	num_per_gpu = 8
+	num_gpus = 2
+	num_per_gpu = 4
 	for idx in range(num_gpus):
 		test_horses = test_horses_all[num_per_gpu*idx:num_per_gpu*idx+num_per_gpu]
-		out_file = os.path.join('to_runs','to_run_1_'+job_name+'_'+str(idx))
+		out_file = os.path.join('to_runs','to_run_'+job_name+'_'+str(idx))
 		print (out_file)
 	# test_horses = ['brava', 'herrera']
 	# test_horses = ['inkasso','julia']
@@ -104,7 +105,8 @@ def pnp_latent_commands():
 
 
 def main():
-	pnp_latent_commands()
+	# pnp_latent_commands()
+	back_bone_commands()
 
 
 
