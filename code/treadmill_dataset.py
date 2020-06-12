@@ -96,9 +96,6 @@ class TreadmillDataset(Dataset):
             return bg_path
     
         def load_pose(path):
-            mocap_3d = np.zeros((3,50))
-            return mocap_3d
-            
             nested_mocap = scio.loadmat(path)
             # Mocap XYZ with residual
             mocap_4d = nested_mocap[clip_id]['Trajectories'][0][0][0][0][0][0]['Data'][0]
