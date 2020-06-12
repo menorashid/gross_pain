@@ -15,7 +15,7 @@ from rhodin.python.losses import images as losses_images
 from rhodin.python.ignite.metrics import Loss
 from rhodin.python.utils import datasets as rhodin_utils_datasets
 from rhodin.python.utils import io as rhodin_utils_io
-from rhodin.python.utils import training as utils_train
+from rhodin.python.utils import training as utils_train_rhodin
 from helpers import util
 
 import math
@@ -69,12 +69,13 @@ class IgniteTrainNVS:
         model = self.load_network(config_dict)
         model = model.to(device)
         optimizer = self.loadOptimizer(model,config_dict)
-        loss_train,loss_test = self.load_loss(config_dict)
-        metrics = self.load_metrics(loss_test)
+        loss_train, loss_test = self.load_loss(config_dict)
+        train_metrics = self.load_metrics(loss_train)
+        test_metrics = self.load_metrics(loss_test)
             
-        trainer = utils_train.create_supervised_trainer(model, optimizer, loss_train, device=device)
-        evaluator = utils_train.create_supervised_evaluator(model,
-                                                metrics=metrics,
+        trainer = utils_train_rhodin.create_supervised_trainer(model, optimizer, loss_train, device=device)
+        evaluator = utils_train_rhodin.create_supervised_evaluator(model,
+                                                metrics=test_metrics,
                                                 device=device)
     
         @trainer.on(Events.ITERATION_COMPLETED)
@@ -82,9 +83,9 @@ class IgniteTrainNVS:
             # log the loss
             iteration = engine.state.iteration - 1
             if iteration % config_dict['print_every'] == 0:
-                utils_train.save_training_error(save_path, engine, vis, vis_windows)
+                util.save_training_error(save_path, engine, vis, vis_windows)
             if iteration in [0,100]:
-                utils_train.save_training_example(save_path, engine, vis, vis_windows, config_dict)
+                utils_train_rhodin.save_training_example(save_path, engine, vis, vis_windows, config_dict)
 
         @trainer.on(Events.EPOCH_COMPLETED)
         def plot_training_image(engine):
@@ -92,14 +93,14 @@ class IgniteTrainNVS:
             print ('plotting')
             epoch = engine.state.epoch - 1
             if epoch % config_dict['plot_every'] == 0:
-                utils_train.save_training_example(save_path, engine, vis, vis_windows, config_dict)
+                utils_train_rhodin.save_training_example(save_path, engine, vis, vis_windows, config_dict)
 
         @trainer.on(Events.EPOCH_COMPLETED)
         def log_training_results(trainer):
             ep = trainer.state.epoch
             if  'train_test_every' in config_dict.keys() and (ep) % config_dict['train_test_every'] == 0:
                 print("Running evaluation of whole train set at epoch ", ep)
-                evaluator.run(train_loader, metrics=metrics)
+                evaluator.run(train_loader, metrics=train_metrics)
                 _ = util.save_testing_error(save_path, trainer, evaluator,
                                     vis, vis_windows, dataset_str='Training Set',
                                     save_extension='debug_log_training_wholeset.txt')
@@ -111,34 +112,37 @@ class IgniteTrainNVS:
             # - 1
             if (ep) % config_dict['test_every'] == 0: # +1 to prevent evaluation at iteration 0
                     # return
-                print("Running evaluation at epoch ", ep)
-                evaluator.run(test_loader, metrics=metrics)
+                print("Running test set evaluation at epoch ", ep)
+                evaluator.run(test_loader, metrics=test_metrics)
                 avg_accuracy = util.save_testing_error(save_path, engine, evaluator,
                                     vis, vis_windows, dataset_str='Test Set', save_extension='debug_log_testing.txt')
         
                 # save the best model
-                utils_train.save_model_state(save_path, trainer, avg_accuracy, model, optimizer, engine.state)
+                # util.save_model_state(save_path, engine, avg_accuracy, model, optimizer)
+                util.save_model_state(save_path, evaluator, avg_accuracy, model, optimizer)
         
         @trainer.on(Events.EPOCH_COMPLETED)
         # @trainer.on(Events.ITERATION_COMPLETED)
         def save_model(engine):
+            import ipdb; ipdb.set_trace()
+            print('IS This never called?')
             epoch = engine.state.epoch
             print ('epoch',epoch,'engine.state.iteration',engine.state.iteration)
             if not epoch % config_dict['save_every']: # +1 to prevent evaluation at iteration 0
-                utils_train.save_model_state_iter(save_path, trainer, model, optimizer, engine.state)
+                util.save_model_state_iter(save_path, engine, model, optimizer)
 
         # print test result
         @evaluator.on(Events.ITERATION_COMPLETED)
         def log_test_loss(engine):
             iteration = engine.state.iteration - 1
             if iteration in [0,100]:
-                utils_train.save_test_example(save_path, trainer, evaluator, vis, vis_windows, config_dict)
+                utils_train_rhodin.save_test_example(save_path, trainer, evaluator, vis, vis_windows, config_dict)
     
         # kick everything off
-        trainer.run(train_loader, max_epochs=epochs, metrics=metrics)
+        trainer.run(train_loader, max_epochs=epochs, metrics=train_metrics)
 
-    def load_metrics(self, loss_test):
-        return {'primary': utils_train.AccumulatedLoss(loss_test)}
+    def load_metrics(self, loss):
+        return {'accumulated_loss': util.AccumulatedLoss(loss)}
         
     def load_network(self, config_dict):
         output_types= config_dict['output_types']
@@ -183,19 +187,19 @@ class IgniteTrainNVS:
                 pretrained_network_path = '/cvlabdata1/home/rhodin/code/humanposeannotation/output_save/CVPR18_H36M/TransferLearning2DNetwork/h36m_23d_crop_relative_s1_s5_aug_from2D_2017-08-22_15-52_3d_resnet/models/network_000000.pth'
                 print("Loading weights from MPII2Dpose")
                 pretrained_states = torch.load(pretrained_network_path, map_location=device)
-                utils_train.transfer_partial_weights(pretrained_states, network_single, submodule=0, add_prefix='encoder.') # last argument is to remove "network.single" prefix in saved network
+                utils_train_rhodin.transfer_partial_weights(pretrained_states, network_single, submodule=0, add_prefix='encoder.') # last argument is to remove "network.single" prefix in saved network
             else:
                 print("Loading weights from config_dict['pretrained_network_path']")
                 pretrained_network_path = config_dict['pretrained_network_path']            
                 pretrained_states = torch.load(pretrained_network_path, map_location=device)
-                utils_train.transfer_partial_weights(pretrained_states, network_single, submodule=0) # last argument is to remove "network.single" prefix in saved network
+                utils_train_rhodin.transfer_partial_weights(pretrained_states, network_single, submodule=0) # last argument is to remove "network.single" prefix in saved network
                 print("Done loading weights from config_dict['pretrained_network_path']")
         
         if 'pretrained_posenet_network_path' in config_dict.keys(): # automatic
             print("Loading weights from config_dict['pretrained_posenet_network_path']")
             pretrained_network_path = config_dict['pretrained_posenet_network_path']            
             pretrained_states = torch.load(pretrained_network_path, map_location=device)
-            utils_train.transfer_partial_weights(pretrained_states, network_single.to_pose, submodule=0) # last argument is to remove "network.single" prefix in saved network
+            utils_train_rhodin.transfer_partial_weights(pretrained_states, network_single.to_pose, submodule=0) # last argument is to remove "network.single" prefix in saved network
             print("Done loading weights from config_dict['pretrained_posenet_network_path']")
         return network_single
     

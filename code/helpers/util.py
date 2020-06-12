@@ -1,5 +1,7 @@
 import numpy as np;
-# import torch
+import ignite
+import pickle
+import torch
 import scipy
 import subprocess;
 import os;
@@ -211,7 +213,7 @@ def get_class_weights(train_files,au=False):
 def save_training_error(save_path, engine, vis, vis_windows):
     # log training error
     iteration = engine.state.iteration - 1
-    loss = engine.state.output
+    loss, _ = engine.state.output
     print("Epoch[{}] Iteration[{}] Batch Loss: {:.2f}".format(engine.state.epoch, iteration, loss))
     title="Training error"
     if vis is not None:
@@ -227,17 +229,23 @@ def save_training_error(save_path, engine, vis, vis_windows):
     with open(log_name, 'a') as the_file:
         the_file.write('{},{}\n'.format(iteration, loss))
 
-def save_testing_error(save_path, trainer, evaluator, vis, vis_windows, dataset_str, save_extension=None):
-    metrics = evaluator.state.metrics
+
+def save_testing_error(save_path, trainer, evaluator, vis, vis_windows,
+                       dataset_str, save_extension=None):
+    # The trainer is only given here to get the current iteration and epoch.
     iteration = trainer.state.iteration
-    print("{} Results - Epoch: {}  Avg accuracy: {}".format(dataset_str, trainer.state.epoch, metrics))
-    accuracies = []
+    epoch = trainer.state.epoch
+
+    metrics = evaluator.state.metrics
+    import ipdb; ipdb.set_trace()
+    print("{} Results - Epoch: {}  AccumulatedLoss: {}".format(dataset_str, epoch, metrics))
+    metric_values = []
     for key in metrics.keys():
-        title="Testing error {}".format(key)
-        avg_accuracy = metrics[key]
-        accuracies.append(avg_accuracy)
+        title="Testing metric: {}".format(key)
+        metric_value = metrics[key]
+        metric_values.append(metric_value)
         if vis is not None:
-            vis_windows[title] = vis.line(X=np.array([iteration]), Y=np.array([avg_accuracy]),
+            vis_windows[title] = vis.line(X=np.array([iteration]), Y=np.array([metric_value]),
                          update='append' if title in vis_windows else None,
                          win=vis_windows.get(title, None),
                          opts=dict(xlabel="# iteration", ylabel="value", title=title))
@@ -248,6 +256,62 @@ def save_testing_error(save_path, trainer, evaluator, vis, vis_windows, dataset_
         with open(log_name, 'w') as the_file: # overwrite exiting file
             the_file.write('#iteration,loss1,loss2,...\n')     
     with open(log_name, 'a') as the_file:
-        the_file.write('{},{}\n'.format(iteration, ",".join(map(str, accuracies)) ))
-    return sum(accuracies)
+        the_file.write('{},{}\n'.format(iteration, ",".join(map(str, metric_values)) ))
+    return sum(metric_values)
+
         
+def save_model_state(save_path, engine, current_loss, model, optimizer):
+    # update the best value
+    best_val = engine.state.metrics.get('best_val', 99999999)
+    engine.state.metrics['best_val'] = np.minimum(current_loss, best_val)
+    
+    print("Saving last model")
+    model_path = os.path.join(save_path,"models/")
+    if not os.path.exists(model_path):
+        os.makedirs(model_path)
+    torch.save(model.state_dict(), os.path.join(model_path,"network_last_val.pth"))
+    torch.save(optimizer.state_dict(), os.path.join(model_path,"optimizer_last_val.pth"))
+    import ipdb; ipdb.set_trace()
+    state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
+    pickle.dump(state_variables, open(os.path.join(model_path,"state_last_val.pickle"),'wb'))
+    
+    if current_loss==engine.state.metrics['best_val']:
+        print("Saving best model (previous best_loss={} > current_loss={})".format(best_val, current_loss))
+        
+        torch.save(model.state_dict(), os.path.join(model_path,"network_best_val_t1.pth"))
+        torch.save(optimizer.state_dict(), os.path.join(model_path,"optimizer_best_val_t1.pth"))
+        state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
+        pickle.dump(state_variables, open(os.path.join(model_path,"state_best_val_t1.pickle"),'wb'))
+
+
+# Fix of original Ignite Loss to not depend on single tensor output but to accept dictionaries
+from rhodin.python.ignite.metrics import Metric
+class AccumulatedLoss(Metric):
+    """
+    Calculates the average loss according to the passed loss_fn.
+    `loss_fn` must return the average loss over all observations in the batch.
+    `update` must receive output of the form (y_pred, y).
+    """
+    def __init__(self, loss_fn, output_transform=lambda x: x):
+        super(AccumulatedLoss, self).__init__(output_transform)
+        self._loss_fn = loss_fn
+
+    def reset(self):
+        self._sum = 0
+        self._num_examples = 0
+
+    def update(self, output):
+        print("accloss is being updated")
+        y_pred, y = output
+        average_loss = self._loss_fn(y_pred, y)
+        assert len(average_loss.shape) == 0, '`loss_fn` did not return the average loss'
+        self._sum += average_loss.item() * 1 # HELGE: Changed here from original version
+        self._num_examples += 1 # count in number of batches
+
+    def compute(self):
+        if self._num_examples == 0:
+            raise ignite.exceptions.NotComputableError(
+                'Loss must have at least one example before it can be computed')
+        return self._sum / self._num_examples
+    
+    
