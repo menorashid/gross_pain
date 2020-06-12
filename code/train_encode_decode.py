@@ -77,10 +77,6 @@ class IgniteTrainNVS:
                                                 metrics=metrics,
                                                 device=device)
     
-        #@trainer.on(Events.STARTED)
-        def load_previous_state(engine):
-            utils_train.load_previous_state(save_path, model, optimizer, engine.state)
-             
         @trainer.on(Events.ITERATION_COMPLETED)
         def log_training_progress(engine):
             # log the loss
