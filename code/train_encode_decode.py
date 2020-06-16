@@ -105,10 +105,8 @@ class IgniteTrainNVS:
                                     save_extension='debug_log_whole_trainset.txt')
 
         @trainer.on(Events.EPOCH_COMPLETED)
-        # @trainer.on(Events.ITERATION_COMPLETED)
         def validate_model(engine):
             ep = engine.state.epoch
-            # - 1
             if ((ep) % config_dict['test_every'] == 0) or ep==1: # +1 to prevent evaluation at iteration 0
                     # return
                 print("Running evaluation at epoch ", ep)
@@ -116,13 +114,11 @@ class IgniteTrainNVS:
                 avg_accuracy = utils_train.save_testing_error(save_path, engine, evaluator,
                                     vis, vis_windows, dataset_str='Validation set',
                                     save_extension='debug_log_testing.txt')
-                # , dataset_str='Test Set', save_extension='debug_log_testing.txt')
         
                 # save the best model
                 utils_train.save_model_state(save_path, trainer, avg_accuracy, model, optimizer, engine.state)
         
         @trainer.on(Events.EPOCH_COMPLETED)
-        # @trainer.on(Events.ITERATION_COMPLETED)
         def save_model(engine):
             epoch = engine.state.epoch
             print ('epoch',epoch,'engine.state.iteration',engine.state.iteration)
@@ -131,7 +127,7 @@ class IgniteTrainNVS:
 
         # print test result
         @evaluator.on(Events.ITERATION_COMPLETED)
-        def log_test_loss(engine):
+        def log_test_example(engine):
             iteration = engine.state.iteration - 1
             if iteration in [0,100]:
                 utils_train.save_test_example(save_path, trainer, evaluator, vis, vis_windows, config_dict)

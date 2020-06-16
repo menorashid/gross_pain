@@ -180,6 +180,7 @@ def save_model_state(save_path, engine, current_loss, model, optimizer, state):
         state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
         pickle.dump(state_variables, open(os.path.join(model_path,"state_best_val_t1.pickle"),'wb'))
 
+
 def save_model_state_iter(save_path, engine, model, optimizer, state):
     # update the best value
     # best_val = engine.state.metrics.get('best_val', 99999999)
@@ -196,7 +197,6 @@ def save_model_state_iter(save_path, engine, model, optimizer, state):
     state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
     pickle.dump(state_variables, open(os.path.join(model_path,"state_"+str_file_name+".pickle"),'wb'))
     
-
 
 # Fix of original Ignite Loss to not depend on single tensor output but to accept dictionaries
 from rhodin.python.ignite.metrics import Metric
