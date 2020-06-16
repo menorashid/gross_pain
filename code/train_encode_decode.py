@@ -9,7 +9,7 @@ import os, shutil
 
 import numpy as np
 
-from models import unet_encode3D
+from models import unet_encode3D_clean as unet_encode3D
 from rhodin.python.losses import generic as losses_generic
 from rhodin.python.losses import images as losses_images
 from rhodin.python.ignite.metrics import Loss

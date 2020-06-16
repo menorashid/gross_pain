@@ -2,16 +2,28 @@ from helpers import util
 import os
 
 def back_bone_commands():
+	# train_horses = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
+	# test_horses_all = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
+	# # ['herrera','julia','naughty_but_nice']
+	# # ['inkasso', 'kastanjett', 'sir_holger']
+	# # 
+	# config_file = 'configs/config_train_rotation_newCal.py'
+	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
+	# # data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
+	# job_name = 'withRotNewCal'
+	# util.mkdir('to_runs')
+
 	train_horses = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
 	test_horses_all = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
 	# ['herrera','julia','naughty_but_nice']
 	# ['inkasso', 'kastanjett', 'sir_holger']
 	# 
-	config_file = 'configs/config_train_rotation_newCal.py'
-	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
-	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
-	job_name = 'withRotNewCal'
+	config_file = 'configs/config_rotcrop_debug.py'
+	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
+	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
+	job_name = 'withRotCropDebug'
 	util.mkdir('to_runs')
+
 
 	num_gpus = 2
 	num_per_gpu = 4
