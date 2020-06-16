@@ -101,7 +101,8 @@ class IgniteTrainNVS:
                 print("Running evaluation of whole train set at epoch ", ep)
                 evaluator.run(train_loader, metrics=metrics)
                 _ = utils_train.save_testing_error(save_path, trainer, evaluator,
-                                    vis, vis_windows)
+                                    vis, vis_windows, dataset_str='Training set',
+                                    save_extension='debug_log_whole_trainset.txt')
 
         @trainer.on(Events.EPOCH_COMPLETED)
         # @trainer.on(Events.ITERATION_COMPLETED)
@@ -113,14 +114,12 @@ class IgniteTrainNVS:
                 print("Running evaluation at epoch ", ep)
                 evaluator.run(test_loader, metrics=metrics)
                 avg_accuracy = utils_train.save_testing_error(save_path, engine, evaluator,
-                                    vis, vis_windows)
+                                    vis, vis_windows, dataset_str='Validation set',
+                                    save_extension='debug_log_testing.txt')
                 # , dataset_str='Test Set', save_extension='debug_log_testing.txt')
         
                 # save the best model
                 utils_train.save_model_state(save_path, trainer, avg_accuracy, model, optimizer, engine.state)
-            if ep % config_dict['num_epochs'] == 0:
-                print('Drawing and saving plots for train and test losses')
-                utils_train.plot_losses(save_path, config_dict)
         
         @trainer.on(Events.EPOCH_COMPLETED)
         # @trainer.on(Events.ITERATION_COMPLETED)
@@ -137,11 +136,6 @@ class IgniteTrainNVS:
             if iteration in [0,100]:
                 utils_train.save_test_example(save_path, trainer, evaluator, vis, vis_windows, config_dict)
     
-        @trainer.on(Events.EPOCH_COMPLETED)
-        def plot_losses(engine):
-            """ Plots train and test losses after the last epoch."""
-            epoch = engine.state.epoch - 1
-
         # kick everything off
         trainer.run(train_loader, max_epochs=epochs, metrics=metrics)
 

@@ -44,19 +44,19 @@ def create_supervised_evaluator(model, metrics={}, device=None):
         metric.attach(engine, name)
 
     return engine
-    
+
+
 def save_training_error(save_path, engine, vis, vis_windows):
     # log training error
     iteration = engine.state.iteration - 1
-    loss, pose = engine.state.output
-    print("Epoch[{}] Iteration[{}] Loss: {:.2f}".format(engine.state.epoch, iteration, loss))
+    loss, _ = engine.state.output
+    print("Epoch[{}] Iteration[{}] Batch Loss: {:.2f}".format(engine.state.epoch, iteration, loss))
     title="Training error"
     if vis is not None:
         vis_windows[title] = vis.line(X=np.array([engine.state.iteration]), Y=np.array([loss]),
                  update='append' if title in vis_windows else None,
                  win=vis_windows.get(title, None),
                  opts=dict(xlabel="# iteration", ylabel="loss", title=title))
-   
     # also save as .txt for plotting
     log_name = os.path.join(save_path, 'debug_log_training.txt')
     if iteration ==0:
@@ -64,11 +64,10 @@ def save_training_error(save_path, engine, vis, vis_windows):
             the_file.write('#iteration,loss\n')     
     with open(log_name, 'a') as the_file:
         the_file.write('{},{}\n'.format(iteration, loss))
-
     # if iteration<100:
     plot_loss(log_name, log_name.replace('.txt','.jpg'),'Training Loss')
-    # plot_loss(log_name, log_name.replace('.txt','.jpg'),'Training Loss')
 
+ 
 def plot_loss(in_file, out_file, title):
     with open(in_file,'r') as f:
         lines=f.readlines()
@@ -89,32 +88,36 @@ def plot_loss(in_file, out_file, title):
     
 
 
-def save_testing_error(save_path, trainer, evaluator, vis, vis_windows):
+def save_testing_error(save_path, trainer, evaluator, vis, vis_windows,
+                       dataset_str, save_extension=None):
+    # The trainer is only given here to get the current iteration and epoch.
+    iteration = trainer.state.iteration
+    epoch = trainer.state.epoch
+
     metrics = evaluator.state.metrics
-    iteration = trainer.state.epoch
-    print("Validation Results - Epoch: {}  Avg accuracy: {}".format(trainer.state.epoch, metrics))
-    accuracies = []
+    print("{} Results - Epoch: {}  AccumulatedLoss: {}".format(dataset_str, epoch, metrics))
+    metric_values = []
     for key in metrics.keys():
-        title="Testing error {}".format(key)
-        avg_accuracy = metrics[key]
-        accuracies.append(avg_accuracy)
+        title="Testing metric: {}".format(key)
+        metric_value = metrics[key]
+        metric_values.append(metric_value)
         if vis is not None:
-            vis_windows[title] = vis.line(X=np.array([iteration]), Y=np.array([avg_accuracy]),
+            vis_windows[title] = vis.line(X=np.array([iteration]), Y=np.array([metric_value]),
                          update='append' if title in vis_windows else None,
                          win=vis_windows.get(title, None),
                          opts=dict(xlabel="# iteration", ylabel="value", title=title))
 
     # also save as .txt for plotting
-    log_name = os.path.join(save_path, 'debug_log_testing.txt')
-    if iteration ==1: #assumes you always eval at end of 1st epoch
+    log_name = os.path.join(save_path, save_extension)
+    if epoch == 1: #assumes you always eval at end of 1st epoch
         with open(log_name, 'w') as the_file: # overwrite exiting file
-            the_file.write('#epoch,loss1,loss2,...\n')     
+            the_file.write('#iteration,loss1,loss2,...\n')     
     with open(log_name, 'a') as the_file:
-        the_file.write('{},{}\n'.format(iteration, ",".join(map(str, accuracies)) ))
+        the_file.write('{},{}\n'.format(iteration, ",".join(map(str, metric_values)) ))
     plot_loss(log_name, log_name.replace('.txt','.jpg'), 'Testing Loss')
+    return sum(metric_values)
 
-    return sum(accuracies)
-        
+
 def save_training_example(save_path, engine, vis, vis_windows, config_dict):
     # print training examples
     iteration = engine.state.iteration - 1
