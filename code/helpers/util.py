@@ -1,3 +1,4 @@
+import pandas as pd
 import numpy as np;
 # import torch
 import scipy
@@ -6,6 +7,7 @@ import os;
 # import importlib
 # import importlib.util
 import collections
+from matplotlib import pyplot as plt
 
 def get_image_name(subject, interval_ind, interval, view, frame, data_dir_path):
     frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
@@ -211,7 +213,7 @@ def get_class_weights(train_files,au=False):
 def save_training_error(save_path, engine, vis, vis_windows):
     # log training error
     iteration = engine.state.iteration - 1
-    loss = engine.state.output
+    loss, _ = engine.state.output
     print("Epoch[{}] Iteration[{}] Batch Loss: {:.2f}".format(engine.state.epoch, iteration, loss))
     title="Training error"
     if vis is not None:
@@ -246,8 +248,21 @@ def save_testing_error(save_path, trainer, evaluator, vis, vis_windows, dataset_
     log_name = os.path.join(save_path, save_extension)
     if iteration ==0:
         with open(log_name, 'w') as the_file: # overwrite exiting file
-            the_file.write('#iteration,loss1,loss2,...\n')     
+            the_file.write('#iteration,loss\n')     
     with open(log_name, 'a') as the_file:
         the_file.write('{},{}\n'.format(iteration, ",".join(map(str, accuracies)) ))
     return sum(accuracies)
-        
+
+
+def plot_losses(save_path, config_dict):
+    train_losses_path = os.path.join(save_path, 'debug_log_training.txt')
+    test_losses_path = os.path.join(save_path, 'debug_log_testing.txt')
+    import ipdb; ipdb.set_trace()
+    train_df = pd.read_csv(train_losses_path, header=None, error_bad_lines=False)
+    test_dk = pd.read_csv(test_losses_path, header=None, error_bad_lines=False)
+    train_df.plot(kind='line', x='#iteration', y='loss')
+    test_df.plot(kind='line', x='#iteration', y='loss')
+    plot_path = os.path.join(save_path, 'losses.png')
+    plt.savefig(plot_path)
+    # losses_df = pd.DataFrame(columns=['# iteration', 'loss1', 'loss2'])
+
