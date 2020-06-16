@@ -1,17 +1,18 @@
-import torch
 import numpy as np
-import os
-from rhodin.python.utils import datasets as utils_data
-from rhodin.python.utils import plot_dict_batch as utils_plot_batch
-
-import sys
-# sys.path.insert(0,'./ignite')
-from rhodin.python.ignite.engine.engine import Engine, State, Events
-
-import matplotlib.image as mpimg
-import matplotlib.pyplot as plt
 import IPython
 import pickle
+import torch
+import sys
+import os
+
+from rhodin.python.utils import datasets as utils_data
+from rhodin.python.utils import plot_dict_batch as utils_plot_batch
+from rhodin.python.ignite.engine.engine import Engine, State, Events
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 
 # optimization function
 def create_supervised_trainer(model, optimizer, loss_fn, device=None):
