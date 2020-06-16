@@ -9,6 +9,7 @@ import sys
 from rhodin.python.ignite.engine.engine import Engine, State, Events
 
 import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
 import IPython
 import pickle
 
@@ -54,6 +55,7 @@ def save_training_error(save_path, engine, vis, vis_windows):
                  update='append' if title in vis_windows else None,
                  win=vis_windows.get(title, None),
                  opts=dict(xlabel="# iteration", ylabel="loss", title=title))
+   
     # also save as .txt for plotting
     log_name = os.path.join(save_path, 'debug_log_training.txt')
     if iteration ==0:
@@ -62,9 +64,33 @@ def save_training_error(save_path, engine, vis, vis_windows):
     with open(log_name, 'a') as the_file:
         the_file.write('{},{}\n'.format(iteration, loss))
 
+    # if iteration<100:
+    plot_loss(log_name, log_name.replace('.txt','.jpg'),'Training Loss')
+    # plot_loss(log_name, log_name.replace('.txt','.jpg'),'Training Loss')
+
+def plot_loss(in_file, out_file, title):
+    with open(in_file,'r') as f:
+        lines=f.readlines()
+    lines=[line.strip('\n') for line in lines]
+    [xlabel,ylabel] = lines[0].split(',')[:2]
+    x = []
+    y = []
+    for line in lines[1:]:
+        line = line.split(',')
+        x.append(int(line[0]))
+        y.append(float(line[1]))
+
+    plt.figure()
+    plt.xlabel(xlabel); plt.ylabel(ylabel); plt.title(title)
+    plt.plot(np.array(x),np.array(y))
+    plt.savefig(out_file)
+    plt.close()
+    
+
+
 def save_testing_error(save_path, trainer, evaluator, vis, vis_windows):
     metrics = evaluator.state.metrics
-    iteration = trainer.state.iteration
+    iteration = trainer.state.epoch
     print("Validation Results - Epoch: {}  Avg accuracy: {}".format(trainer.state.epoch, metrics))
     accuracies = []
     for key in metrics.keys():
@@ -79,11 +105,13 @@ def save_testing_error(save_path, trainer, evaluator, vis, vis_windows):
 
     # also save as .txt for plotting
     log_name = os.path.join(save_path, 'debug_log_testing.txt')
-    if iteration ==0:
+    if iteration ==1: #assumes you always eval at end of 1st epoch
         with open(log_name, 'w') as the_file: # overwrite exiting file
-            the_file.write('#iteration,loss1,loss2,...\n')     
+            the_file.write('#epoch,loss1,loss2,...\n')     
     with open(log_name, 'a') as the_file:
         the_file.write('{},{}\n'.format(iteration, ",".join(map(str, accuracies)) ))
+    plot_loss(log_name, log_name.replace('.txt','.jpg'), 'Testing Loss')
+
     return sum(accuracies)
         
 def save_training_example(save_path, engine, vis, vis_windows, config_dict):
@@ -100,6 +128,10 @@ def save_training_example(save_path, engine, vis, vis_windows, config_dict):
         title="Training example"
         vis_windows[title] = vis.image(img.transpose(2,0,1), win=vis_windows.get(title, None),
              opts=dict(title=title+" (iteration {})".format(iteration)))
+
+    # log_name = os.path.join(save_path, 'debug_log_training.txt')
+    # if os.path.exists(log_name):
+    #     plot_loss(log_name, log_name.replace('.txt','.jpg'),'Training Loss')
 
 def save_test_example(save_path, trainer, evaluator, vis, vis_windows, config_dict):
     iteration_global = trainer.state.iteration

@@ -82,7 +82,7 @@ class IgniteTrainNVS:
             # log the loss
             iteration = engine.state.iteration - 1
             if iteration % config_dict['print_every'] == 0:
-                util.save_training_error(save_path, engine, vis, vis_windows)
+                utils_train.save_training_error(save_path, engine, vis, vis_windows)
             if iteration in [0,100]:
                 utils_train.save_training_example(save_path, engine, vis, vis_windows, config_dict)
 
@@ -100,27 +100,27 @@ class IgniteTrainNVS:
             if  'train_test_every' in config_dict.keys() and (ep) % config_dict['train_test_every'] == 0:
                 print("Running evaluation of whole train set at epoch ", ep)
                 evaluator.run(train_loader, metrics=metrics)
-                _ = util.save_testing_error(save_path, trainer, evaluator,
-                                    vis, vis_windows, dataset_str='Training Set',
-                                    save_extension='debug_log_training_wholeset.txt')
+                _ = utils_train.save_testing_error(save_path, trainer, evaluator,
+                                    vis, vis_windows)
 
         @trainer.on(Events.EPOCH_COMPLETED)
         # @trainer.on(Events.ITERATION_COMPLETED)
         def validate_model(engine):
             ep = engine.state.epoch
             # - 1
-            if (ep) % config_dict['test_every'] == 0: # +1 to prevent evaluation at iteration 0
+            if ((ep) % config_dict['test_every'] == 0) or ep==1: # +1 to prevent evaluation at iteration 0
                     # return
                 print("Running evaluation at epoch ", ep)
                 evaluator.run(test_loader, metrics=metrics)
-                avg_accuracy = util.save_testing_error(save_path, engine, evaluator,
-                                    vis, vis_windows, dataset_str='Test Set', save_extension='debug_log_testing.txt')
+                avg_accuracy = utils_train.save_testing_error(save_path, engine, evaluator,
+                                    vis, vis_windows)
+                # , dataset_str='Test Set', save_extension='debug_log_testing.txt')
         
                 # save the best model
                 utils_train.save_model_state(save_path, trainer, avg_accuracy, model, optimizer, engine.state)
             if ep % config_dict['num_epochs'] == 0:
                 print('Drawing and saving plots for train and test losses')
-                util.plot_losses(save_path, config_dict)
+                utils_train.plot_losses(save_path, config_dict)
         
         @trainer.on(Events.EPOCH_COMPLETED)
         # @trainer.on(Events.ITERATION_COMPLETED)
