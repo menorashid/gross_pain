@@ -135,8 +135,8 @@ class IgniteTrainNVS:
         # kick everything off
         trainer.run(train_loader, max_epochs=epochs, metrics=metrics)
 
-    def load_metrics(self, loss_test):
-        return {'primary': utils_train.AccumulatedLoss(loss_test)}
+    def load_metrics(self, loss):
+        return {'AccumulatedLoss': utils_train.AccumulatedLoss(loss)}
         
     def load_network(self, config_dict):
         output_types= config_dict['output_types']
