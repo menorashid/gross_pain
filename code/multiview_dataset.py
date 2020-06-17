@@ -223,7 +223,7 @@ class MultiViewDatasetSampler(Sampler):
                     continue
                 # A key is an 'absolute moment in time', regardless of view.
                 key = (sub_i, interval_i, frame_i)
-                # Each key points to its different views by storing their indices.
+                # Each key points to its different views in a viewset by storing their indices.
                 # A viewset is a collection of indices of the frames corresponding to
                 # that moment in time, i.e. that key.
                 if key not in viewsets:
@@ -243,7 +243,8 @@ class MultiViewDatasetSampler(Sampler):
         self.interval_keys = {interval: list(keyset)
                               for interval, keyset in interval_keys.items()}
 
-        print("DictDataset: Done initializing, listed {} viewsets ({} frames) and {} sequences".format(
+        print('\n', 'Done initializing entire dataset, before every_nth sampling.')
+        print('Listed {} viewsets ({} frames), from {} sequences'.format(
                                             len(self.viewsets),
                                             len(self.all_keys)*self.use_view_batches,
                                             len(interval_keys)))
@@ -268,32 +269,28 @@ class MultiViewDatasetSampler(Sampler):
                             return x indices for that key,
                             where x = self.use_view_batches."""
                         viewset = self.viewsets[key]
-                        # print ('viewset',viewset)
+                        # example viewset: {0: 2562, 1: 7738, 2: 12912, 3: 18088}
                         viewset_keys = list(viewset.keys())
-                        # print ('viewset_keys',viewset_keys)
                         assert self.use_view_batches <= len(viewset_keys)
                         if self.randomize:
                             shuffle(viewset_keys)
-                            # print ('viewset_keys',viewset_keys)
                         if self.use_view_batches == 0:
                             view_subset_size = 99
                         else:
                             view_subset_size = self.use_view_batches
                         view_indices = [viewset[k] for k in viewset_keys[:view_subset_size]]
-                        # print ('view_indices',view_indices)
                         return view_indices
 
                     index_list = index_list + get_view_subbatch(key)
                     if self.use_subject_batches:
-                        # Add indices for random moment (t') from the same interval.
-                        # These indices can be from any viewpoint.
-                        # I suspect that this is the appearance branch.
+                        # Add indices for other time, t', from the same interval
+                        # to disentangle pose from appearance
                         interval_i = key[1]
                         potential_keys = self.interval_keys[interval_i]
                         nb_potential_keys = len(potential_keys)
-                        key_other = potential_keys[np.random.randint(nb_potential_keys)]
-                        index_list = index_list + get_view_subbatch(key_other)
-                    # s = input()
+                        key_t_prime = potential_keys[np.random.randint(nb_potential_keys)]
+                        index_list = index_list + get_view_subbatch(key_t_prime)
+
             subject_batch_factor = 1 + int(self.use_subject_batches > 0) # either 1 or 2
             view_batch_factor = max(1, self.use_view_batches)
             # The following number should be equal to the number of new indices
@@ -313,8 +310,6 @@ class MultiViewDatasetSampler(Sampler):
             # Randomizes the order of the sub-batches.
             indices_batched = np.random.permutation(indices_batched)
         indices_batched = indices_batched.reshape([-1])[:(indices_batched.size//self.batch_size)*self.batch_size] # drop last frames
-        # print ('first_time',first_time)
-        # s = input()
         return iter(indices_batched.reshape([-1,self.batch_size]))
 
 
