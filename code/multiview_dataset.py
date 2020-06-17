@@ -194,7 +194,7 @@ class MultiViewDatasetSampler(Sampler):
         and indices corresponding to frames from different
         views at t', from the same interval."""
 
-    def __init__(self, data_folder, batch_size,
+    def __init__(self, data_folder, save_path, batch_size,
                  subjects=None,
                  use_subject_batches=0, use_view_batches=0,
                  randomize=True,
@@ -254,57 +254,61 @@ class MultiViewDatasetSampler(Sampler):
     def __iter__(self):
         index_list = []
         print("Randomizing dataset (MultiViewDatasetSampler.__iter__)")
-        # Iterate over all keys, i.e. all 'moments in time'
-        with tqdm(total=len(self.all_keys)//self.every_nth_frame) as pbar:
-            for index in range(0,len(self.all_keys), self.every_nth_frame):
-                pbar.update(1)
-                key = self.all_keys[index]
-                def get_view_subbatch(key):
-                    """ Given a key (a moment in time),
-                        return x indices for that key,
-                        where x = self.use_view_batches."""
-                    viewset = self.viewsets[key]
-                    # print ('viewset',viewset)
-                    viewset_keys = list(viewset.keys())
-                    # print ('viewset_keys',viewset_keys)
-                    assert self.use_view_batches <= len(viewset_keys)
-                    if self.randomize:
-                        shuffle(viewset_keys)
+        s_time = time.time()
+        indices_batched_path = os.path.join(self.save_path, 'indices_batched.npy')
+        if not os.path.isfile(indices_batched_path):
+            print('No batched index was saved, creating one...')
+            # Iterate over all keys, i.e. all 'moments in time'
+            with tqdm(total=len(self.all_keys)//self.every_nth_frame) as pbar:
+                for index in range(0,len(self.all_keys), self.every_nth_frame):
+                    pbar.update(1)
+                    key = self.all_keys[index]
+                    def get_view_subbatch(key):
+                        """ Given a key (a moment in time),
+                            return x indices for that key,
+                            where x = self.use_view_batches."""
+                        viewset = self.viewsets[key]
+                        # print ('viewset',viewset)
+                        viewset_keys = list(viewset.keys())
                         # print ('viewset_keys',viewset_keys)
-                    if self.use_view_batches == 0:
-                        view_subset_size = 99
-                    else:
-                        view_subset_size = self.use_view_batches
-                    view_indices = [viewset[k] for k in viewset_keys[:view_subset_size]]
-                    # print ('view_indices',view_indices)
-                    return view_indices
+                        assert self.use_view_batches <= len(viewset_keys)
+                        if self.randomize:
+                            shuffle(viewset_keys)
+                            # print ('viewset_keys',viewset_keys)
+                        if self.use_view_batches == 0:
+                            view_subset_size = 99
+                        else:
+                            view_subset_size = self.use_view_batches
+                        view_indices = [viewset[k] for k in viewset_keys[:view_subset_size]]
+                        # print ('view_indices',view_indices)
+                        return view_indices
 
-                # t = time.time()
-                index_list = index_list + get_view_subbatch(key)
-                # index_list.extend(get_view_subbatch(key))
-                # t = time.time()-t
-                # if index==0:
-                #     first_time = t
-                # print ('line 236',t)
-                if self.use_subject_batches:
-                    # Add indices for random moment (t') from the same interval.
-                    # These indices can be from any viewpoint.
-                    # I suspect that this is the appearance branch.
-                    interval_i = key[1]
-                    potential_keys = self.interval_keys[interval_i]
-                    key_other = potential_keys[np.random.randint(len(potential_keys))]
-                    index_list = index_list + get_view_subbatch(key_other)
-                # s = input()
-        subject_batch_factor = 1 + int(self.use_subject_batches > 0) # either 1 or 2
-        view_batch_factor = max(1, self.use_view_batches)
-        # The following number should be equal to the number of new indices
-        # added per iteration in the above loop, so we can group them accordingly. 
-        sub_batch_size = view_batch_factor*subject_batch_factor
-        # Check that the following holds so we don't split up sub-batches.
-        assert self.batch_size % sub_batch_size == 0
-        # Check that we can safely reshape index_list into sub-batches.
-        assert len(index_list) % sub_batch_size == 0
-        indices_batched = np.array(index_list).reshape([-1,sub_batch_size])
+                    index_list = index_list + get_view_subbatch(key)
+                    if self.use_subject_batches:
+                        # Add indices for random moment (t') from the same interval.
+                        # These indices can be from any viewpoint.
+                        # I suspect that this is the appearance branch.
+                        interval_i = key[1]
+                        potential_keys = self.interval_keys[interval_i]
+                        nb_potential_keys = len(potential_keys)
+                        key_other = potential_keys[np.random.randint(nb_potential_keys)]
+                        index_list = index_list + get_view_subbatch(key_other)
+                    # s = input()
+            subject_batch_factor = 1 + int(self.use_subject_batches > 0) # either 1 or 2
+            view_batch_factor = max(1, self.use_view_batches)
+            # The following number should be equal to the number of new indices
+            # added per iteration in the above loop, so we can group them accordingly. 
+            sub_batch_size = view_batch_factor*subject_batch_factor
+            # Check that the following holds so we don't split up sub-batches.
+            assert self.batch_size % sub_batch_size == 0
+            # Check that we can safely reshape index_list into sub-batches.
+            assert len(index_list) % sub_batch_size == 0
+            indices_batched = np.array(index_list).reshape([-1,sub_batch_size])
+            np.save(indices_batched_path, indices_batched)
+        else:
+            indices_batched = np.load(indices_batched_path)
+        e_time = time.time()
+        print('\n', 'Time to create or load batched index: ', e_time - s_time)
         if self.randomize:
             # Randomizes the order of the sub-batches.
             indices_batched = np.random.permutation(indices_batched)

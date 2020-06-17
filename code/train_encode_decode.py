@@ -64,8 +64,8 @@ class IgniteTrainNVS:
         
         # now do training stuff
         epochs = config_dict['num_epochs']
-        train_loader = self.load_data_train(config_dict)
-        test_loader = self.load_data_test(config_dict)
+        train_loader = self.load_data_train(config_dict, save_path)
+        test_loader = self.load_data_test(config_dict, save_path)
         model = self.load_network(config_dict)
         model = model.to(device)
         optimizer = self.loadOptimizer(model,config_dict)
@@ -233,7 +233,7 @@ class IgniteTrainNVS:
             optimizer = torch.optim.Adam(network.parameters(), lr=config_dict['learning_rate'])
         return optimizer
     
-    def load_data_train(self,config_dict):
+    def load_data_train(self,config_dict,save_path):
         if config_dict['training_set']=='LPS_2fps_crop':
             dataset = MultiViewDatasetCrop(data_folder=config_dict['dataset_folder_train'],
                                        bg_folder=config_dict['bg_folder'],
@@ -250,17 +250,19 @@ class IgniteTrainNVS:
                                        rot_folder = config_dict['rot_folder'])
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_train'],
-              subjects=config_dict['train_subjects'],
-              use_subject_batches=config_dict['use_subject_batches'], use_view_batches=config_dict['use_view_batches'],
-              batch_size=config_dict['batch_size_train'],
-              randomize=True,
-              every_nth_frame=config_dict['every_nth_frame'])
+                                                save_path=save_path,
+                                                subjects=config_dict['train_subjects'],
+                                                use_subject_batches=config_dict['use_subject_batches'],
+                                                use_view_batches=config_dict['use_view_batches'],
+                                                batch_size=config_dict['batch_size_train'],
+                                                randomize=True,
+                                                every_nth_frame=config_dict['every_nth_frame'])
 
         loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler, num_workers=0, pin_memory=False,
                                              collate_fn=rhodin_utils_datasets.default_collate_with_string)
         return loader
     
-    def load_data_test(self,config_dict):
+    def load_data_test(self,config_dict,save_path):
         if config_dict['training_set']=='LPS_2fps_crop':
             dataset = MultiViewDatasetCrop(data_folder=config_dict['dataset_folder_test'],
                                        bg_folder=config_dict['bg_folder'],
@@ -277,6 +279,7 @@ class IgniteTrainNVS:
                                        rot_folder = config_dict['rot_folder'])
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_test'],
+                                                save_path=save_path,
                                                 subjects=config_dict['test_subjects'],
                                                 use_subject_batches=0,
                                                 use_view_batches=config_dict['use_view_batches'],
