@@ -158,8 +158,9 @@ def load_model_state(save_path, model, optimizer, state):
     for key, value in sate_variables.items(): setattr(state, key, value)
     print('Loaded ',sate_variables)
 
+
 def save_model_state(save_path, engine, current_loss, model, optimizer, state):
-    # update the best value
+    # Update the best value, 99999999 if first time
     best_val = engine.state.metrics.get('best_val', 99999999)
     engine.state.metrics['best_val'] = np.minimum(current_loss, best_val)
     
@@ -182,11 +183,8 @@ def save_model_state(save_path, engine, current_loss, model, optimizer, state):
 
 
 def save_model_state_iter(save_path, engine, model, optimizer, state):
-    # update the best value
-    # best_val = engine.state.metrics.get('best_val', 99999999)
-    # engine.state.metrics['best_val'] = np.minimum(current_loss, best_val)
-    
-    print("Saving model at epoch",state.epoch,"iter", state.iteration)
+
+    print("Saving model at epoch", state.epoch, "iter", state.iteration)
     model_path = os.path.join(save_path,"models/")
     if not os.path.exists(model_path):
         os.makedirs(model_path)
