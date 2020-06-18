@@ -251,6 +251,7 @@ class IgniteTrainNVS:
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_train'],
                                                 save_path=save_path,
+                                                mode='train',
                                                 subjects=config_dict['train_subjects'],
                                                 use_subject_batches=config_dict['use_subject_batches'],
                                                 use_view_batches=config_dict['use_view_batches'],
@@ -280,6 +281,7 @@ class IgniteTrainNVS:
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_test'],
                                                 save_path=save_path,
+                                                mode='test',
                                                 subjects=config_dict['test_subjects'],
                                                 use_subject_batches=0,
                                                 use_view_batches=config_dict['use_view_batches'],

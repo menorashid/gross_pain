@@ -194,7 +194,8 @@ class MultiViewDatasetSampler(Sampler):
         and indices corresponding to frames from different
         views at t', from the same interval."""
 
-    def __init__(self, data_folder, save_path, batch_size,
+    def __init__(self, data_folder, save_path, mode,
+                 batch_size,
                  subjects=None,
                  use_subject_batches=0, use_view_batches=0,
                  randomize=True,
@@ -256,7 +257,8 @@ class MultiViewDatasetSampler(Sampler):
         index_list = []
         print("Randomizing dataset (MultiViewDatasetSampler.__iter__)")
         s_time = time.time()
-        indices_batched_path = os.path.join(self.save_path, 'indices_batched.npy')
+        ind_batched_str = 'indices_batched_{}.npy'.format(self.mode)
+        indices_batched_path = os.path.join(self.save_path, ind_batched_str)
         if not os.path.isfile(indices_batched_path):
             print('No batched index was saved, creating one...')
             # Iterate over all keys, i.e. all 'moments in time'
