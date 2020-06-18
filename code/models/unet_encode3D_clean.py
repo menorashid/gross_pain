@@ -266,21 +266,18 @@ class unet(nn.Module):
 
 
     def get_latent_3d_rotated(self, input_dict, latent_3d, cam2cam):
-        if 'extrinsic_rot' in input_dict.keys():
-            if self.implicit_rotation:
-                encoded_angle = self.encode_angle(cam2cam.view(batch_size,-1))
-                encoded_latent_and_angle = torch.cat([latent_3d.view(batch_size,-1), encoded_angle], dim=1)
-                latent_3d_rotated = self.rotate_implicitely(encoded_latent_and_angle)
-            else:
-                # print ('LADIES AND GENTLEMEN! WE ARE ROTATING!')
-                latent_3d_rotated = torch.bmm(latent_3d, cam2cam.transpose(1,2))
-
-            if 'shuffled_pose_weight' in input_dict.keys():
-                w = input_dict['shuffled_pose_weight']
-                # weighted average with the last one
-                latent_3d_rotated = (1-w.expand_as(latent_3d))*latent_3d + w.expand_as(latent_3d)*latent_3d_rotated[-1:].expand_as(latent_3d)
+        if self.implicit_rotation:
+            encoded_angle = self.encode_angle(cam2cam.view(batch_size,-1))
+            encoded_latent_and_angle = torch.cat([latent_3d.view(batch_size,-1), encoded_angle], dim=1)
+            latent_3d_rotated = self.rotate_implicitely(encoded_latent_and_angle)
         else:
-            latent_3d_rotated = latent_3d
+            # print ('LADIES AND GENTLEMEN! WE ARE ROTATING!')
+            latent_3d_rotated = torch.bmm(latent_3d, cam2cam.transpose(1,2))
+
+        if 'shuffled_pose_weight' in input_dict.keys():
+            w = input_dict['shuffled_pose_weight']
+            # weighted average with the last one
+            latent_3d_rotated = (1-w.expand_as(latent_3d))*latent_3d + w.expand_as(latent_3d)*latent_3d_rotated[-1:].expand_as(latent_3d)
 
         return latent_3d_rotated
 
@@ -357,7 +354,10 @@ class unet(nn.Module):
         ###############################################
         # do shuffling
         
-        latent_3d_rotated = self.get_latent_3d_rotated(input_dict, latent_3d, cam2cam)
+        if 'extrinsic_rot' in input_dict.keys():
+            latent_3d_rotated = self.get_latent_3d_rotated(input_dict, latent_3d, cam2cam)
+        else:
+            latent_3d_rotated = latent_3d
 
 
         if self.skip_background:
