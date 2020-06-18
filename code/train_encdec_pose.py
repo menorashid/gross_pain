@@ -65,7 +65,7 @@ class IgniteTrainPoseFromLatent(train_encode_decode.IgniteTrainNVS):
         folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
         return folder
 
-    def load_data_train(self, config_dict):
+    def load_data_train(self, config_dict, save_path=None):
         dataset = TreadmillDataset(rgb_folder=config_dict['dataset_folder_rgb'],
                                    mocap_folder=config_dict['dataset_folder_mocap'],
                                    bg_folder=config_dict['bg_folder'],
@@ -84,7 +84,7 @@ class IgniteTrainPoseFromLatent(train_encode_decode.IgniteTrainNVS):
 
         return loader
     
-    def load_data_test(self, config_dict):
+    def load_data_test(self, config_dict, save_path=None):
         dataset = TreadmillDataset(rgb_folder=config_dict['dataset_folder_rgb'],
                                    mocap_folder=config_dict['dataset_folder_mocap'],
                                    bg_folder=config_dict['bg_folder'],
