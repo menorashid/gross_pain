@@ -25,7 +25,7 @@ print(device)
 class IgniteTestNVS(train_encode_decode.IgniteTrainNVS):
     def run(self, config_dict_file, config_dict):
         config_dict['n_hidden_to3Dpose'] = config_dict.get('n_hidden_to3Dpose', 2)
-
+        
         data_loader = self.load_data_test(config_dict)
         model = self.load_network(config_dict)
         model = model.to(device)
@@ -63,7 +63,14 @@ def get_values(model, data_iterator, input_to_get, output_to_get):
         for str_curr in input_to_get:
             the_rest[str_curr].append(input_dict[str_curr].numpy())
         for str_curr in output_to_get:
+            # print (str_curr, output_dict[str_curr].numpy().shape)
+            if str_curr=='latent_3d':
+                val =  output_dict[str_curr].numpy()
+                print (np.min(val), np.max(val), np.mean(val))
+                s = input()
+
             the_rest[str_curr].append(output_dict[str_curr].numpy())
+
 
     return the_rest
 
@@ -101,7 +108,7 @@ def set_up_config_dict(config_path,
 def save_all_features(config_dict, config_path, all_subjects, out_path_meta, input_to_get, output_to_get):
     
     for test_subject_curr in all_subjects:
-
+        print (test_subject_curr, all_subjects)
         out_dir_data = os.path.join(out_path_meta,test_subject_curr)
         config_dict['test_subjects'] = [test_subject_curr]
 
@@ -167,9 +174,19 @@ def main():
     job_identifier = 'withRot'
     nth_frame = 10
     
+    dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
+    config_path = 'configs/config_train_rotation_crop_newCal.py'
+    job_identifier = 'withRotCropNewCal'
+    nth_frame = 100
+
+    dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
+    config_path = 'configs/config_train_rotation_newCal.py'
+    job_identifier = 'withRotNewCal'
+    nth_frame = 100
+
     train_subjects = 'brava/herrera/inkasso/julia/kastanjett/naughty_but_nice/sir_holger'.split('/')
     test_subject = 'aslan'
-    all_subjects = train_subjects+[test_subject]
+    all_subjects = [test_subject]+train_subjects
 
     model_num = 50
     batch_size_test = 64
@@ -188,6 +205,9 @@ def main():
 
     save_all_features(config_dict, config_path, all_subjects, out_path_meta, input_to_get, output_to_get)
     
+    return
+
+
     feat_files, im_files = get_file_list(out_path_meta, test_subject)
     feat_file = feat_files[0]
     im_file = im_files[0]

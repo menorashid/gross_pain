@@ -157,7 +157,8 @@ class IgniteTrainNVS:
 
         if 'model_type' not in config_dict:
             model_type_str = 'unet_encode3D_clean'
-        model_type_str = config_dict['model_type']
+        else:
+            model_type_str = config_dict['model_type']
         unet_encode3D = importlib.import_module('models.'+model_type_str)
         network_single = unet_encode3D.unet(dimension_bg=config_dict['latent_bg'],
                                             dimension_fg=config_dict['latent_fg'],
