@@ -57,8 +57,8 @@ class TreadmillDataset(Dataset):
             torchvision.transforms.Normalize(self.mean, self.stdDev)
         ])
         self.label_dict = get_label_df_for_subjects(subjects).to_dict()
-        self.label_dict['pose_mean'] = self.load_np_array('../metadata/treadmill_pose_mean.npy')
-        self.label_dict['pose_std'] = self.load_np_array('../metadata/treadmill_pose_mean.npy')
+        self.label_dict['pose_mean'] = self.load_np_array('../metadata/treadmill_pose_mean_flat.npy')
+        self.label_dict['pose_std'] = self.load_np_array('../metadata/treadmill_pose_std_flat.npy')
 
     def load_np_array(self, path):
         ar = np.load(path)
@@ -103,6 +103,7 @@ class TreadmillDataset(Dataset):
             # Some are 50, some are 51 long
             if mocap_3d.shape[0] == 51:  # Remove the first mocap joint "CristaFac_L"
                 mocap_3d = mocap_3d[1:,:]
+            mocap_3d = mocap_3d.ravel()  # Flatten
             mocap_3d = np.nan_to_num(mocap_3d, nan=0)
             return mocap_3d.astype(np.float32)
         

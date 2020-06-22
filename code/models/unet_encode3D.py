@@ -390,8 +390,7 @@ class unet(nn.Module):
 
         ###############################################
         # 3D pose stage (parallel to image decoder)
-        output_pose_flat = self.to_pose.forward({'latent_3d': latent_3d})['3D']
-        output_pose = output_pose_flat.view(batch_size, -1, 3) 
+        output_pose = self.to_pose.forward({'latent_3d': latent_3d})['3D']
         output_pain = self.to_pain.forward({'latent_3d': latent_3d})['3D']
 
         ###############################################
