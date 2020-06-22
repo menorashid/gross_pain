@@ -111,12 +111,12 @@ class IgniteTrainNVS:
                     # return
                 print("Running evaluation at epoch ", ep)
                 evaluator.run(test_loader, metrics=metrics)
-                avg_accuracy = utils_train.save_testing_error(save_path, engine, evaluator,
+                accumulated_loss = utils_train.save_testing_error(save_path, engine, evaluator,
                                     vis, vis_windows, dataset_str='Validation set',
                                     save_extension='debug_log_testing.txt')
         
                 # save the best model
-                utils_train.save_model_state(save_path, trainer, avg_accuracy, model, optimizer, engine.state)
+                utils_train.save_model_state(save_path, trainer, accumulated_loss, model, optimizer, engine.state)
         
         @trainer.on(Events.EPOCH_COMPLETED)
         def save_model(engine):
