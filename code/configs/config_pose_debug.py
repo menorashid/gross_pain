@@ -21,10 +21,11 @@ config_dict = {
     'num_joints' : 50,
 
     # opt parameters    
-    'num_epochs'              : 1,
+    'num_epochs'              : 5,
     'save_every'              : 100000,
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
-    'test_every'              : 2510,
+    'train_test_every'        : 1,
+    'test_every'              : 1,
     'plot_every'              : 2510,
     'print_every'             : 100,
 
