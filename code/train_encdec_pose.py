@@ -25,11 +25,7 @@ from rhodin.python.utils import training as utils_train
 from treadmill_dataset import TreadmillDataset, TreadmillRandomFrameSampler
 
 class IgniteTrainPoseFromLatent(train_encode_decode.IgniteTrainNVS):
-    def load_metrics(self, loss_test):
-        metrics = {'loss': utils_train.AccumulatedLoss(loss_test),
-                   'accuracy': BinaryAccuracy()}
-        return metrics
-    
+
     def loadOptimizer(self, network, config_dict):
         params_all_id = list(map(id, network.parameters()))
         params_posenet_id = list(map(id, network.to_pose.parameters()))
