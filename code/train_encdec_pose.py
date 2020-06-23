@@ -54,13 +54,6 @@ class IgniteTrainPoseFromLatent(train_encode_decode.IgniteTrainNVS):
         # annotation and pred is organized as a list, to facilitate multiple output types (e.g. heatmap and 3d loss)
         return loss_train, loss_test
 
-    def get_parameter_description(self, config_dict):#, config_dict):
-        shorter_train_subjects = [subject[:2] for subject in config_dict['train_subjects']]
-        shorter_test_subjects = [subject[:2] for subject in config_dict['test_subjects']]
-        folder = "../output/trainNVSPoseFromLatent_{job_identifier}_{job_identifier_encdec}/{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_lr{learning_rate}_bstrain{batch_size_train}_bstest{batch_size_test}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
-        folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
-        return folder
-
     def load_data_train(self, config_dict, save_path=None):
         dataset = TreadmillDataset(rgb_folder=config_dict['dataset_folder_rgb'],
                                    mocap_folder=config_dict['dataset_folder_mocap'],
