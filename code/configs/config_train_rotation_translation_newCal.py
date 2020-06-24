@@ -18,7 +18,7 @@ config_dict = {
     # General parameters
     'dpi'                     : 190,
     # Possible input types    : 'img_crop' | 'bg_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
-    'input_types'             : ['img_crop', 'bg_crop','extrinsic_rot', 'extrinsic_rot_inv'],
+    'input_types'             : ['img_crop', 'bg_crop','extrinsic_rot', 'extrinsic_rot_inv', 'extrinsic_tvec'],
     # Possible output types   :  'img_crop' | '3D'
     'output_types'            : ['img_crop'],
     # Possible lt train       : 'img_crop' | '3D' | 'bounding_box_cam' | 'intrinsic_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
@@ -29,8 +29,8 @@ config_dict = {
     'bones'                   : bones,
 
     # opt parameters    
-    'num_epochs'              : 1,
-    'save_every'              : 10, #in epochs
+    'num_epochs'              : 10,
+    'save_every'              : 50, #in epochs
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
     'test_every'              : 1, #size of epoch nth1 in iterations
     'train_test_every'        : 1,
@@ -74,7 +74,7 @@ config_dict = {
     'seam_scaling' : 1.0,
     'use_view_batches' : 4,
     'use_subject_batches' : True,
-    'every_nth_frame' : 10,
+    'every_nth_frame' : 100,
 
     # Encoder-decoder
     'model_type' : 'unet_encode3D_translate',

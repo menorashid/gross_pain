@@ -103,7 +103,7 @@ class MultiViewDataset(Dataset):
                 elif key == 'img_path':
                     interval_int = [int(val) for val in interval.split('_')]
                     new_dict[key] = np.array(interval_int+[interval_ind, view, frame])
-                elif (key=='extrinsic_rot') or (key=='extrinsic_rot_inv'):
+                elif (key=='extrinsic_rot') or (key=='extrinsic_rot_inv') or (key=='extrinsic_tvec'):
                     rot_path = get_rot_path(view,subject,key)
                     new_dict[key] = np.load(rot_path)
                     # print (new_dict[key])
@@ -177,7 +177,7 @@ class MultiViewDatasetCrop(MultiViewDataset):
                     new_dict[key] = np.array(interval_int+[interval_ind, view, frame])
                 # elif key == 'view':
                 #     new_dict[key] = int(self.label_dict[key][index])
-                elif (key=='extrinsic_rot') or (key=='extrinsic_rot_inv'):
+                elif (key=='extrinsic_rot') or (key=='extrinsic_rot_inv') or (key=='extrinsic_tvec'):
                     rot_path = get_rot_path(view,subject,key)
                     new_dict[key] = np.load(rot_path)
                     # print (new_dict[key])

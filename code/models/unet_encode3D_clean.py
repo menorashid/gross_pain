@@ -24,7 +24,8 @@ class unet(nn.Module):
                  lower_billinear=False,
                  in_channels=3, is_batchnorm=True, 
                  skip_background=True,
-                 num_joints=17, nb_dims=3, # ecoding transformation
+                 num_joints=17, 
+                 nb_dims=3, # ecoding transformation
                  encoderType='UNet',
                  num_encoding_layers=5,
                  dimension_bg=256,
