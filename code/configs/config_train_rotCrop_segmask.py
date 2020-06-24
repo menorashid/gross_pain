@@ -21,7 +21,7 @@ config_dict = {
     'input_types'             : ['img_crop', 'bg_crop','extrinsic_rot', 'extrinsic_rot_inv'],
     # , 'extrinsic_tvec'],
     # Possible output types   :  'img_crop' | '3D'
-    'output_types'            : ['img_crop'],
+    'output_types'            : ['img_crop', 'mask'],
     # Possible lt train       : 'img_crop' | '3D' | 'bounding_box_cam' | 'intrinsic_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
     'label_types_train'       : ['img_crop'],
     # Possible lt test        : 'img_crop' | '3D' | 'bounding_box_cam' | 'intrinsic_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
@@ -75,7 +75,7 @@ config_dict = {
     'seam_scaling' : 1.0,
     'use_view_batches' : 4,
     'use_subject_batches' : True,
-    'every_nth_frame' : 1,
+    'every_nth_frame' : 100,
 
     # Encoder-decoder
     'model_type' : 'unet_encode3D_segmask',

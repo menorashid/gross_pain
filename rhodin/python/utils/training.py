@@ -123,6 +123,7 @@ def save_training_example(save_path, engine, vis, vis_windows, config_dict):
     iteration = engine.state.iteration - 1
     loss, output = engine.state.output
     inputs, labels = engine.state.batch
+    
     mode='training'
     img_name = os.path.join(save_path, 'debug_images_{}_{:06d}.jpg'.format(mode, iteration))
     utils_plot_batch.plot_iol(inputs, labels, output, config_dict, mode, img_name)
