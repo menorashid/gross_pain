@@ -18,7 +18,8 @@ config_dict = {
     # General parameters
     'dpi'                     : 190,
     # Possible input types    : 'img_crop' | 'bg_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
-    'input_types'             : ['img_crop', 'bg_crop','extrinsic_rot', 'extrinsic_rot_inv', 'extrinsic_tvec'],
+    'input_types'             : ['img_crop', 'bg_crop','extrinsic_rot', 'extrinsic_rot_inv'],
+    # , 'extrinsic_tvec'],
     # Possible output types   :  'img_crop' | '3D'
     'output_types'            : ['img_crop'],
     # Possible lt train       : 'img_crop' | '3D' | 'bounding_box_cam' | 'intrinsic_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
@@ -61,7 +62,7 @@ config_dict = {
     # dataset
     'bg_folder'            : '../data/median_bg/',
     'rot_folder': '../data/rotation_cal_2/',
-    'training_set' : 'LPS_2fps',
+    'training_set' : 'LPS_2fps_crop',
     'img_mean' : (0.485, 0.456, 0.406),
     'img_std' : (0.229, 0.224, 0.225),
     'active_cameras' : False,
@@ -74,10 +75,10 @@ config_dict = {
     'seam_scaling' : 1.0,
     'use_view_batches' : 4,
     'use_subject_batches' : True,
-    'every_nth_frame' : 10,
+    'every_nth_frame' : 1,
 
     # Encoder-decoder
-    'model_type' : 'unet_encode3D_translate',
+    'model_type' : 'unet_encode3D_segmask',
     'latent_bg' : 0,
     'latent_fg' : 24,
     'latent_3d' : 200*3,
@@ -96,7 +97,7 @@ config_dict = {
     'encoderType' : 'UNet',
     'implicit_rotation' : False,
     'predict_rotation' : False,
-    'skip_background' : True,  # This means use background
+    'skip_background' : False,  # This means use background
 
     # From rhodin config
     'note'              : 'resL3'
