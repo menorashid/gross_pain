@@ -126,11 +126,19 @@ def debug_commands():
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
 	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
 	job_name = 'withRotTransAll'
-	util.mkdir('to_runs')
-
+	
 	config_file = 'configs/config_train_rotCrop_segmask.py'
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
 	job_name = 'withRotCropSeg'
+
+	config_file = 'configs/config_train_rot_segmask.py'
+	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
+	job_name = 'withRotSeg'
+
+	config_file = 'configs/config_train_rotTranslate_segmask.py'
+	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
+	job_name = 'withRotTranslateSeg'
+
 	util.mkdir('to_runs')
 
 	num_gpus = 1
