@@ -303,7 +303,10 @@ class MultiViewDatasetSampler(Sampler):
             # Check that we can safely reshape index_list into sub-batches.
             assert len(index_list) % sub_batch_size == 0
             indices_batched = np.array(index_list).reshape([-1,sub_batch_size])
-            np.save(indices_batched_path, indices_batched)
+            if os.path.exists(os.path.split(indices_batched_path)[1]): 
+            # if condition to keep the nn code working. 
+            # nth is different for testing, so savepath doesn't exist
+                np.save(indices_batched_path, indices_batched)
         else:
             indices_batched = np.load(indices_batched_path)
         e_time = time.time()

@@ -26,7 +26,7 @@ class IgniteTestNVS(train_encode_decode.IgniteTrainNVS):
     def run(self, config_dict_file, config_dict):
         config_dict['n_hidden_to3Dpose'] = config_dict.get('n_hidden_to3Dpose', 2)
         
-        data_loader = self.load_data_test(config_dict)
+        data_loader = self.load_data_test(config_dict, train_encode_decode.get_parameter_description(config_dict))
         model = self.load_network(config_dict)
         model = model.to(device)
 
@@ -62,13 +62,8 @@ def get_values(model, data_iterator, input_to_get, output_to_get):
         output_dict = predict(model, input_dict, label_dict)
         for str_curr in input_to_get:
             the_rest[str_curr].append(input_dict[str_curr].numpy())
+            
         for str_curr in output_to_get:
-            # print (str_curr, output_dict[str_curr].numpy().shape)
-            if str_curr=='latent_3d':
-                val =  output_dict[str_curr].numpy()
-                print (np.min(val), np.max(val), np.mean(val))
-                s = input()
-
             the_rest[str_curr].append(output_dict[str_curr].numpy())
 
 
@@ -195,6 +190,7 @@ def main():
 
     config_dict = set_up_config_dict(config_path, train_subjects, [test_subject], job_identifier, batch_size_test, dataset_path, input_to_get, output_to_get)
     model_path = get_model_path(config_dict, str(model_num))
+    print (model_path)
     
     config_dict['pretrained_network_path'] = model_path
     config_dict['every_nth_frame'] = nth_frame
