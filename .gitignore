@@ -66,6 +66,7 @@ models-master
 # Output
 output/
 logs/
+code/wandb/
 
 # more
 Release-v1.2/
