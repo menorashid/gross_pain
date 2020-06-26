@@ -1,6 +1,7 @@
 import numpy as np
 import IPython
 import pickle
+import wandb
 import torch
 import sys
 import os
@@ -50,6 +51,8 @@ def save_training_error(save_path, engine, vis, vis_windows):
     # log training error
     iteration = engine.state.iteration - 1
     loss, _ = engine.state.output
+    wandb.log({'train loss': loss})
+    
     print("Epoch[{}] Iteration[{}] Batch Loss: {:.2f}".format(engine.state.epoch, iteration, loss))
     title="Training error"
     if vis is not None:
@@ -101,6 +104,8 @@ def save_testing_error(save_path, trainer, evaluator, vis, vis_windows,
         title="Testing metric: {}".format(key)
         metric_value = metrics[key]
         metric_values.append(metric_value)
+        name_for_log = dataset_str + ' ' + key
+        wandb.log({name_for_log: metric_value})
         if vis is not None:
             vis_windows[title] = vis.line(X=np.array([iteration]), Y=np.array([metric_value]),
                          update='append' if title in vis_windows else None,

@@ -27,6 +27,8 @@ import torch.optim
 from rhodin.python.ignite._utils import convert_tensor
 from rhodin.python.ignite.engine import Events
 
+import wandb
+
 if torch.cuda.is_available():
     device = "cuda:0"
 else:
@@ -40,6 +42,7 @@ class IgniteTrainNVS:
         config_dict['skip_background'] = config_dict.get('skip_background', True)
         config_dict['loss_weight_pose3D'] = config_dict.get('loss_weight_pose3D', 0)
         config_dict['n_hidden_to3Dpose'] = config_dict.get('n_hidden_to3Dpose', 2)
+        wandb.init(config=config_dict, project='egp')
         
         print (config_dict['rot_folder'])
         # s = input()
@@ -67,6 +70,7 @@ class IgniteTrainNVS:
         train_loader = self.load_data_train(config_dict, save_path)
         test_loader = self.load_data_test(config_dict, save_path)
         model = self.load_network(config_dict)
+        wandb.watch(model)
         model = model.to(device)
         optimizer = self.loadOptimizer(model,config_dict)
         loss_train,loss_test = self.load_loss(config_dict)
@@ -131,7 +135,7 @@ class IgniteTrainNVS:
             iteration = engine.state.iteration - 1
             if iteration in [0,100]:
                 utils_train.save_test_example(save_path, trainer, evaluator, vis, vis_windows, config_dict)
-    
+        
         # kick everything off
         trainer.run(train_loader, max_epochs=epochs, metrics=metrics)
 
