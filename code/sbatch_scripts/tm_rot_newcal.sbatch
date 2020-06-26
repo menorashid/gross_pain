@@ -12,4 +12,4 @@ echo "Starting job ${SLURM_JOB_ID} on ${SLURMD_NODENAME}"
 nvidia-smi
 . ~/miniconda3/etc/profile.d/conda.sh
 conda activate tsnecuda
-python train_encdec_pose.py --config_file ${CONFIG_FILE} --dataset_path /Midgard/home/sbroome/lameness/ --train_subjects ${TRAIN_SUBJECTS} --test_subjects ${TEST_SUBJECTS} --job_identifier treadmillRotNewCal --config_file_model configs/config_train_rotation_newCal.py --epoch_encdec 50 --train_subjects_model ${TRAIN_SUBJECTS_MODEL} --test_subjects_model ${TEST_SUBJECTS_MODEL} --job_identifier_encdec withRotNewCalMaheen
+python train_encdec_pose.py --config_file ${CONFIG_FILE} --dataset_path /local_storage/users/sbroome/treadmill/ --train_subjects ${TRAIN_SUBJECTS} --test_subjects ${TEST_SUBJECTS} --job_identifier treadmillRotNewCal --config_file_model configs/config_train_rotation_newCal.py --epoch_encdec 50 --train_subjects_model ${TRAIN_SUBJECTS_MODEL} --test_subjects_model ${TEST_SUBJECTS_MODEL} --job_identifier_encdec withRotNewCalMaheen

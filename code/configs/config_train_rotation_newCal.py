@@ -29,13 +29,13 @@ config_dict = {
     'bones'                   : bones,
 
     # opt parameters    
-    'num_epochs'              : 1,
+    'num_epochs'              : 40,
     'save_every'              : 10, #in epochs
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
     'test_every'              : 1, #size of epoch nth1 in iterations
-    'train_test_every'        : 1,
+    'train_test_every'        : 5,
     'plot_every'              : 1,
-    'print_every'             : 10,
+    'print_every'             : 100,
 
     # LPS dataset parameters
     
