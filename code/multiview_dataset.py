@@ -63,8 +63,23 @@ class MultiViewDataset(Dataset):
         frame = self.label_dict['frame'][index]
         return interval, interval_ind, view, subject, frame
 
-    def __getitem__(self, index):
+    def get_bg_path(self, view, subject):
+            lookup_viewpoint = self.lookup_viewpoint.set_index('subject')
+            camera = int(lookup_viewpoint.at[subject, str(view)])
+            bg_path = self.bg_folder + 'median_0.1fps_camera_{}.jpg'.format(camera-1)
+            return bg_path
 
+    def get_rot_path(self, view, subject, key):
+        lookup_viewpoint = self.lookup_viewpoint.set_index('subject')
+        camera = int(lookup_viewpoint.at[subject, str(view)])
+        rot_path = self.rot_folder + '{}_{}.npy'.format(key,camera)
+        return rot_path            
+
+    def load_image(self, name):
+        return np.array(self.transform_in(imageio.imread(name)), dtype='float32')
+    
+
+    def __getitem__(self, index):
         interval, interval_ind, view, subject, frame = self.get_local_indices(index)
 
         def get_image_path(key):
@@ -74,28 +89,13 @@ class MultiViewDataset(Dataset):
                                                                 interval,
                                                                 view,
                                                                 frame_id)
-        def get_bg_path(view, subject):
-            lookup_viewpoint = self.lookup_viewpoint.set_index('subject')
-            camera = int(lookup_viewpoint.at[subject, str(view)])
-            bg_path = self.bg_folder + 'median_0.1fps_camera_{}.jpg'.format(camera-1)
-            return bg_path
-
-        def get_rot_path(view, subject, key):
-            lookup_viewpoint = self.lookup_viewpoint.set_index('subject')
-            camera = int(lookup_viewpoint.at[subject, str(view)])
-            rot_path = self.rot_folder + '{}_{}.npy'.format(key,camera)
-            return rot_path            
-
-        def load_image(name):
-            return np.array(self.transform_in(imageio.imread(name)), dtype='float32')
-        
         def load_data(types):
             new_dict = {}
             for key in types:
                 if key == 'img_crop':
-                    new_dict[key] = load_image(get_image_path(key)) 
+                    new_dict[key] = self.load_image(get_image_path(key)) 
                 elif key == 'bg_crop':
-                    new_dict[key] = load_image(get_bg_path(view, subject))
+                    new_dict[key] = self.load_image(self.get_bg_path(view, subject))
                 elif key == 'pain':
                     new_dict[key] = int(self.label_dict[key][index])
                 elif key == 'view':
@@ -104,7 +104,7 @@ class MultiViewDataset(Dataset):
                     interval_int = [int(val) for val in interval.split('_')]
                     new_dict[key] = np.array(interval_int+[interval_ind, view, frame])
                 elif (key=='extrinsic_rot') or (key=='extrinsic_rot_inv') or (key=='extrinsic_tvec'):
-                    rot_path = get_rot_path(view,subject,key)
+                    rot_path = self.get_rot_path(view,subject,key)
                     new_dict[key] = np.load(rot_path)
                     # print (new_dict[key])
                 else:
@@ -152,23 +152,14 @@ class MultiViewDatasetCrop(MultiViewDataset):
                                                                 interval,
                                                                 view,
                                                                 frame_id)
-
-        def get_rot_path(view, subject, key):
-            lookup_viewpoint = self.lookup_viewpoint.set_index('subject')
-            camera = int(lookup_viewpoint.at[subject, str(view)])
-            rot_path = self.rot_folder + '{}_{}.npy'.format(key,camera)
-            return rot_path            
-
-        def load_image(name):
-            return np.array(self.transform_in(imageio.imread(name)), dtype='float32')
-        
+       
         def load_data(types):
             new_dict = {}
             for key in types:
                 if key == 'img_crop':
-                    new_dict[key] = load_image(get_image_path(key)) 
+                    new_dict[key] = self.load_image(get_image_path(key)) 
                 elif key == 'bg_crop':
-                    new_dict[key] = load_image(get_bg_path(key))
+                    new_dict[key] = self.load_image(get_bg_path(key))
                 elif key in self.label_dict.keys():
                  # == 'pain':
                     new_dict[key] = int(self.label_dict[key][index])
@@ -178,7 +169,7 @@ class MultiViewDatasetCrop(MultiViewDataset):
                 # elif key == 'view':
                 #     new_dict[key] = int(self.label_dict[key][index])
                 elif (key=='extrinsic_rot') or (key=='extrinsic_rot_inv') or (key=='extrinsic_tvec'):
-                    rot_path = get_rot_path(view,subject,key)
+                    rot_path = self.get_rot_path(view,subject,key)
                     new_dict[key] = np.load(rot_path)
                     # print (new_dict[key])
                 else:
