@@ -47,7 +47,7 @@ def create_supervised_evaluator(model, metrics={}, device=None):
     return engine
 
 
-def save_training_error(save_path, engine, vis, vis_windows):
+def save_training_error(save_path, engine):
     # log training error
     iteration = engine.state.iteration - 1
     loss, _ = engine.state.output
@@ -55,11 +55,6 @@ def save_training_error(save_path, engine, vis, vis_windows):
     
     print("Epoch[{}] Iteration[{}] Batch Loss: {:.2f}".format(engine.state.epoch, iteration, loss))
     title="Training error"
-    if vis is not None:
-        vis_windows[title] = vis.line(X=np.array([engine.state.iteration]), Y=np.array([loss]),
-                 update='append' if title in vis_windows else None,
-                 win=vis_windows.get(title, None),
-                 opts=dict(xlabel="# iteration", ylabel="loss", title=title))
     # also save as .txt for plotting
     log_name = os.path.join(save_path, 'debug_log_training.txt')
     if iteration ==0:
@@ -91,7 +86,7 @@ def plot_loss(in_file, out_file, title):
     
 
 
-def save_testing_error(save_path, trainer, evaluator, vis, vis_windows,
+def save_testing_error(save_path, trainer, evaluator,
                        dataset_str, save_extension=None):
     # The trainer is only given here to get the current iteration and epoch.
     iteration = trainer.state.iteration
@@ -106,11 +101,6 @@ def save_testing_error(save_path, trainer, evaluator, vis, vis_windows,
         metric_values.append(metric_value)
         name_for_log = dataset_str + ' ' + key
         wandb.log({name_for_log: metric_value})
-        if vis is not None:
-            vis_windows[title] = vis.line(X=np.array([iteration]), Y=np.array([metric_value]),
-                         update='append' if title in vis_windows else None,
-                         win=vis_windows.get(title, None),
-                         opts=dict(xlabel="# iteration", ylabel="value", title=title))
 
     # also save as .txt for plotting
     log_name = os.path.join(save_path, save_extension)
@@ -123,7 +113,7 @@ def save_testing_error(save_path, trainer, evaluator, vis, vis_windows,
     return metrics['AccumulatedLoss']
 
 
-def save_training_example(save_path, engine, vis, vis_windows, config_dict):
+def save_training_example(save_path, engine, config_dict):
     # print training examples
     iteration = engine.state.iteration - 1
     loss, output = engine.state.output
@@ -133,17 +123,12 @@ def save_training_example(save_path, engine, vis, vis_windows, config_dict):
     img_name = os.path.join(save_path, 'debug_images_{}_{:06d}.jpg'.format(mode, iteration))
     utils_plot_batch.plot_iol(inputs, labels, output, config_dict, mode, img_name)
     #img = misc.imread(img_name)
-    if vis:
-        img = mpimg.imread(img_name)
-        title="Training example"
-        vis_windows[title] = vis.image(img.transpose(2,0,1), win=vis_windows.get(title, None),
-             opts=dict(title=title+" (iteration {})".format(iteration)))
 
     # log_name = os.path.join(save_path, 'debug_log_training.txt')
     # if os.path.exists(log_name):
     #     plot_loss(log_name, log_name.replace('.txt','.jpg'),'Training Loss')
 
-def save_test_example(save_path, trainer, evaluator, vis, vis_windows, config_dict):
+def save_test_example(save_path, trainer, evaluator, config_dict):
     iteration_global = trainer.state.iteration
     iteration = evaluator.state.iteration - 1
     inputs, labels = evaluator.state.batch
@@ -151,11 +136,6 @@ def save_test_example(save_path, trainer, evaluator, vis, vis_windows, config_di
     mode='testing_{}'.format(iteration_global)
     img_name = os.path.join(save_path, 'debug_images_{}_{:06d}.jpg'.format(mode,iteration))
     utils_plot_batch.plot_iol(inputs, labels, output, config_dict, mode, img_name)               
-    if vis is not None:
-        img = mpimg.imread(img_name)
-        title="Testing example"+" (test iteration {})".format(iteration)
-        vis_windows[title] = vis.image(img.transpose(2,0,1), win=vis_windows.get(title,None),
-                                    opts=dict(title=title+" (training iteration {})".format(iteration_global)))
     
 def load_model_state(save_path, model, optimizer, state):
     model.load_state_dict(torch.load(os.path.join(save_path,"network_best_val_t1.pth")))

@@ -47,19 +47,6 @@ class IgniteTrainNVS:
         print (config_dict['rot_folder'])
         # s = input()
 
-        # create visualization windows
-        try:
-            import visdom
-            vis = visdom.Visdom()
-            if not vis.check_connection():
-                vis = None
-            print("WARNING: Visdom server not running. Please run python -m visdom.server to see visual output")
-        except ImportError:
-            vis = None
-            print("WARNING: No visdom package is found. Please install it with command: \n pip install visdom to see visual output")
-            #raise RuntimeError("WARNING: No visdom package is found. Please install it with command: \n pip install visdom to see visual output")
-        vis_windows = {}
-    
         # save path and config files
         save_path = get_parameter_description(config_dict)
         rhodin_utils_io.savePythonFile(config_dict_file, save_path)
@@ -86,9 +73,9 @@ class IgniteTrainNVS:
             # log the loss
             iteration = engine.state.iteration - 1
             if iteration % config_dict['print_every'] == 0:
-                utils_train.save_training_error(save_path, engine, vis, vis_windows)
+                utils_train.save_training_error(save_path, engine)
             if iteration in [0,100]:
-                utils_train.save_training_example(save_path, engine, vis, vis_windows, config_dict)
+                utils_train.save_training_example(save_path, engine, config_dict)
 
         @trainer.on(Events.EPOCH_COMPLETED)
         def plot_training_image(engine):
@@ -96,7 +83,7 @@ class IgniteTrainNVS:
             print ('plotting')
             epoch = engine.state.epoch - 1
             if epoch % config_dict['plot_every'] == 0:
-                utils_train.save_training_example(save_path, engine, vis, vis_windows, config_dict)
+                utils_train.save_training_example(save_path, engine, config_dict)
 
         @trainer.on(Events.EPOCH_COMPLETED)
         def log_training_results(trainer):
@@ -105,7 +92,7 @@ class IgniteTrainNVS:
                 print("Running evaluation of whole train set at epoch ", ep)
                 evaluator.run(train_loader, metrics=metrics)
                 _ = utils_train.save_testing_error(save_path, trainer, evaluator,
-                                    vis, vis_windows, dataset_str='Training set',
+                                    dataset_str='Training set',
                                     save_extension='debug_log_whole_trainset.txt')
 
         @trainer.on(Events.EPOCH_COMPLETED)
@@ -116,7 +103,7 @@ class IgniteTrainNVS:
                 print("Running evaluation at epoch ", ep)
                 evaluator.run(test_loader, metrics=metrics)
                 accumulated_loss = utils_train.save_testing_error(save_path, engine, evaluator,
-                                    vis, vis_windows, dataset_str='Validation set',
+                                    dataset_str='Validation set',
                                     save_extension='debug_log_testing.txt')
         
                 # save the best model
@@ -134,7 +121,7 @@ class IgniteTrainNVS:
         def log_test_example(engine):
             iteration = engine.state.iteration - 1
             if iteration in [0,100]:
-                utils_train.save_test_example(save_path, trainer, evaluator, vis, vis_windows, config_dict)
+                utils_train.save_test_example(save_path, trainer, evaluator, config_dict)
         
         # kick everything off
         trainer.run(train_loader, max_epochs=epochs, metrics=metrics)

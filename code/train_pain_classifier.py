@@ -29,19 +29,6 @@ else:
 class IgniteTrainPain(train_encode_decode.IgniteTrainNVS):
     def run(self, config_dict_file, config_dict):
     
-        # create visualization windows
-        try:
-            import visdom
-            vis = visdom.Visdom()
-            if not vis.check_connection():
-                vis = None
-            print("WARNING: Visdom server not running. Please run python -m visdom.server to see visual output")
-        except ImportError:
-            vis = None
-            print("WARNING: No visdom package is found. Please install it with command: \n pip install visdom to see visual output")
-            #raise RuntimeError("WARNING: No visdom package is found. Please install it with command: \n pip install visdom to see visual output")
-        vis_windows = {}
-    
         # save path and config files
         save_path = self.get_parameter_description(config_dict)
         rhodin_utils_io.savePythonFile(config_dict_file, save_path)
@@ -67,14 +54,14 @@ class IgniteTrainPain(train_encode_decode.IgniteTrainNVS):
             # log the loss
             iteration = engine.state.iteration - 1
             if iteration % config_dict['print_every'] == 0:
-                util.save_training_error(save_path, engine, vis, vis_windows)
+                util.save_training_error(save_path, engine)
         
         @trainer.on(Events.EPOCH_COMPLETED)
         def log_training_results(trainer):
             evaluator.run(train_loader)
             metrics = evaluator.state.metrics
             _ = util.save_testing_error(save_path, trainer, evaluator,
-                                vis, vis_windows, dataset_str='Training Set',
+                                dataset_str='Training Set',
                                 save_extension='debug_log_training_wholeset.txt')
             print("Training Results - Epoch: {}  Avg accuracy: {:.2f} Avg loss: {:.2f}"
                   .format(trainer.state.epoch, metrics['accuracy'], metrics['bceloss']))
@@ -94,7 +81,7 @@ class IgniteTrainPain(train_encode_decode.IgniteTrainNVS):
             print("Running evaluation at iteration",iteration)
             evaluator.run(test_loader)
             avg_accuracy = util.save_testing_error(save_path, engine, evaluator,
-                                vis, vis_windows, dataset_str='Test Set', save_extension='debug_log_testing.txt')
+                                dataset_str='Test Set', save_extension='debug_log_testing.txt')
             # save the best model
             rhodin_utils_train.save_model_state(save_path, trainer, avg_accuracy, model, optimizer, engine.state)
         
