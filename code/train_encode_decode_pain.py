@@ -27,7 +27,10 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
         metrics = {'loss': utils_train.AccumulatedLoss(loss_test),
                    'accuracy': BinaryAccuracy()}
         return metrics
-    
+
+    def initialize_wandb(self):
+        wandb.init(config=config_dict, entity='egp', project='pain-classification')
+        
     def loadOptimizer(self, network, config_dict):
         params_all_id = list(map(id, network.parameters()))
         params_painnet_id = list(map(id, network.to_pain.parameters()))

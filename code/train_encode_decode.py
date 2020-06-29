@@ -42,10 +42,10 @@ class IgniteTrainNVS:
         config_dict['skip_background'] = config_dict.get('skip_background', True)
         config_dict['loss_weight_pose3D'] = config_dict.get('loss_weight_pose3D', 0)
         config_dict['n_hidden_to3Dpose'] = config_dict.get('n_hidden_to3Dpose', 2)
-        wandb.init(config=config_dict, project='egp')
         
         print (config_dict['rot_folder'])
         # s = input()
+        self.initialize_wandb()
 
         # save path and config files
         save_path = get_parameter_description(config_dict)
@@ -128,6 +128,9 @@ class IgniteTrainNVS:
 
     def load_metrics(self, loss):
         return {'AccumulatedLoss': utils_train.AccumulatedLoss(loss)}
+
+    def initialize_wandb(self):
+        wandb.init(config=config_dict, entity='egp', project='multi-view-encdec')
         
     def load_network(self, config_dict):
         output_types= config_dict['output_types']

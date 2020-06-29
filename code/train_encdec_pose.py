@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import wandb
 import argparse
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -25,7 +26,10 @@ from rhodin.python.utils import training as utils_train
 from treadmill_dataset import TreadmillDataset, TreadmillRandomFrameSampler
 
 class IgniteTrainPoseFromLatent(train_encode_decode.IgniteTrainNVS):
-
+    
+    def initialize_wandb(self):
+        wandb.init(config=config_dict, entity='egp', project='3d-pose-estimation')
+        
     def loadOptimizer(self, network, config_dict):
         params_all_id = list(map(id, network.parameters()))
         params_posenet_id = list(map(id, network.to_pose.parameters()))

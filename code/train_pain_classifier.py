@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import wandb
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from rhodin.python.utils import io as rhodin_utils_io
@@ -33,12 +34,14 @@ class IgniteTrainPain(train_encode_decode.IgniteTrainNVS):
         save_path = self.get_parameter_description(config_dict)
         rhodin_utils_io.savePythonFile(config_dict_file, save_path)
         rhodin_utils_io.savePythonFile(__file__, save_path)
+        self.initialize_wandb()
         
         # now do training stuff
         epochs = config_dict['num_epochs']
         train_loader = self.load_data_train(config_dict)
         test_loader = self.load_data_test(config_dict)
         model = self.load_network(config_dict)
+        wandb.watch(model)
         model = model.to(device)
         optimizer = self.load_optimizer(model,config_dict)
         loss_train, loss_test = self.load_loss(config_dict)
@@ -95,6 +98,9 @@ class IgniteTrainPain(train_encode_decode.IgniteTrainNVS):
 
         # kick everything off
         trainer.run(train_loader, max_epochs=epochs)
+        
+    def initialize_wandb(self):
+        wandb.init(config=config_dict, entity='egp', project='pain-classification')
         
     def load_optimizer(self, network, config_dict):
         # params_all_id = list(map(id, network.parameters()))
