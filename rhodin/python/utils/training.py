@@ -10,6 +10,8 @@ from rhodin.python.utils import datasets as utils_data
 from rhodin.python.utils import plot_dict_batch as utils_plot_batch
 from rhodin.python.ignite.engine.engine import Engine, State, Events
 
+from helpers import util
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -145,7 +147,7 @@ def load_model_state(save_path, model, optimizer, state):
     print('Loaded ',sate_variables)
 
 
-def save_model_state(save_path, engine, current_loss, model, optimizer, state):
+def save_model_state(save_path, engine, current_loss, model, optimizer, state, wandb_run):
     # Update the best value, 99999999 if first time
     best_val = engine.state.metrics.get('best_val', 99999999)
     engine.state.metrics['best_val'] = np.minimum(current_loss, best_val)
@@ -154,32 +156,71 @@ def save_model_state(save_path, engine, current_loss, model, optimizer, state):
     model_path = os.path.join(save_path,"models/")
     if not os.path.exists(model_path):
         os.makedirs(model_path)
-    torch.save(model.state_dict(), os.path.join(model_path,"network_last_val.pth"))
-    torch.save(optimizer.state_dict(), os.path.join(model_path,"optimizer_last_val.pth"))
+
+    model_artifact = wandb.Artifact(
+        util.translate_special_char(model_path[-80:-20], None),
+        type='model')
+
+    network_last_str = os.path.join(model_path,"network_last_val.pth")
+    optimizer_last_str = os.path.join(model_path,"optimizer_last_val.pth")
+    state_last_str = os.path.join(model_path,"state_last_val.pickle")
+    torch.save(model.state_dict(), network_last_str)
+    torch.save(optimizer.state_dict(), optimizer_last_str)
     state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
-    pickle.dump(state_variables, open(os.path.join(model_path,"state_last_val.pickle"),'wb'))
+    pickle.dump(state_variables, open(state_last_str, 'wb'))
+    model_artifact.add_file(network_last_str)
+    model_artifact.add_file(optimizer_last_str)
+    model_artifact.add_file(state_last_str)
+    wandb_run.log_artifact(model_artifact, aliases=['last'])
     
     if current_loss==engine.state.metrics['best_val']:
         print("Saving best model (previous best_loss={} > current_loss={})".format(best_val, current_loss))
+        model_artifact = wandb.Artifact(
+            util.translate_special_char(model_path[-80:-20], None),
+            type='model')
+
+        network_best_str = os.path.join(model_path, "network_best_val_t1.pth")
+        optimizer_best_str = os.path.join(model_path, "optimizer_best_val_t1.pth")
+        state_best_str = os.path.join(model_path, "state_best_val_t1.pickle")
         
-        torch.save(model.state_dict(), os.path.join(model_path,"network_best_val_t1.pth"))
-        torch.save(optimizer.state_dict(), os.path.join(model_path,"optimizer_best_val_t1.pth"))
+        torch.save(model.state_dict(), network_best_str)
+        torch.save(optimizer.state_dict(), optimizer_best_str)
         state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
-        pickle.dump(state_variables, open(os.path.join(model_path,"state_best_val_t1.pickle"),'wb'))
+        pickle.dump(state_variables, open(state_best_str, 'wb'))
+        model_artifact.add_file(network_best_str)
+        model_artifact.add_file(optimizer_best_str)
+        model_artifact.add_file(state_best_str)
+        wandb_run.log_artifact(model_artifact, aliases=['best'])
 
 
-def save_model_state_iter(save_path, engine, model, optimizer, state):
+def save_model_state_iter(save_path, engine, model, optimizer, state, wandb_run):
 
     print("Saving model at epoch", state.epoch, "iter", state.iteration)
     model_path = os.path.join(save_path,"models/")
     if not os.path.exists(model_path):
         os.makedirs(model_path)
 
+
     str_file_name = '%03d'%state.epoch
-    torch.save(model.state_dict(), os.path.join(model_path,"network_"+str_file_name+".pth"))
-    torch.save(optimizer.state_dict(), os.path.join(model_path,"optimizer_"+str_file_name+".pth"))
+
+    model_artifact = wandb.Artifact(
+        util.translate_special_char(model_path[-80:-20], None),
+        type='model')
+
+    network_str = os.path.join(model_path,"network_"+str_file_name+".pth")
+    optimizer_str = os.path.join(model_path,"optimizer_"+str_file_name+".pth")
+    state_str = os.path.join(model_path,"state_"+str_file_name+".pickle")
+
+
+    torch.save(model.state_dict(), network_str)
+    torch.save(optimizer.state_dict(), optimizer_str)
     state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
-    pickle.dump(state_variables, open(os.path.join(model_path,"state_"+str_file_name+".pickle"),'wb'))
+    pickle.dump(state_variables, open(state_str,'wb'))
+
+    model_artifact.add_file(network_str)
+    model_artifact.add_file(optimizer_str)
+    model_artifact.add_file(state_str)
+    wandb_run.log_artifact(model_artifact, aliases=[str_file_name])
     
 
 # Fix of original Ignite Loss to not depend on single tensor output but to accept dictionaries

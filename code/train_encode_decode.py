@@ -42,10 +42,11 @@ class IgniteTrainNVS:
         config_dict['skip_background'] = config_dict.get('skip_background', True)
         config_dict['loss_weight_pose3D'] = config_dict.get('loss_weight_pose3D', 0)
         config_dict['n_hidden_to3Dpose'] = config_dict.get('n_hidden_to3Dpose', 2)
+        config_dict['team_wandb'] = config_dict.get('team_wandb', 'egp')
         
         print (config_dict['rot_folder'])
         # s = input()
-        self.initialize_wandb()
+        wandb_run = self.initialize_wandb(config_dict)
 
         # save path and config files
         save_path = get_parameter_description(config_dict)
@@ -107,14 +108,16 @@ class IgniteTrainNVS:
                                     save_extension='debug_log_testing.txt')
         
                 # save the best model
-                utils_train.save_model_state(save_path, trainer, accumulated_loss, model, optimizer, engine.state)
+                utils_train.save_model_state(save_path, trainer, accumulated_loss,
+                                             model, optimizer, engine.state, wandb_run)
         
         @trainer.on(Events.EPOCH_COMPLETED)
         def save_model(engine):
             epoch = engine.state.epoch
             print ('epoch',epoch,'engine.state.iteration',engine.state.iteration)
             if not epoch % config_dict['save_every']: # +1 to prevent evaluation at iteration 0
-                utils_train.save_model_state_iter(save_path, trainer, model, optimizer, engine.state)
+                utils_train.save_model_state_iter(save_path, trainer, model,
+                                                  optimizer, engine.state, wandb_run)
 
         # print test result
         @evaluator.on(Events.ITERATION_COMPLETED)
@@ -129,8 +132,11 @@ class IgniteTrainNVS:
     def load_metrics(self, loss):
         return {'AccumulatedLoss': utils_train.AccumulatedLoss(loss)}
 
-    def initialize_wandb(self):
-        wandb.init(config=config_dict, entity='egp', project='multi-view-encdec')
+    def initialize_wandb(self, config_dict):
+        wandb_run = wandb.init(config=config_dict, job_type='train',
+                               entity=config_dict['team_wandb'],
+                               project=config_dict['project_wandb'])
+        return wandb_run
         
     def load_network(self, config_dict):
         output_types= config_dict['output_types']
