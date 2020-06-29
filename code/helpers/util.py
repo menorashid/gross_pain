@@ -135,6 +135,11 @@ def replaceSpecialChar(string,replace_with):
         string=string.replace(special_char,replace_with);
     return string
 
+def translate_special_char(string, replace_with):
+    translation_table = dict.fromkeys(map(ord, '!"&\'()*,:;<=>?@[]`{|}/'), replace_with)
+    string = string.translate(translation_table)
+    return string
+
 def writeFile(file_name,list_to_write):
     with open(file_name,'w') as f:
         for string in list_to_write:
