@@ -140,6 +140,9 @@ def translate_special_char(string, replace_with):
     string = string.translate(translation_table)
     return string
 
+def join_string_list(str_list, sep):
+    return sep.join(str_list)
+
 def writeFile(file_name,list_to_write):
     with open(file_name,'w') as f:
         for string in list_to_write:

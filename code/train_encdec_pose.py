@@ -12,7 +12,7 @@ from rhodin.python.utils import io as rhodin_utils_io
 from rhodin.python.utils import datasets as rhodin_utils_datasets
 import numpy as np
 import torch
-torch.cuda.current_device() # to prevent  "Cannot re-initialize CUDA in forked subprocess." error on some configurations
+# torch.cuda.current_device() # to prevent  "Cannot re-initialize CUDA in forked subprocess." error on some configurations
 import torch.optim
 #import pickle
 import IPython
@@ -157,7 +157,7 @@ if __name__ == "__main__":
     config_dict['dataset_folder_mocap'] = os.path.join(args.dataset_path, 'treadmill_lameness_mocap_ci_may11/mocap/')
     config_dict['dataset_folder_rgb'] = os.path.join(args.dataset_path, 'animals_data/')
     config_dict['bg_folder'] = '../data/median_bg/'
-    config_dict['rot_folder'] = '../data/rotation_cal_1/'
+    config_dict['rot_folder'] = '../data/rotation_cal_2/'
 
     config_dict['pretrained_network_path'] = get_model_path(config_dict_for_saved_model, epoch=args.epoch_encdec)
 
