@@ -157,6 +157,31 @@ def get_train_feat(train_subjects, meta_path, every_nth):
 
     return keep_lists
 
+def get_rotated_latent(q_im, q_feat_curr, cam_num, dataset, test_subject):
+
+    cam2world_s = []
+    for idx_q in range(q_im.shape[0]):
+        im_file_curr = q_im[idx_q]
+        im_file_curr_split = im_file_curr.split('/')
+        view = int(im_file_curr_split[-2])
+        subject = im_file_curr_split[-4]
+        assert subject==test_subject
+        rot_path = dataset.get_rot_path( view, subject, 'extrinsic_rot_inv')
+        cam2world_s.append(np.load(rot_path))
+
+    cam2world_s = np.array(cam2world_s)
+    if cam_num>=0:
+        world2cam_t = np.load(dataset.get_rot_path( cam_num, test_subject, 'extrinsic_rot'))[np.newaxis,:,:]
+        cam2cam = np.matmul(cam2world_s,world2cam_t)
+    else:
+        cam2cam = cam2world_s
+
+    cam2cam_t = np.transpose(cam2cam,(0,2,1))
+    feat_new = np.matmul(q_feat_curr, cam2cam_t)
+    
+    return q_im, feat_new
+
+
 def main():
 
     dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
@@ -177,7 +202,7 @@ def main():
     # dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
     # config_path = 'configs/config_train_rotation_newCal.py'
     # job_identifier = 'withRotNewCal'
-    # nth_frame = 100
+    nth_frame = 100
 
     train_subjects = 'brava/herrera/inkasso/julia/kastanjett/naughty_but_nice/sir_holger'.split('/')
     test_subject = 'aslan'
@@ -194,17 +219,20 @@ def main():
     
     config_dict['pretrained_network_path'] = model_path
     config_dict['every_nth_frame'] = nth_frame
-
-
     out_path_meta = model_path[:-4]+'_feats'
-    md_file = os.path.join(out_path_meta,'nn_rot.md')
-    # util.mkdir(out_path_meta)
+    util.mkdir(out_path_meta)
 
     # save_all_features(config_dict, config_path, all_subjects, out_path_meta, input_to_get, output_to_get)
     
-    # return
-    # test_subject = train_subjects[0]
-    config_dict['test_subjects'] = [train_subjects[0]]
+    simple = False
+    cam_num = -1
+    config_dict['test_subjects'] = [test_subject]
+    post_str = '_'.join([config_dict['test_subjects'][0],'withself',str(cam_num)])
+    if simple:
+        md_file = os.path.join(out_path_meta,'_'.join(['nn', 'simple', post_str])+'.md')
+    else:
+        md_file = os.path.join(out_path_meta,'_'.join(['nn', 'rot', post_str])+'.md')
+
     dataset = ted.IgniteTrainNVS().load_data_test(config_dict, ted.get_parameter_description(config_dict)).dataset
     
 
@@ -213,62 +241,52 @@ def main():
     im_file = im_files[0]
     q_feat_curr = np.load(feat_file)
     q_im = np.load(im_file)
+    q_im_org = q_im
+    q_feat_curr_org = q_feat_curr
     
-    print (q_im[0])
-
-    cam2world_s = []
-    for idx_q in range(q_im.shape[0]):
-        im_file_curr = q_im[idx_q]
-        im_file_curr_split = im_file_curr.split('/')
-        view = int(im_file_curr_split[-2])
-        subject = im_file_curr_split[-4]
-        assert subject==test_subject
-        rot_path = dataset.get_rot_path( view, subject, 'extrinsic_rot_inv')
-        cam2world_s.append(np.load(rot_path))
-
-    cam2world_s = np.array(cam2world_s)
-    world2cam_t = np.array([np.load(dataset.get_rot_path( view, test_subject, 'extrinsic_rot')) for view in range(4)])
+    if not simple:
+        q_im, q_feat_curr = get_rotated_latent(q_im, q_feat_curr, cam_num, dataset, test_subject)
     
-    feat_all = []
-    for idx_t in range(world2cam_t.shape[0]):
-        cam2cam = np.matmul(cam2world_s,world2cam_t[idx_t:idx_t+1,:,:])
-        # print (cam2cam.shape)
-        cam2cam_t = np.transpose(cam2cam,(0,2,1))
-        # print (cam2cam_t.shape,q_feat_curr.shape)
-        feat_new = np.matmul(q_feat_curr, cam2cam_t)
-        # print (feat_new.shape)
-
-        feat_all.append(feat_new[:,np.newaxis,:,:])
-    feat_all = np.concatenate(feat_all,1)
-    feat_all = np.reshape(feat_all, (-1,feat_all.shape[2],feat_all.shape[3]))
-    
-    q_im = np.tile(q_im[:,np.newaxis],(1,4)).ravel()
-    q_feat_curr = feat_all
     
     keep_lists = get_train_feat(train_subjects, out_path_meta, 1)
-
     train_data = np.reshape(keep_lists[0], (keep_lists[0].shape[0],-1))
+    train_im = keep_lists[1]
+
     test_data = np.reshape(q_feat_curr, (q_feat_curr.shape[0],-1))
     
-    # scaler = sklearn.preprocessing.StandardScaler()
-    # train_data = scaler.fit_transform(train_data)
-    # test_data = scaler.transform(test_data)
+    # train_data = np.reshape(q_feat_curr_org, (q_feat_curr_org.shape[0],-1))
+    # train_im = q_im_org
+    # print (train_data.shape, train_im.shape)
+    train_data = test_data
+    train_im = q_im
+
+    scaler = sklearn.preprocessing.StandardScaler()
+    train_data = scaler.fit_transform(train_data)
+    test_data = scaler.transform(test_data)
     print (train_data.shape, test_data.shape)
 
     nn = sklearn.neighbors.NearestNeighbors(n_neighbors=10, algorithm = 'brute')
     nn.fit(train_data)
-    _, idx_close = nn.kneighbors(test_data)
-
+    _, idx_close = nn.kneighbors()
+    print (idx_close[:10])
+    # test_data)
     im_files = []
+    captions =[]
     titles = ['query']+[str(num+1) for num in range(10)]
+
     for r in range(idx_close.shape[0]):
         val = q_im[r].replace('..','../../../../../..')
-        # print (val)
+        title_str = os.path.split(q_im[r])[1].split('_')[-2]+' '+os.path.split(q_im[r])[1].split('_')[-1][:-4]
+        title_strs = [title_str] 
         im_row = [val]
-        im_row+=[keep_lists[1][idx_curr].replace('..','../../../../../..') for idx_curr in idx_close[r]]
+        for idx_curr in idx_close[r]:
+            title_str = os.path.split(train_im[idx_curr])[1].split('_')[-2]+' '+os.path.split(train_im[idx_curr])[1].split('_')[-1][:-4]
+            title_strs.append(title_str)
+            im_row.append(train_im[idx_curr].replace('..','../../../../../..') )
+        captions.append(title_strs)
         im_files.append(im_row)
 
-    visualize.markdown_im_table(im_files, titles, feat_file, md_file)
+    visualize.markdown_im_table(im_files, titles, feat_file, md_file, title_strs = captions)
 
     
         
