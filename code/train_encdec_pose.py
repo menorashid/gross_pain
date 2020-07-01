@@ -12,7 +12,7 @@ from rhodin.python.utils import io as rhodin_utils_io
 from rhodin.python.utils import datasets as rhodin_utils_datasets
 import numpy as np
 import torch
-torch.cuda.current_device() # to prevent  "Cannot re-initialize CUDA in forked subprocess." error on some configurations
+# torch.cuda.current_device() # to prevent  "Cannot re-initialize CUDA in forked subprocess." error on some configurations
 import torch.optim
 #import pickle
 import IPython
@@ -25,10 +25,6 @@ from rhodin.python.utils import training as utils_train
 from treadmill_dataset import TreadmillDataset, TreadmillRandomFrameSampler
 
 class IgniteTrainPoseFromLatent(train_encode_decode.IgniteTrainNVS):
-    def load_metrics(self, loss_test):
-        metrics = {'loss': utils_train.AccumulatedLoss(loss_test),
-                   'accuracy': BinaryAccuracy()}
-        return metrics
     
     def loadOptimizer(self, network, config_dict):
         params_all_id = list(map(id, network.parameters()))
@@ -51,24 +47,17 @@ class IgniteTrainPoseFromLatent(train_encode_decode.IgniteTrainNVS):
         return optimizer
 
     def load_loss(self, config_dict):
-    
-        pose_key = 'pose'
-        loss_train = losses_generic.LossLabel(pose_key, torch.nn.CrossEntropyLoss())
-        loss_test = losses_generic.LossLabel(pose_key, torch.nn.CrossEntropyLoss())
-
+        weight = 1 
+        pose_key = '3D'
+        loss_train = losses_generic.LossLabelMeanStdNormalized(pose_key, torch.nn.MSELoss())
+        loss_test = losses_generic.LossLabelMeanStdUnNormalized(pose_key, losses_poses.Criterion3DPose_leastQuaresScaled(losses_poses.MPJPECriterion(weight)), scale_normalized=False)
         # annotation and pred is organized as a list, to facilitate multiple output types (e.g. heatmap and 3d loss)
         return loss_train, loss_test
 
-    def get_parameter_description(self, config_dict):#, config_dict):
-        shorter_train_subjects = [subject[:2] for subject in config_dict['train_subjects']]
-        shorter_test_subjects = [subject[:2] for subject in config_dict['test_subjects']]
-        folder = "../output/trainNVSPoseFromLatent_{job_identifier}_{job_identifier_encdec}/{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_lr{learning_rate}_bstrain{batch_size_train}_bstest{batch_size_test}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
-        folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
-        return folder
-
-    def load_data_train(self, config_dict):
+    def load_data_train(self, config_dict, save_path=None):
         dataset = TreadmillDataset(rgb_folder=config_dict['dataset_folder_rgb'],
                                    mocap_folder=config_dict['dataset_folder_mocap'],
+                                   bg_folder=config_dict['bg_folder'],
                                    subjects = config_dict['train_subjects'],
                                    input_types=config_dict['input_types'],
                                    label_types=config_dict['label_types_train'])
@@ -84,9 +73,10 @@ class IgniteTrainPoseFromLatent(train_encode_decode.IgniteTrainNVS):
 
         return loader
     
-    def load_data_test(self, config_dict):
+    def load_data_test(self, config_dict, save_path=None):
         dataset = TreadmillDataset(rgb_folder=config_dict['dataset_folder_rgb'],
                                    mocap_folder=config_dict['dataset_folder_mocap'],
+                                   bg_folder=config_dict['bg_folder'],
                                    subjects = config_dict['test_subjects'],
                                    input_types=config_dict['input_types'],
                                    label_types=config_dict['label_types_test'])
@@ -104,15 +94,12 @@ class IgniteTrainPoseFromLatent(train_encode_decode.IgniteTrainNVS):
     
 
 def get_model_path(config_dict, epoch):
-    shorter_train_subjects = [subject[:2] for subject in config_dict['train_subjects']]
-    shorter_test_subjects = [subject[:2] for subject in config_dict['test_subjects']]
-
-    folder = "../output/trainNVS_{job_identifier}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}/skipBG{skip_background}_bg{latent_bg}_fg{latent_fg}_3d{latent_3d}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_bs{use_view_batches}_lr{learning_rate}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
-    folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
+    folder = train_encode_decode.get_parameter_description(config_dict)
     model_ext = 'network_0' + epoch + '.pth'
     model_path = os.path.join(folder, 'models', model_ext)
     print ('Model Path',model_path)
     return model_path
+    
 
 
 def parse_arguments(argv):
@@ -169,9 +156,8 @@ if __name__ == "__main__":
     config_dict['dataset_folder_test'] = args.dataset_path
     config_dict['dataset_folder_mocap'] = os.path.join(args.dataset_path, 'treadmill_lameness_mocap_ci_may11/mocap/')
     config_dict['dataset_folder_rgb'] = os.path.join(args.dataset_path, 'animals_data/')
-    root = args.dataset_path.rsplit('/', 2)[0]
-    config_dict['bg_folder'] = os.path.join(root, 'median_bg/')
-    config_dict['rot_folder'] = os.path.join(root, 'rotation_cal_1/')
+    config_dict['bg_folder'] = '../data/median_bg/'
+    config_dict['rot_folder'] = '../data/rotation_cal_2/'
 
     config_dict['pretrained_network_path'] = get_model_path(config_dict_for_saved_model, epoch=args.epoch_encdec)
 

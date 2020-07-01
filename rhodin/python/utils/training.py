@@ -1,16 +1,21 @@
-import torch
 import numpy as np
-import os
-from rhodin.python.utils import datasets as utils_data
-from rhodin.python.utils import plot_dict_batch as utils_plot_batch
-
-import sys
-# sys.path.insert(0,'./ignite')
-from rhodin.python.ignite.engine.engine import Engine, State, Events
-
-import matplotlib.image as mpimg
 import IPython
 import pickle
+import wandb
+import torch
+import sys
+import os
+
+from rhodin.python.utils import datasets as utils_data
+from rhodin.python.utils import plot_dict_batch as utils_plot_batch
+from rhodin.python.ignite.engine.engine import Engine, State, Events
+
+from helpers import util
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 
 # optimization function
 def create_supervised_trainer(model, optimizer, loss_fn, device=None):
@@ -42,18 +47,16 @@ def create_supervised_evaluator(model, metrics={}, device=None):
         metric.attach(engine, name)
 
     return engine
-    
-def save_training_error(save_path, engine, vis, vis_windows):
+
+
+def save_training_error(save_path, engine):
     # log training error
     iteration = engine.state.iteration - 1
-    loss, pose = engine.state.output
-    print("Epoch[{}] Iteration[{}] Loss: {:.2f}".format(engine.state.epoch, iteration, loss))
+    loss, _ = engine.state.output
+    wandb.log({'train loss': loss})
+    
+    print("Epoch[{}] Iteration[{}] Batch Loss: {:.2f}".format(engine.state.epoch, iteration, loss))
     title="Training error"
-    if vis is not None:
-        vis_windows[title] = vis.line(X=np.array([engine.state.iteration]), Y=np.array([loss]),
-                 update='append' if title in vis_windows else None,
-                 win=vis_windows.get(title, None),
-                 opts=dict(xlabel="# iteration", ylabel="loss", title=title))
     # also save as .txt for plotting
     log_name = os.path.join(save_path, 'debug_log_training.txt')
     if iteration ==0:
@@ -61,47 +64,73 @@ def save_training_error(save_path, engine, vis, vis_windows):
             the_file.write('#iteration,loss\n')     
     with open(log_name, 'a') as the_file:
         the_file.write('{},{}\n'.format(iteration, loss))
+    # if iteration<100:
+    plot_loss(log_name, log_name.replace('.txt','.jpg'),'Training Loss')
 
-def save_testing_error(save_path, trainer, evaluator, vis, vis_windows):
-    metrics = evaluator.state.metrics
+ 
+def plot_loss(in_file, out_file, title):
+    with open(in_file,'r') as f:
+        lines=f.readlines()
+    lines=[line.strip('\n') for line in lines]
+    [xlabel,ylabel] = lines[0].split(',')[:2]
+    x = []
+    y = []
+    for line in lines[1:]:
+        line = line.split(',')
+        x.append(int(line[0]))
+        y.append(float(line[1]))
+
+    plt.figure()
+    plt.xlabel(xlabel); plt.ylabel(ylabel); plt.title(title)
+    plt.plot(np.array(x),np.array(y))
+    plt.savefig(out_file)
+    plt.close()
+    
+
+
+def save_testing_error(save_path, trainer, evaluator,
+                       dataset_str, save_extension=None):
+    # The trainer is only given here to get the current iteration and epoch.
     iteration = trainer.state.iteration
-    print("Validation Results - Epoch: {}  Avg accuracy: {}".format(trainer.state.epoch, metrics))
-    accuracies = []
+    epoch = trainer.state.epoch
+
+    metrics = evaluator.state.metrics
+    print("{} Results - Epoch: {}  AccumulatedLoss: {}".format(dataset_str, epoch, metrics))
+    metric_values = []
     for key in metrics.keys():
-        title="Testing error {}".format(key)
-        avg_accuracy = metrics[key]
-        accuracies.append(avg_accuracy)
-        if vis is not None:
-            vis_windows[title] = vis.line(X=np.array([iteration]), Y=np.array([avg_accuracy]),
-                         update='append' if title in vis_windows else None,
-                         win=vis_windows.get(title, None),
-                         opts=dict(xlabel="# iteration", ylabel="value", title=title))
+        title="Testing metric: {}".format(key)
+        metric_value = metrics[key]
+        metric_values.append(metric_value)
+        name_for_log = dataset_str + ' ' + key
+        wandb.log({name_for_log: metric_value})
 
     # also save as .txt for plotting
-    log_name = os.path.join(save_path, 'debug_log_testing.txt')
-    if iteration ==0:
+    log_name = os.path.join(save_path, save_extension)
+    if epoch == 1: #assumes you always eval at end of 1st epoch
         with open(log_name, 'w') as the_file: # overwrite exiting file
             the_file.write('#iteration,loss1,loss2,...\n')     
     with open(log_name, 'a') as the_file:
-        the_file.write('{},{}\n'.format(iteration, ",".join(map(str, accuracies)) ))
-    return sum(accuracies)
-        
-def save_training_example(save_path, engine, vis, vis_windows, config_dict):
+        the_file.write('{},{}\n'.format(iteration, ",".join(map(str, metric_values)) ))
+    plot_loss(log_name, log_name.replace('.txt','.jpg'), 'Testing Loss')
+    return metrics['AccumulatedLoss']
+
+
+def save_training_example(save_path, engine, config_dict):
     # print training examples
     iteration = engine.state.iteration - 1
     loss, output = engine.state.output
     inputs, labels = engine.state.batch
+    
     mode='training'
     img_name = os.path.join(save_path, 'debug_images_{}_{:06d}.jpg'.format(mode, iteration))
     utils_plot_batch.plot_iol(inputs, labels, output, config_dict, mode, img_name)
     #img = misc.imread(img_name)
-    if vis:
-        img = mpimg.imread(img_name)
-        title="Training example"
-        vis_windows[title] = vis.image(img.transpose(2,0,1), win=vis_windows.get(title, None),
-             opts=dict(title=title+" (iteration {})".format(iteration)))
 
-def save_test_example(save_path, trainer, evaluator, vis, vis_windows, config_dict):
+    # log_name = os.path.join(save_path, 'debug_log_training.txt')
+    # if os.path.exists(log_name):
+    #     plot_loss(log_name, log_name.replace('.txt','.jpg'),'Training Loss')
+
+def save_test_example(save_path, trainer, evaluator, config_dict):
     iteration_global = trainer.state.iteration
     iteration = evaluator.state.iteration - 1
     inputs, labels = evaluator.state.batch
@@ -109,11 +138,6 @@ def save_test_example(save_path, trainer, evaluator, vis, vis_windows, config_di
     mode='testing_{}'.format(iteration_global)
     img_name = os.path.join(save_path, 'debug_images_{}_{:06d}.jpg'.format(mode,iteration))
     utils_plot_batch.plot_iol(inputs, labels, output, config_dict, mode, img_name)               
-    if vis is not None:
-        img = mpimg.imread(img_name)
-        title="Testing example"+" (test iteration {})".format(iteration)
-        vis_windows[title] = vis.image(img.transpose(2,0,1), win=vis_windows.get(title,None),
-                                    opts=dict(title=title+" (training iteration {})".format(iteration_global)))
     
 def load_model_state(save_path, model, optimizer, state):
     model.load_state_dict(torch.load(os.path.join(save_path,"network_best_val_t1.pth")))
@@ -122,8 +146,9 @@ def load_model_state(save_path, model, optimizer, state):
     for key, value in sate_variables.items(): setattr(state, key, value)
     print('Loaded ',sate_variables)
 
-def save_model_state(save_path, engine, current_loss, model, optimizer, state):
-    # update the best value
+
+def save_model_state(save_path, engine, current_loss, model, optimizer, state, wandb_run):
+    # Update the best value, 99999999 if first time
     best_val = engine.state.metrics.get('best_val', 99999999)
     engine.state.metrics['best_val'] = np.minimum(current_loss, best_val)
     
@@ -131,36 +156,72 @@ def save_model_state(save_path, engine, current_loss, model, optimizer, state):
     model_path = os.path.join(save_path,"models/")
     if not os.path.exists(model_path):
         os.makedirs(model_path)
-    torch.save(model.state_dict(), os.path.join(model_path,"network_last_val.pth"))
-    torch.save(optimizer.state_dict(), os.path.join(model_path,"optimizer_last_val.pth"))
+
+    model_artifact = wandb.Artifact(
+        util.translate_special_char(model_path[-80:-20], None),
+        type='model')
+
+    network_last_str = os.path.join(model_path,"network_last_val.pth")
+    optimizer_last_str = os.path.join(model_path,"optimizer_last_val.pth")
+    state_last_str = os.path.join(model_path,"state_last_val.pickle")
+    torch.save(model.state_dict(), network_last_str)
+    torch.save(optimizer.state_dict(), optimizer_last_str)
     state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
-    pickle.dump(state_variables, open(os.path.join(model_path,"state_last_val.pickle"),'wb'))
+    pickle.dump(state_variables, open(state_last_str, 'wb'))
+    model_artifact.add_file(network_last_str)
+    model_artifact.add_file(optimizer_last_str)
+    model_artifact.add_file(state_last_str)
+    wandb_run.log_artifact(model_artifact, aliases=['last'])
     
     if current_loss==engine.state.metrics['best_val']:
         print("Saving best model (previous best_loss={} > current_loss={})".format(best_val, current_loss))
-        
-        torch.save(model.state_dict(), os.path.join(model_path,"network_best_val_t1.pth"))
-        torch.save(optimizer.state_dict(), os.path.join(model_path,"optimizer_best_val_t1.pth"))
-        state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
-        pickle.dump(state_variables, open(os.path.join(model_path,"state_best_val_t1.pickle"),'wb'))
+        model_artifact = wandb.Artifact(
+            util.translate_special_char(model_path[-80:-20], None),
+            type='model')
 
-def save_model_state_iter(save_path, engine, model, optimizer, state):
-    # update the best value
-    # best_val = engine.state.metrics.get('best_val', 99999999)
-    # engine.state.metrics['best_val'] = np.minimum(current_loss, best_val)
-    
-    print("Saving model at epoch",state.epoch,"iter", state.iteration)
+        network_best_str = os.path.join(model_path, "network_best_val_t1.pth")
+        optimizer_best_str = os.path.join(model_path, "optimizer_best_val_t1.pth")
+        state_best_str = os.path.join(model_path, "state_best_val_t1.pickle")
+        
+        torch.save(model.state_dict(), network_best_str)
+        torch.save(optimizer.state_dict(), optimizer_best_str)
+        state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
+        pickle.dump(state_variables, open(state_best_str, 'wb'))
+        model_artifact.add_file(network_best_str)
+        model_artifact.add_file(optimizer_best_str)
+        model_artifact.add_file(state_best_str)
+        wandb_run.log_artifact(model_artifact, aliases=['best'])
+
+
+def save_model_state_iter(save_path, engine, model, optimizer, state, wandb_run):
+
+    print("Saving model at epoch", state.epoch, "iter", state.iteration)
     model_path = os.path.join(save_path,"models/")
     if not os.path.exists(model_path):
         os.makedirs(model_path)
 
-    str_file_name = '%03d'%state.epoch
-    torch.save(model.state_dict(), os.path.join(model_path,"network_"+str_file_name+".pth"))
-    torch.save(optimizer.state_dict(), os.path.join(model_path,"optimizer_"+str_file_name+".pth"))
-    state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
-    pickle.dump(state_variables, open(os.path.join(model_path,"state_"+str_file_name+".pickle"),'wb'))
-    
 
+    str_file_name = '%03d'%state.epoch
+
+    model_artifact = wandb.Artifact(
+        util.translate_special_char(model_path[-80:-20], None),
+        type='model')
+
+    network_str = os.path.join(model_path,"network_"+str_file_name+".pth")
+    optimizer_str = os.path.join(model_path,"optimizer_"+str_file_name+".pth")
+    state_str = os.path.join(model_path,"state_"+str_file_name+".pickle")
+
+
+    torch.save(model.state_dict(), network_str)
+    torch.save(optimizer.state_dict(), optimizer_str)
+    state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
+    pickle.dump(state_variables, open(state_str,'wb'))
+
+    model_artifact.add_file(network_str)
+    model_artifact.add_file(optimizer_str)
+    model_artifact.add_file(state_str)
+    wandb_run.log_artifact(model_artifact, aliases=[str_file_name])
+    
 
 # Fix of original Ignite Loss to not depend on single tensor output but to accept dictionaries
 from rhodin.python.ignite.metrics import Metric

@@ -148,7 +148,7 @@ class unet(nn.Module):
         setattr(self, 'fc_1_stage' + str(ns), Linear(self.dimension_3d, 128))
         setattr(self, 'fc_2_stage' + str(ns), Linear(128, num_joints * nb_dims))
         
-        self.to_pose = MLP.MLP_fromLatent(d_in=self.dimension_3d, d_hidden=2048, d_out=51, n_hidden=n_hidden_to3Dpose, dropout=0.5)
+        self.to_pose = MLP.MLP_fromLatent(d_in=self.dimension_3d, d_hidden=2048, d_out=150, n_hidden=n_hidden_to3Dpose, dropout=0.5)
         self.to_pain = MLP.MLP_fromLatent(d_in=self.dimension_3d, d_hidden=2048, d_out=2, n_hidden=n_hidden_to3Dpose, dropout=0.5)
                 
         self.to_3d =  nn.Sequential( Linear(num_output_features, self.dimension_3d),

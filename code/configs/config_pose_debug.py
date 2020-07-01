@@ -1,26 +1,33 @@
+# Kinematic tree for horses
+num_joints = 36
+joint_names = ['pelvis', 'pelvis0', 'spine', 'spine0', 'spine1', 'spine2', 'spine3', 'LLeg1', 'LLeg2', 'LLeg3', 'LFoot', 'RLeg1', 'RLeg2', 'RLeg3', 'RFoot', 'Neck', 'Neck1', 'Head', 'LLegBack1', 'LLegBack2', 'LLegBack3', 'LFootBack', 'RLegBack1', 'RLegBack2', 'RLegBack3', 'RFootBack', 'Tail1', 'Tail2', 'Tail3', 'Tail4', 'Tail5', 'Tail6', 'Tail7', 'Mouth', 'LEar', 'REar']
+bones = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [6, 11], [11, 12], [12, 13], [13, 14], [6, 15], [15, 16], [16, 17], [0, 18], [18, 19], [19, 20], [20, 21], [0, 22], [22, 23], [23, 24], [24, 25], [0, 26], [26, 27], [27, 28], [28, 29], [29, 30], [30, 31], [31, 32], [17, 33], [17, 34], [17, 35]]
+
+
 inputDimension = 128
 
 config_dict = {
     # General parameters
     'dpi'                     : 190,
-    'input_types'             : ['img_crop'],
+    'input_types'             : ['img_crop', 'bg_crop'],
     # Possible output types   :  'img_crop' | '3D' | 'shuffled_pose' | 'shuffled_appearance' | 'latent_3d'
-    'output_types'            : ['pose'],
-    'label_types_train'       : ['pose'],
-    'label_types_test'        : ['pose'],
+    'output_types'            : ['3D'],
+    'label_types_train'       : ['3D', 'pose_mean', 'pose_std'],
+    'label_types_test'        : ['3D', 'pose_mean', 'pose_std'],
     'num_workers'             : 4,
-#     'bones'                   : bones,
+    'bones'                   : bones,
 
 # Classfication
     'num_joints' : 50,
 
     # opt parameters    
     'num_epochs'              : 1,
-    'save_every'              : 100000,
+    'save_every'              : 1,
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
-    'test_every'              : 2510,
+    'train_test_every'        : 1,
+    'test_every'              : 1,
     'plot_every'              : 2510,
-    'print_every'             : 100,
+    'print_every'             : 10,
 
     # LPS dataset parameters
     
@@ -36,8 +43,8 @@ config_dict = {
     'image_height'            : 128,
 
     # network parameters
-    'batch_size_train' : 48,
-    'batch_size_test' : 48, #10 #self.batch_size # Note, needs to be = self.batch_size for multi-view validation
+    'batch_size_train' : 64,
+    'batch_size_test' : 64, #10 #self.batch_size # Note, needs to be = self.batch_size for multi-view validation
 #     'outputDimension_3d' : num_joints * 3,
     'outputDimension_2d' : inputDimension // 8,
 
@@ -47,6 +54,7 @@ config_dict = {
 
     # dataset
     'training_set' : 'treadmill',
+    'project_wandb': '3d-pose-estimation',
     'img_mean' : (0.485, 0.456, 0.406),
     'img_std' : (0.229, 0.224, 0.225),
     'active_cameras' : False,
@@ -59,9 +67,10 @@ config_dict = {
     'seam_scaling' : 1.0,
     'use_view_batches' : 4,
     'use_subject_batches' : True,
-    'every_nth_frame' : 1,
+    'every_nth_frame' : 500,
 
     # Encoder-decoder
+    'model_type': 'unet_encode3D_clean',
     'latent_bg' : 0,
     'latent_fg' : 24,
     'latent_3d' : 200*3,

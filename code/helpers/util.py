@@ -1,3 +1,4 @@
+import pandas as pd
 import numpy as np;
 # import torch
 import scipy
@@ -6,6 +7,7 @@ import os;
 # import importlib
 # import importlib.util
 import collections
+from matplotlib import pyplot as plt
 
 def get_image_name(subject, interval_ind, interval, view, frame, data_dir_path):
     frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
@@ -133,6 +135,14 @@ def replaceSpecialChar(string,replace_with):
         string=string.replace(special_char,replace_with);
     return string
 
+def translate_special_char(string, replace_with):
+    translation_table = dict.fromkeys(map(ord, '!"&\'()*,:;<=>?@[]`{|}/'), replace_with)
+    string = string.translate(translation_table)
+    return string
+
+def join_string_list(str_list, sep):
+    return sep.join(str_list)
+
 def writeFile(file_name,list_to_write):
     with open(file_name,'w') as f:
         for string in list_to_write:
@@ -206,48 +216,3 @@ def get_class_weights(train_files,au=False):
         return tuple(to_return)
     else:
         return to_return[0]
-
-
-def save_training_error(save_path, engine, vis, vis_windows):
-    # log training error
-    iteration = engine.state.iteration - 1
-    loss = engine.state.output
-    print("Epoch[{}] Iteration[{}] Batch Loss: {:.2f}".format(engine.state.epoch, iteration, loss))
-    title="Training error"
-    if vis is not None:
-        vis_windows[title] = vis.line(X=np.array([engine.state.iteration]), Y=np.array([loss]),
-                 update='append' if title in vis_windows else None,
-                 win=vis_windows.get(title, None),
-                 opts=dict(xlabel="# iteration", ylabel="loss", title=title))
-    # also save as .txt for plotting
-    log_name = os.path.join(save_path, 'debug_log_training.txt')
-    if iteration ==0:
-        with open(log_name, 'w') as the_file: # overwrite exiting file
-            the_file.write('#iteration,loss\n')     
-    with open(log_name, 'a') as the_file:
-        the_file.write('{},{}\n'.format(iteration, loss))
-
-def save_testing_error(save_path, trainer, evaluator, vis, vis_windows, dataset_str, save_extension=None):
-    metrics = evaluator.state.metrics
-    iteration = trainer.state.iteration
-    print("{} Results - Epoch: {}  Avg accuracy: {}".format(dataset_str, trainer.state.epoch, metrics))
-    accuracies = []
-    for key in metrics.keys():
-        title="Testing error {}".format(key)
-        avg_accuracy = metrics[key]
-        accuracies.append(avg_accuracy)
-        if vis is not None:
-            vis_windows[title] = vis.line(X=np.array([iteration]), Y=np.array([avg_accuracy]),
-                         update='append' if title in vis_windows else None,
-                         win=vis_windows.get(title, None),
-                         opts=dict(xlabel="# iteration", ylabel="value", title=title))
-
-    # also save as .txt for plotting
-    log_name = os.path.join(save_path, save_extension)
-    if iteration ==0:
-        with open(log_name, 'w') as the_file: # overwrite exiting file
-            the_file.write('#iteration,loss1,loss2,...\n')     
-    with open(log_name, 'a') as the_file:
-        the_file.write('{},{}\n'.format(iteration, ",".join(map(str, accuracies)) ))
-    return sum(accuracies)
-        

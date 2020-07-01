@@ -8,8 +8,8 @@ from multiview_dataset import MultiViewDataset, MultiViewDatasetCrop, MultiViewD
 import os, shutil
 
 import numpy as np
-
-from models import unet_encode3D
+import importlib
+# from models import unet_encode3D_clean as unet_encode3D
 from rhodin.python.losses import generic as losses_generic
 from rhodin.python.losses import images as losses_images
 from rhodin.python.ignite.metrics import Loss
@@ -27,6 +27,8 @@ import torch.optim
 from rhodin.python.ignite._utils import convert_tensor
 from rhodin.python.ignite.engine import Events
 
+import wandb
+
 if torch.cuda.is_available():
     device = "cuda:0"
 else:
@@ -40,30 +42,23 @@ class IgniteTrainNVS:
         config_dict['skip_background'] = config_dict.get('skip_background', True)
         config_dict['loss_weight_pose3D'] = config_dict.get('loss_weight_pose3D', 0)
         config_dict['n_hidden_to3Dpose'] = config_dict.get('n_hidden_to3Dpose', 2)
+        config_dict['team_wandb'] = config_dict.get('team_wandb', 'egp')
         
-        # create visualization windows
-        try:
-            import visdom
-            vis = visdom.Visdom()
-            if not vis.check_connection():
-                vis = None
-            print("WARNING: Visdom server not running. Please run python -m visdom.server to see visual output")
-        except ImportError:
-            vis = None
-            print("WARNING: No visdom package is found. Please install it with command: \n pip install visdom to see visual output")
-            #raise RuntimeError("WARNING: No visdom package is found. Please install it with command: \n pip install visdom to see visual output")
-        vis_windows = {}
-    
+        print (config_dict['rot_folder'])
+        # s = input()
+        wandb_run = self.initialize_wandb(config_dict)
+
         # save path and config files
-        save_path = self.get_parameter_description(config_dict)
+        save_path = get_parameter_description(config_dict)
         rhodin_utils_io.savePythonFile(config_dict_file, save_path)
         rhodin_utils_io.savePythonFile(__file__, save_path)
         
         # now do training stuff
         epochs = config_dict['num_epochs']
-        train_loader = self.load_data_train(config_dict)
-        test_loader = self.load_data_test(config_dict)
+        train_loader = self.load_data_train(config_dict, save_path)
+        test_loader = self.load_data_test(config_dict, save_path)
         model = self.load_network(config_dict)
+        wandb.watch(model)
         model = model.to(device)
         optimizer = self.loadOptimizer(model,config_dict)
         loss_train,loss_test = self.load_loss(config_dict)
@@ -74,18 +69,14 @@ class IgniteTrainNVS:
                                                 metrics=metrics,
                                                 device=device)
     
-        #@trainer.on(Events.STARTED)
-        def load_previous_state(engine):
-            utils_train.load_previous_state(save_path, model, optimizer, engine.state)
-             
         @trainer.on(Events.ITERATION_COMPLETED)
         def log_training_progress(engine):
             # log the loss
             iteration = engine.state.iteration - 1
             if iteration % config_dict['print_every'] == 0:
-                utils_train.save_training_error(save_path, engine, vis, vis_windows)
+                utils_train.save_training_error(save_path, engine)
             if iteration in [0,100]:
-                utils_train.save_training_example(save_path, engine, vis, vis_windows, config_dict)
+                utils_train.save_training_example(save_path, engine, config_dict)
 
         @trainer.on(Events.EPOCH_COMPLETED)
         def plot_training_image(engine):
@@ -93,7 +84,7 @@ class IgniteTrainNVS:
             print ('plotting')
             epoch = engine.state.epoch - 1
             if epoch % config_dict['plot_every'] == 0:
-                utils_train.save_training_example(save_path, engine, vis, vis_windows, config_dict)
+                utils_train.save_training_example(save_path, engine, config_dict)
 
         @trainer.on(Events.EPOCH_COMPLETED)
         def log_training_results(trainer):
@@ -101,45 +92,51 @@ class IgniteTrainNVS:
             if  'train_test_every' in config_dict.keys() and (ep) % config_dict['train_test_every'] == 0:
                 print("Running evaluation of whole train set at epoch ", ep)
                 evaluator.run(train_loader, metrics=metrics)
-                _ = util.save_testing_error(save_path, trainer, evaluator,
-                                    vis, vis_windows, dataset_str='Training Set',
-                                    save_extension='debug_log_training_wholeset.txt')
+                _ = utils_train.save_testing_error(save_path, trainer, evaluator,
+                                    dataset_str='Training set',
+                                    save_extension='debug_log_whole_trainset.txt')
 
         @trainer.on(Events.EPOCH_COMPLETED)
-        # @trainer.on(Events.ITERATION_COMPLETED)
         def validate_model(engine):
             ep = engine.state.epoch
-            # - 1
-            if (ep) % config_dict['test_every'] == 0: # +1 to prevent evaluation at iteration 0
+            if ((ep) % config_dict['test_every'] == 0) or ep==1: # +1 to prevent evaluation at iteration 0
                     # return
                 print("Running evaluation at epoch ", ep)
                 evaluator.run(test_loader, metrics=metrics)
-                avg_accuracy = util.save_testing_error(save_path, engine, evaluator,
-                                    vis, vis_windows, dataset_str='Test Set', save_extension='debug_log_testing.txt')
+                accumulated_loss = utils_train.save_testing_error(save_path, engine, evaluator,
+                                    dataset_str='Validation set',
+                                    save_extension='debug_log_testing.txt')
         
                 # save the best model
-                utils_train.save_model_state(save_path, trainer, avg_accuracy, model, optimizer, engine.state)
+                utils_train.save_model_state(save_path, trainer, accumulated_loss,
+                                             model, optimizer, engine.state, wandb_run)
         
         @trainer.on(Events.EPOCH_COMPLETED)
-        # @trainer.on(Events.ITERATION_COMPLETED)
         def save_model(engine):
             epoch = engine.state.epoch
             print ('epoch',epoch,'engine.state.iteration',engine.state.iteration)
             if not epoch % config_dict['save_every']: # +1 to prevent evaluation at iteration 0
-                utils_train.save_model_state_iter(save_path, trainer, model, optimizer, engine.state)
+                utils_train.save_model_state_iter(save_path, trainer, model,
+                                                  optimizer, engine.state, wandb_run)
 
         # print test result
         @evaluator.on(Events.ITERATION_COMPLETED)
-        def log_test_loss(engine):
+        def log_test_example(engine):
             iteration = engine.state.iteration - 1
             if iteration in [0,100]:
-                utils_train.save_test_example(save_path, trainer, evaluator, vis, vis_windows, config_dict)
-    
+                utils_train.save_test_example(save_path, trainer, evaluator, config_dict)
+        
         # kick everything off
         trainer.run(train_loader, max_epochs=epochs, metrics=metrics)
 
-    def load_metrics(self, loss_test):
-        return {'primary': utils_train.AccumulatedLoss(loss_test)}
+    def load_metrics(self, loss):
+        return {'AccumulatedLoss': utils_train.AccumulatedLoss(loss)}
+
+    def initialize_wandb(self, config_dict):
+        wandb_run = wandb.init(config=config_dict, job_type='train',
+                               entity=config_dict['team_wandb'],
+                               project=config_dict['project_wandb'])
+        return wandb_run
         
     def load_network(self, config_dict):
         output_types= config_dict['output_types']
@@ -157,6 +154,12 @@ class IgniteTrainNVS:
         
         if lower_billinear:
             use_billinear_upsampling = False
+
+        if 'model_type' not in config_dict:
+            model_type_str = 'unet_encode3D_clean'
+        else:
+            model_type_str = config_dict['model_type']
+        unet_encode3D = importlib.import_module('models.'+model_type_str)
         network_single = unet_encode3D.unet(dimension_bg=config_dict['latent_bg'],
                                             dimension_fg=config_dict['latent_fg'],
                                             dimension_3d=config_dict['latent_3d'],
@@ -231,7 +234,7 @@ class IgniteTrainNVS:
             optimizer = torch.optim.Adam(network.parameters(), lr=config_dict['learning_rate'])
         return optimizer
     
-    def load_data_train(self,config_dict):
+    def load_data_train(self,config_dict,save_path):
         if config_dict['training_set']=='LPS_2fps_crop':
             dataset = MultiViewDatasetCrop(data_folder=config_dict['dataset_folder_train'],
                                        bg_folder=config_dict['bg_folder'],
@@ -248,17 +251,20 @@ class IgniteTrainNVS:
                                        rot_folder = config_dict['rot_folder'])
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_train'],
-              subjects=config_dict['train_subjects'],
-              use_subject_batches=config_dict['use_subject_batches'], use_view_batches=config_dict['use_view_batches'],
-              batch_size=config_dict['batch_size_train'],
-              randomize=True,
-              every_nth_frame=config_dict['every_nth_frame'])
+                                                save_path=save_path,
+                                                mode='train',
+                                                subjects=config_dict['train_subjects'],
+                                                use_subject_batches=config_dict['use_subject_batches'],
+                                                use_view_batches=config_dict['use_view_batches'],
+                                                batch_size=config_dict['batch_size_train'],
+                                                randomize=True,
+                                                every_nth_frame=config_dict['every_nth_frame'])
 
         loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler, num_workers=0, pin_memory=False,
                                              collate_fn=rhodin_utils_datasets.default_collate_with_string)
         return loader
     
-    def load_data_test(self,config_dict):
+    def load_data_test(self,config_dict,save_path):
         if config_dict['training_set']=='LPS_2fps_crop':
             dataset = MultiViewDatasetCrop(data_folder=config_dict['dataset_folder_test'],
                                        bg_folder=config_dict['bg_folder'],
@@ -275,6 +281,8 @@ class IgniteTrainNVS:
                                        rot_folder = config_dict['rot_folder'])
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_test'],
+                                                save_path=save_path,
+                                                mode='test',
                                                 subjects=config_dict['test_subjects'],
                                                 use_subject_batches=0,
                                                 use_view_batches=config_dict['use_view_batches'],
@@ -315,14 +323,21 @@ class IgniteTrainNVS:
         # annotation and pred is organized as a list, to facilitate multiple output types (e.g. heatmap and 3d loss)
         return loss_train, loss_test
     
-    def get_parameter_description(self, config_dict):
-        shorter_train_subjects = [subject[:2] for subject in config_dict['train_subjects']]
-        shorter_test_subjects = [subject[:2] for subject in config_dict['test_subjects']]
-        # folder = "../output/trainNVS_{job_identifier}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}_skipBG{skip_background}_bg{latent_bg}_fg{latent_fg}_3d{latent_3d}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}_nth{every_nth_frame}_c{active_cameras}_train{}_test{}_bs{use_view_batches}_lr{learning_rate}_".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
+def get_parameter_description(config_dict):
+    nb_chars = 3 if config_dict['training_set'] == 'treadmill' else 2
+    shorter_train_subjects = [subject[:nb_chars] for subject in config_dict['train_subjects']]
+    shorter_test_subjects = [subject[:nb_chars] for subject in config_dict['test_subjects']]
+    train_subj_str = util.join_string_list(shorter_train_subjects, '_')
+    test_subj_str = util.join_string_list(shorter_test_subjects, '_')
+    
+    if 'model_type' not in config_dict: #backward compatibility
+        folder = "../output/trainNVS_{job_identifier}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}/skipBG{skip_background}_bg{latent_bg}_fg{latent_fg}_3d{latent_3d}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}/nth{every_nth_frame}_c{active_cameras}_train_{}_test_{}_bs{use_view_batches}_lr{learning_rate}".format(train_subj_str, test_subj_str, **config_dict)
+    else: #added model type here
+        folder = "../output/train_{model_type}_{job_identifier}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}/skipBG{skip_background}_bg{latent_bg}_fg{latent_fg}_3d{latent_3d}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}/nth{every_nth_frame}_c{active_cameras}_train_{}_test_{}_bs{use_view_batches}_lr{learning_rate}".format(train_subj_str, test_subj_str, **config_dict)
+        print (folder)
 
-        folder = "../output/trainNVS_{job_identifier}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}/skipBG{skip_background}_bg{latent_bg}_fg{latent_fg}_3d{latent_3d}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_bs{use_view_batches}_lr{learning_rate}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
-        folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
-        return folder
+    folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
+    return folder
 
 
 def parse_arguments(argv):
@@ -354,8 +369,6 @@ if __name__ == "__main__":
     config_dict['dataset_folder_train'] = args.dataset_path
     config_dict['dataset_folder_test'] = args.dataset_path
     root = args.dataset_path.rsplit('/', 2)[0]
-    config_dict['bg_folder'] = os.path.join(root, 'median_bg/')
-    config_dict['rot_folder'] = os.path.join(root, 'rotation_cal_1/')
     
     ignite = IgniteTrainNVS()
     ignite.run(config_dict_module.__file__, config_dict)

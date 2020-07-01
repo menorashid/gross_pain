@@ -424,6 +424,14 @@ def plot_iol(inputs_raw, labels_raw, outputs_dict, config_dict, keyword, image_n
         ax_img.set_title("Output - foreground", size=title_font_size)
         grid_t = torchvision.utils.make_grid(images_diff, padding=0)
         tensor_imshow_normalized(ax_img, grid_t, x_label=x_label)
+    
+    if 'mask' in outputs_dict.keys():
+        images_out  = outputs_dict['mask'].cpu().data
+        created_sub_plots += 1
+        grid_t = torchvision.utils.make_grid(images_out, padding=0)
+        out_file = image_name[:-4]+'_mask_img.jpg'
+        imageio.imsave( out_file, tensor_to_im(grid_t))
+        
 
     if 'shuffled_pose' in outputs_dict.keys():
         shuffle_out = outputs_dict['shuffled_pose'].cpu().data
