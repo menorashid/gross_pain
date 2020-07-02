@@ -168,10 +168,6 @@ def save_model_state(save_path, engine, current_loss, model, optimizer, state, w
     torch.save(optimizer.state_dict(), optimizer_last_str)
     state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
     pickle.dump(state_variables, open(state_last_str, 'wb'))
-    model_artifact.add_file(network_last_str)
-    model_artifact.add_file(optimizer_last_str)
-    model_artifact.add_file(state_last_str)
-    wandb_run.log_artifact(model_artifact, aliases=['last'])
     
     if current_loss==engine.state.metrics['best_val']:
         print("Saving best model (previous best_loss={} > current_loss={})".format(best_val, current_loss))
