@@ -100,6 +100,7 @@ config_dict = {
     'skip_background' : False,  # This means use background
 
     # From rhodin config
-    'note'              : 'resL3'
+    'note'              : 'resL3',
+    'project_wandb': 'multi-view-encdec',
 
 }

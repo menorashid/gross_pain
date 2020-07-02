@@ -135,9 +135,17 @@ def debug_commands():
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
 	job_name = 'withRotSeg'
 
-	config_file = 'configs/config_train_rotTranslate_segmask.py'
+	# config_file = 'configs/config_train_rotTranslate_segmask.py'
+	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
+	# job_name = 'withRotTranslateSeg'
+
+	config_file = 'configs/config_train_rotation_newCal.py'
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
-	job_name = 'withRotTranslateSeg'
+	job_name = 'withRotNewCal'
+
+	config_file = 'configs/config_train_rotation_crop_newCal.py'
+	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
+	job_name = 'withRotCropNewCal'
 
 	util.mkdir('to_runs')
 
@@ -149,8 +157,8 @@ def debug_commands():
 		print (out_file)
 	
 		for test_subject in test_horses:
-			train_subjects = [x for x in train_horses if x is not test_subject]
-			# train_subjects = train_horses
+		# 	train_subjects = [x for x in train_horses if x is not test_subject]
+			train_subjects = train_horses
 			str_com = ['python','train_encode_decode.py']
 			str_com+= ['--config_file', config_file]
 			str_com+= ['--dataset_path', data_path]

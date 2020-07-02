@@ -30,12 +30,12 @@ config_dict = {
 
     # opt parameters    
     'num_epochs'              : 50,
-    'save_every'              : 10, #in epochs
+    'save_every'              : 50, #in epochs
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
     'test_every'              : 1, #size of epoch nth1 in iterations
-    'train_test_every'        : 5,
+    'train_test_every'        : 50,
     'plot_every'              : 1,
-    'print_every'             : 100,
+    'print_every'             : 10,
 
     # LPS dataset parameters
     
@@ -77,7 +77,7 @@ config_dict = {
     'every_nth_frame' : 1,
 
     # Encoder-decoder
-    # 'model_type' : 'unet_encode3D_clean',
+    'model_type' : 'unet_encode3D_clean',
     'latent_bg' : 0,
     'latent_fg' : 24,
     'latent_3d' : 200*3,
@@ -99,6 +99,7 @@ config_dict = {
     'skip_background' : True,  # This means use background
 
     # From rhodin config
-    'note'              : 'resL3'
+    'note'              : 'resL3',
+    'project_wandb': 'multi-view-encdec',
 
 }
