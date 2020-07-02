@@ -172,7 +172,7 @@ def get_rotated_latent(q_im, q_feat_curr, cam_num, dataset, test_subject):
     cam2world_s = np.array(cam2world_s)
     if cam_num>=0:
         world2cam_t = np.load(dataset.get_rot_path( cam_num, test_subject, 'extrinsic_rot'))[np.newaxis,:,:]
-        cam2cam = np.matmul(cam2world_s,world2cam_t)
+        cam2cam = np.matmul(world2cam_t,cam2world_s)
     else:
         cam2cam = cam2world_s
 
@@ -225,9 +225,11 @@ def main():
     # save_all_features(config_dict, config_path, all_subjects, out_path_meta, input_to_get, output_to_get)
     
     simple = False
-    cam_num = -1
-    config_dict['test_subjects'] = [test_subject]
-    post_str = '_'.join([config_dict['test_subjects'][0],'withself',str(cam_num)])
+    cam_num = 3
+    type_match = 'withtrain'
+    config_dict['test_subjects'] = [train_subjects[0]]
+    # post_str = '_'.join([config_dict['test_subjects'][0],'withself',str(cam_num)])
+    post_str = '_'.join([config_dict['test_subjects'][0],type_match,str(cam_num)])
     if simple:
         md_file = os.path.join(out_path_meta,'_'.join(['nn', 'simple', post_str])+'.md')
     else:
@@ -246,19 +248,20 @@ def main():
     
     if not simple:
         q_im, q_feat_curr = get_rotated_latent(q_im, q_feat_curr, cam_num, dataset, test_subject)
-    
-    
-    keep_lists = get_train_feat(train_subjects, out_path_meta, 1)
-    train_data = np.reshape(keep_lists[0], (keep_lists[0].shape[0],-1))
-    train_im = keep_lists[1]
+
 
     test_data = np.reshape(q_feat_curr, (q_feat_curr.shape[0],-1))
     
-    # train_data = np.reshape(q_feat_curr_org, (q_feat_curr_org.shape[0],-1))
-    # train_im = q_im_org
-    # print (train_data.shape, train_im.shape)
-    train_data = test_data
-    train_im = q_im
+    if type_match=='withtrain':
+        keep_lists = get_train_feat(train_subjects, out_path_meta, 1)
+        train_data = np.reshape(keep_lists[0], (keep_lists[0].shape[0],-1))
+        train_im = keep_lists[1]
+    elif type_match=='withselforg':
+        train_data = np.reshape(q_feat_curr_org, (q_feat_curr_org.shape[0],-1))
+        train_im = q_im_org
+    elif type_match=='withself':
+        train_data = test_data
+        train_im = q_im
 
     scaler = sklearn.preprocessing.StandardScaler()
     train_data = scaler.fit_transform(train_data)
@@ -267,7 +270,10 @@ def main():
 
     nn = sklearn.neighbors.NearestNeighbors(n_neighbors=10, algorithm = 'brute')
     nn.fit(train_data)
-    _, idx_close = nn.kneighbors()
+    if type_match=='withself':
+        _, idx_close = nn.kneighbors()
+    else:
+        _, idx_close = nn.kneighbors(test_data)
     print (idx_close[:10])
     # test_data)
     im_files = []
@@ -287,6 +293,7 @@ def main():
         im_files.append(im_row)
 
     visualize.markdown_im_table(im_files, titles, feat_file, md_file, title_strs = captions)
+    print (md_file)
 
     
         
