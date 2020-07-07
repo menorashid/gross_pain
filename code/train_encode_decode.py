@@ -45,8 +45,11 @@ class IgniteTrainNVS:
         config_dict['team_wandb'] = config_dict.get('team_wandb', 'egp')
         
         print (config_dict['rot_folder'])
-        # s = input()
-        wandb_run = self.initialize_wandb(config_dict)
+        
+        if not config_dict['project_wandb']=='debug':
+            wandb_run = self.initialize_wandb(config_dict)
+        else:
+            wandb_run = False
 
         # save path and config files
         save_path = get_parameter_description(config_dict)
@@ -58,7 +61,8 @@ class IgniteTrainNVS:
         train_loader = self.load_data_train(config_dict, save_path)
         test_loader = self.load_data_test(config_dict, save_path)
         model = self.load_network(config_dict)
-        wandb.watch(model)
+        if wandb_run:
+            wandb.watch(model)
         model = model.to(device)
         optimizer = self.loadOptimizer(model,config_dict)
         loss_train,loss_test = self.load_loss(config_dict)

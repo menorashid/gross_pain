@@ -117,7 +117,8 @@ def pnp_latent_commands():
 
 
 def debug_commands():
-	train_horses = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
+	train_horses = ['aslan']
+	# , 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
 	test_horses_all = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
 	# ['herrera','julia','naughty_but_nice']
 	# ['inkasso', 'kastanjett', 'sir_holger']
@@ -145,7 +146,7 @@ def debug_commands():
 
 	config_file = 'configs/config_train_rotation_crop_newCal.py'
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
-	job_name = 'withRotCropNewCal'
+	job_name = 'withRotCropNewCalDebug'
 
 	util.mkdir('to_runs')
 
