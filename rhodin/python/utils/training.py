@@ -105,7 +105,11 @@ def save_testing_error(save_path, trainer, evaluator,
         metric_value = metrics[key]
         metric_values.append(metric_value)
         name_for_log = dataset_str + ' ' + key
-        wandb.log({name_for_log: metric_value})
+        try:
+            wandb.log({name_for_log: metric_value})
+        except:
+            pass
+
 
     # also save as .txt for plotting
     log_name = os.path.join(save_path, save_extension)
