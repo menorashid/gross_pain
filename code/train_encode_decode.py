@@ -308,7 +308,11 @@ class IgniteTrainNVS:
         
         image_imgNet_bare = losses_images.ImageNetCriterium(criterion=pairwise_loss, weight=config_dict['loss_weight_imageNet'], do_maxpooling=config_dict.get('do_maxpooling',True))
         image_imgNet_loss = losses_generic.LossOnDict(key='img_crop', loss=image_imgNet_bare)
-    
+        
+        latent_dist_loss = losses_generic.LossOnPredDict(key = 'latent_3d', 
+            other_key = 'latent_3d_transformed',
+            loss = torch.nn.modules.loss.MSELoss(),
+            weight = config_dict['loss_weight_latent'] if 'loss_weight_latent' in config_dict.keys() else 1.)
         
         losses_train = []
         losses_test = []
@@ -320,6 +324,9 @@ class IgniteTrainNVS:
             if config_dict['loss_weight_imageNet']>0:
                 losses_train.append(image_imgNet_loss)
                 losses_test.append(image_imgNet_loss)
+            if 'loss_weight_latent' in config_dict.keys() and config_dict['loss_weight_latent']>0:
+                losses_train.append(latent_dist_loss)
+                losses_test.append(latent_dist_loss)
                 
         loss_train = losses_generic.PreApplyCriterionListDict(losses_train, sum_losses=True)
         loss_test  = losses_generic.PreApplyCriterionListDict(losses_test,  sum_losses=True)

@@ -357,8 +357,10 @@ class unet(nn.Module):
         
         if 'extrinsic_rot' in input_dict.keys():
             latent_3d_rotated = self.get_latent_3d_rotated(input_dict, latent_3d, cam2cam)
+            latent_3d_transformed = torch.index_select(latent_3d_rotated, dim=0, index=shuffled_pose_inv)
         else:
             latent_3d_rotated = latent_3d
+            latent_3d_transformed = latent_3d
 
 
         if self.skip_background:
@@ -396,7 +398,7 @@ class unet(nn.Module):
         ###############################################
         # Select the right output
         output_dict_all = {'3D' : output_pose, 'img_crop' : output_img, 'shuffled_pose' : shuffled_pose,
-                           'shuffled_appearance' : shuffled_appearance, 'latent_3d': latent_3d,
+                           'shuffled_appearance' : shuffled_appearance, 'latent_3d': latent_3d, 'latent_3d_transformed': latent_3d_transformed,
                            'pain': output_pain } 
         output_dict = {}
         for key in self.output_types:

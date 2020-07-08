@@ -20,7 +20,7 @@ config_dict = {
     # Possible input types    : 'img_crop' | 'bg_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
     'input_types'             : ['img_crop', 'bg_crop','extrinsic_rot', 'extrinsic_rot_inv'],
     # Possible output types   :  'img_crop' | '3D'
-    'output_types'            : ['img_crop'],
+    'output_types'            : ['img_crop', 'latent_3d','latent_3d_transformed'],
     # Possible lt train       : 'img_crop' | '3D' | 'bounding_box_cam' | 'intrinsic_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
     'label_types_train'       : ['img_crop'],
     # Possible lt test        : 'img_crop' | '3D' | 'bounding_box_cam' | 'intrinsic_crop' | 'extrinsic_rot' | 'extrinsic_rot_inv'
@@ -92,6 +92,7 @@ config_dict = {
     'loss_weight_gradient' : 0.01,
     'loss_weight_imageNet' : 2,
     'loss_weight_3d' : 0,
+    'loss_weight_latent' : 1,
     'do_maxpooling' : False,
     'encoderType' : 'UNet',
     'implicit_rotation' : False,
