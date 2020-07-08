@@ -1,7 +1,20 @@
 # Kinematic tree for horses
-num_joints = 36
-joint_names = ['pelvis', 'pelvis0', 'spine', 'spine0', 'spine1', 'spine2', 'spine3', 'LLeg1', 'LLeg2', 'LLeg3', 'LFoot', 'RLeg1', 'RLeg2', 'RLeg3', 'RFoot', 'Neck', 'Neck1', 'Head', 'LLegBack1', 'LLegBack2', 'LLegBack3', 'LFootBack', 'RLegBack1', 'RLegBack2', 'RLegBack3', 'RFootBack', 'Tail1', 'Tail2', 'Tail3', 'Tail4', 'Tail5', 'Tail6', 'Tail7', 'Mouth', 'LEar', 'REar']
-bones = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [6, 11], [11, 12], [12, 13], [13, 14], [6, 15], [15, 16], [16, 17], [0, 18], [18, 19], [19, 20], [20, 21], [0, 22], [22, 23], [23, 24], [24, 25], [0, 26], [26, 27], [27, 28], [28, 29], [29, 30], [30, 31], [31, 32], [17, 33], [17, 34], [17, 35]]
+
+num_joints = 50
+joint_names = ['CristaFac_L', 'CristaFac_R', 'Poll', 'T8_', 'T12', 'T15','L3_','L5_','TubSac',
+    'S5_', 'SpinaSca_R', 'Shoulder_R', 'Elbow_R', 'Carpus_R', 'MC3_R_PD', 'MC3_R_PP',
+    'MC3_R_DD', 'MC3_R_DP', 'Fetl_RF', 'Hoof_RF', 'TubCox_R', 'Hip_R', 'Knee_R', 'Tarsus_R',
+     'MT3_R_PD', 'MT3_R_PP', 'MT3_R_DD', 'MT3_R_DP', 'Fetl_RH', 'Hoof_RH', 'SpinaSca_L',
+    'Shoulder_L', 'Elbow_L', 'Carpus_L', 'MC3_L_PD', 'MC3_L_PP', 'MC3_L_DD', 'MC3_L_DP',
+    'Fetl_LF', 'Hoof_LF', 'TubCox_L', 'Hip_L', 'Knee_L', 'Tarsus_L', 'MT3_L_PD',
+     'MT3_L_PP', 'MT3_L_DD', 'MT3_L_DP', 'Fetl_LH', 'Hoof_LH', 'Sternum']
+
+bones=[[1, 0], [2, 1], [3, 2], [4, 3], [5, 4], [6, 5], [7, 6], [8, 7], [2, 9], [9, 10], [10, 11],
+ [11, 12], [12, 13], [13, 15], [15, 17], [12, 14], [14, 16], [16, 17], [17, 18], [2, 29], [29, 30],
+ [30, 31], [31, 32], [32, 33], [33, 35], [35, 37], [32, 34], [34, 36], [36, 37], [37, 38],
+ [8, 20], [20, 21], [21, 22], [22, 23], [23, 25], [25, 27], [22, 24], [24, 26], [26, 27], [27, 28],
+ [8, 40], [40, 41], [41, 42], [42, 43], [43, 45], [45, 47], [42, 44], [44, 46], [46, 47],
+ [47, 48], [8, 49]]
 
 
 inputDimension = 128
@@ -21,8 +34,8 @@ config_dict = {
     'num_joints' : 50,
 
     # opt parameters    
-    'num_epochs'              : 50,
-    'save_every'              : 100000,
+    'num_epochs'              : 75,
+    'save_every'              : 10,
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
     'train_test_every'        : 5,
     'test_every'              : 1,
