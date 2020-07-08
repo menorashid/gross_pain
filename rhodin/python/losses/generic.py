@@ -7,7 +7,20 @@ class LossOnDict(torch.nn.Module):
         self.loss = loss
         
     def forward(self, pred_dict, label_dict):
-        return self.loss(pred_dict[self.key], label_dict[self.key])
+        loss = self.loss(pred_dict[self.key], label_dict[self.key])
+        return loss
+
+class LossOnPredDict(torch.nn.Module):
+    def __init__(self, key, other_key, loss, weight = 1):
+        super(LossOnPredDict, self).__init__()
+        self.key = key
+        self.other_key = other_key
+        self.loss = loss
+        self.weight = weight
+        
+    def forward(self, pred_dict, label_dict):
+        loss = self.weight * self.loss(pred_dict[self.key], pred_dict[self.other_key])
+        return loss
 
 class PreApplyCriterionListDict(torch.nn.Module):
     """

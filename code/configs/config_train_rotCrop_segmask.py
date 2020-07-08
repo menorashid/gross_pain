@@ -102,6 +102,5 @@ config_dict = {
     # From rhodin config
     'note'              : 'resL3',
     'project_wandb': 'multi-view-encdec',
-    'project_wandb': 'multi-view-encdec',
 
 }

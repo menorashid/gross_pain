@@ -45,8 +45,11 @@ class IgniteTrainNVS:
         config_dict['team_wandb'] = config_dict.get('team_wandb', 'egp')
         
         print (config_dict['rot_folder'])
-        # s = input()
-        wandb_run = self.initialize_wandb(config_dict)
+        
+        if not config_dict['project_wandb']=='debug':
+            wandb_run = self.initialize_wandb(config_dict)
+        else:
+            wandb_run = False
 
         # save path and config files
         save_path = get_parameter_description(config_dict)
@@ -58,7 +61,8 @@ class IgniteTrainNVS:
         train_loader = self.load_data_train(config_dict, save_path)
         test_loader = self.load_data_test(config_dict, save_path)
         model = self.load_network(config_dict)
-        wandb.watch(model)
+        if wandb_run:
+            wandb.watch(model)
         model = model.to(device)
         optimizer = self.loadOptimizer(model,config_dict)
         loss_train,loss_test = self.load_loss(config_dict)
@@ -304,7 +308,11 @@ class IgniteTrainNVS:
         
         image_imgNet_bare = losses_images.ImageNetCriterium(criterion=pairwise_loss, weight=config_dict['loss_weight_imageNet'], do_maxpooling=config_dict.get('do_maxpooling',True))
         image_imgNet_loss = losses_generic.LossOnDict(key='img_crop', loss=image_imgNet_bare)
-    
+        
+        latent_dist_loss = losses_generic.LossOnPredDict(key = 'latent_3d', 
+            other_key = 'latent_3d_transformed',
+            loss = torch.nn.modules.loss.MSELoss(),
+            weight = config_dict['loss_weight_latent'] if 'loss_weight_latent' in config_dict.keys() else 1.)
         
         losses_train = []
         losses_test = []
@@ -316,6 +324,9 @@ class IgniteTrainNVS:
             if config_dict['loss_weight_imageNet']>0:
                 losses_train.append(image_imgNet_loss)
                 losses_test.append(image_imgNet_loss)
+            if 'loss_weight_latent' in config_dict.keys() and config_dict['loss_weight_latent']>0:
+                losses_train.append(latent_dist_loss)
+                losses_test.append(latent_dist_loss)
                 
         loss_train = losses_generic.PreApplyCriterionListDict(losses_train, sum_losses=True)
         loss_test  = losses_generic.PreApplyCriterionListDict(losses_test,  sum_losses=True)

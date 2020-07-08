@@ -53,7 +53,10 @@ def save_training_error(save_path, engine):
     # log training error
     iteration = engine.state.iteration - 1
     loss, _ = engine.state.output
-    wandb.log({'train loss': loss})
+    try:
+        wandb.log({'train loss': loss})
+    except:
+        pass
     
     print("Epoch[{}] Iteration[{}] Batch Loss: {:.2f}".format(engine.state.epoch, iteration, loss))
     title="Training error"
@@ -102,7 +105,11 @@ def save_testing_error(save_path, trainer, evaluator,
         metric_value = metrics[key]
         metric_values.append(metric_value)
         name_for_log = dataset_str + ' ' + key
-        wandb.log({name_for_log: metric_value})
+        try:
+            wandb.log({name_for_log: metric_value})
+        except:
+            pass
+
 
     # also save as .txt for plotting
     log_name = os.path.join(save_path, save_extension)
@@ -157,9 +164,9 @@ def save_model_state(save_path, engine, current_loss, model, optimizer, state, w
     if not os.path.exists(model_path):
         os.makedirs(model_path)
 
-    model_artifact = wandb.Artifact(
-        util.translate_special_char(model_path[-80:-20], None),
-        type='model')
+    # model_artifact = wandb.Artifact(
+    #     util.translate_special_char(model_path[-80:-20], None),
+    #     type='model')
 
     network_last_str = os.path.join(model_path,"network_last_val.pth")
     optimizer_last_str = os.path.join(model_path,"optimizer_last_val.pth")
@@ -171,9 +178,7 @@ def save_model_state(save_path, engine, current_loss, model, optimizer, state, w
     
     if current_loss==engine.state.metrics['best_val']:
         print("Saving best model (previous best_loss={} > current_loss={})".format(best_val, current_loss))
-        model_artifact = wandb.Artifact(
-            util.translate_special_char(model_path[-80:-20], None),
-            type='model')
+        
 
         network_best_str = os.path.join(model_path, "network_best_val_t1.pth")
         optimizer_best_str = os.path.join(model_path, "optimizer_best_val_t1.pth")
@@ -183,10 +188,15 @@ def save_model_state(save_path, engine, current_loss, model, optimizer, state, w
         torch.save(optimizer.state_dict(), optimizer_best_str)
         state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
         pickle.dump(state_variables, open(state_best_str, 'wb'))
-        model_artifact.add_file(network_best_str)
-        model_artifact.add_file(optimizer_best_str)
-        model_artifact.add_file(state_best_str)
-        wandb_run.log_artifact(model_artifact, aliases=['best'])
+
+        if wandb_run:
+            model_artifact = wandb.Artifact(
+            util.translate_special_char(model_path[-80:-20], None),
+            type='model')
+            model_artifact.add_file(network_best_str)
+            model_artifact.add_file(optimizer_best_str)
+            model_artifact.add_file(state_best_str)
+            wandb_run.log_artifact(model_artifact, aliases=['best'])
 
 
 def save_model_state_iter(save_path, engine, model, optimizer, state, wandb_run):
@@ -199,10 +209,7 @@ def save_model_state_iter(save_path, engine, model, optimizer, state, wandb_run)
 
     str_file_name = '%03d'%state.epoch
 
-    model_artifact = wandb.Artifact(
-        util.translate_special_char(model_path[-80:-20], None),
-        type='model')
-
+    
     network_str = os.path.join(model_path,"network_"+str_file_name+".pth")
     optimizer_str = os.path.join(model_path,"optimizer_"+str_file_name+".pth")
     state_str = os.path.join(model_path,"state_"+str_file_name+".pickle")
@@ -213,10 +220,14 @@ def save_model_state_iter(save_path, engine, model, optimizer, state, wandb_run)
     state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
     pickle.dump(state_variables, open(state_str,'wb'))
 
-    model_artifact.add_file(network_str)
-    model_artifact.add_file(optimizer_str)
-    model_artifact.add_file(state_str)
-    wandb_run.log_artifact(model_artifact, aliases=[str_file_name])
+    if wandb_run:
+        model_artifact = wandb.Artifact(
+            util.translate_special_char(model_path[-80:-20], None),
+            type='model')
+        model_artifact.add_file(network_str)
+        model_artifact.add_file(optimizer_str)
+        model_artifact.add_file(state_str)
+        wandb_run.log_artifact(model_artifact, aliases=[str_file_name])
     
 
 # Fix of original Ignite Loss to not depend on single tensor output but to accept dictionaries

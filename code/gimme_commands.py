@@ -147,6 +147,14 @@ def debug_commands():
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
 	job_name = 'withRotCropNewCal'
 
+	config_file = 'configs/config_train_rotCropLatent.py'
+	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
+	job_name = 'withRotCropLatent'
+
+	config_file = 'configs/config_train_rotCropSegMaskLatent.py'
+	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
+	job_name = 'withRotCropSegLatent'
+
 	util.mkdir('to_runs')
 
 	num_gpus = 1
@@ -157,8 +165,8 @@ def debug_commands():
 		print (out_file)
 	
 		for test_subject in test_horses:
-		# 	train_subjects = [x for x in train_horses if x is not test_subject]
-			train_subjects = train_horses
+			train_subjects = [x for x in train_horses if x is not test_subject]
+			# train_subjects = train_horses
 			str_com = ['python','train_encode_decode.py']
 			str_com+= ['--config_file', config_file]
 			str_com+= ['--dataset_path', data_path]
