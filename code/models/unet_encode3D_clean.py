@@ -237,8 +237,8 @@ class unet(nn.Module):
         for i,v in enumerate(shuffled_pose):
             shuffled_pose_inv[v]=i
             
-        # print('self.training',self.training,'shuffled_appearance',shuffled_appearance)
-        # print('shuffled_pose      ',shuffled_pose)
+        print('self.training',self.training,'shuffled_appearance',shuffled_appearance)
+        print('shuffled_pose      ',shuffled_pose)
         # s = raw_input()
             
         shuffled_appearance = torch.LongTensor(shuffled_appearance).to(device)

@@ -117,7 +117,8 @@ def pnp_latent_commands():
 
 
 def debug_commands():
-	train_horses = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
+	train_horses = ['aslan']
+	# , 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
 	test_horses_all = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
 	# ['herrera','julia','naughty_but_nice']
 	# ['inkasso', 'kastanjett', 'sir_holger']
@@ -151,9 +152,9 @@ def debug_commands():
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
 	job_name = 'withRotCropLatent'
 
-	config_file = 'configs/config_train_rotCropSegMaskLatent.py'
-	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
-	job_name = 'withRotCropSegLatent'
+	# config_file = 'configs/config_train_rotCropSegMaskLatent.py'
+	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
+	# job_name = 'withRotCropSegLatent'
 
 	util.mkdir('to_runs')
 
@@ -165,8 +166,8 @@ def debug_commands():
 		print (out_file)
 	
 		for test_subject in test_horses:
-			train_subjects = [x for x in train_horses if x is not test_subject]
-			# train_subjects = train_horses
+			# train_subjects = [x for x in train_horses if x is not test_subject]
+			train_subjects = train_horses
 			str_com = ['python','train_encode_decode.py']
 			str_com+= ['--config_file', config_file]
 			str_com+= ['--dataset_path', data_path]
