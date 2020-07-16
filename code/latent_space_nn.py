@@ -8,67 +8,12 @@ import torch
 import sklearn.manifold
 import sklearn.preprocessing
 
-import train_encode_decode as ted
+from test_encode_decode_new import IgniteTestNVS
 from rhodin.python.utils import datasets as rhodin_utils_datasets
 from rhodin.python.utils import io as rhodin_utils_io
 
 from train_encode_decode_pain import get_model_path 
 import glob
-# as ext_get_model_path
-
-if torch.cuda.is_available():
-    device = "cuda:0"
-else:
-    device = "cpu"
-print(device)
-
-class IgniteTestNVS(ted.IgniteTrainNVS):
-    def run(self, config_dict_file, config_dict):
-        config_dict['n_hidden_to3Dpose'] = config_dict.get('n_hidden_to3Dpose', 2)
-        
-        data_loader = self.load_data_test(config_dict, ted.get_parameter_description(config_dict))
-        model = self.load_network(config_dict)
-        model = model.to(device)
-
-        return model, data_loader, config_dict
-    
-def predict(model, input_dict, label_dict):
-    model.eval()
-    with torch.no_grad():
-        input_dict_cuda, label_dict_cuda = rhodin_utils_datasets.nestedDictToDevice((input_dict, label_dict), device=device)
-        output_dict_cuda = model(input_dict_cuda)
-        output_dict = rhodin_utils_datasets.nestedDictToDevice(output_dict_cuda, device='cpu')
-    return output_dict
-
-def nextImage(data_iterator):
-    input_dict, label_dict = next(data_iterator)
-    return input_dict, label_dict
-
-def get_config_model_and_iterator(config_path, config_dict):
-    ignite = IgniteTestNVS()
-    model, data_loader, config_dict = ignite.run(config_path, config_dict)
-    data_iterator = iter(data_loader)
-    return config_dict, model, data_iterator
-
-def get_values(model, data_iterator, input_to_get, output_to_get):
-    
-    the_rest = {}
-    for str_curr in input_to_get+output_to_get:
-        the_rest[str_curr] = []
-    
-    idx = 0
-    for input_dict, label_dict in data_iterator:
-        idx+=1
-        output_dict = predict(model, input_dict, label_dict)
-        for str_curr in input_to_get:
-            the_rest[str_curr].append(input_dict[str_curr].numpy())
-
-        for str_curr in output_to_get:
-            the_rest[str_curr].append(output_dict[str_curr].numpy())
-
-
-    return the_rest
-
 
 def set_up_config_dict(config_path,
                      train_subjects,
@@ -108,8 +53,8 @@ def save_all_features(config_dict, config_path, all_subjects, out_path_meta, inp
         config_dict['test_subjects'] = [test_subject_curr]
 
 
-        config_dict, model, data_iterator = get_config_model_and_iterator(config_path, config_dict)
-        ret_vals = get_values(model, data_iterator, input_to_get, output_to_get)
+        tester = IgniteTestNVS(config_path, config_dict,'simple_featsave')
+        ret_vals = tester.get_values(input_to_get, output_to_get)
         
         for idx_batch, batch in enumerate(ret_vals['img_path']):
             new_batch = []
@@ -127,6 +72,36 @@ def save_all_features(config_dict, config_path, all_subjects, out_path_meta, inp
                 out_file = os.path.join(out_dir_data,k+'_%06d.npy'%idx_batch)
                 util.makedirs(os.path.split(out_file)[0])
                 np.save(out_file, batch)
+
+def save_all_im(config_dict, config_path, all_subjects, out_path_meta, input_to_get, output_to_get):
+    
+    for test_subject_curr in all_subjects:
+        print (test_subject_curr, all_subjects)
+        out_dir_data = os.path.join(out_path_meta,test_subject_curr)
+        config_dict['test_subjects'] = [test_subject_curr]
+
+
+        tester = IgniteTestNVS(config_path, config_dict,'simple_imsave')
+        ret_vals = tester.get_values(input_to_get, output_to_get)
+        
+        for idx_batch, batch in enumerate(ret_vals['img_path']):
+            new_batch = []
+            for row in batch:
+                [interval_int_pre, interval_int_post, interval_ind, view, frame] = row
+                interval = '%014d_%06d'%(interval_int_pre,interval_int_post)
+                img_path = util.get_image_name(test_subject_curr, interval_ind, interval, view, frame, config_dict['data_dir_path'])
+                assert os.path.exists(img_path)
+                new_batch.append(img_path)
+            new_batch = np.array(new_batch)
+            ret_vals['img_path'][idx_batch] = new_batch
+
+        for k in ret_vals.keys():
+            for idx_batch, batch in enumerate(ret_vals[k]):
+                out_file = os.path.join(out_dir_data,k+'_%06d.npy'%idx_batch)
+                util.makedirs(os.path.split(out_file)[0])
+                np.save(out_file, batch)
+
+
 
 def get_file_list(out_path_meta, test_subject):
     dir_curr = os.path.join(out_path_meta, test_subject)
@@ -189,20 +164,20 @@ def main():
     job_identifier = 'withRotCrop'
     nth_frame = 1
 
-    dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
-    config_path = 'configs/config_train_rotation_bl.py'
-    job_identifier = 'withRot'
-    nth_frame = 10
-    
-    dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
-    config_path = 'configs/config_train_rotation_crop_newCal.py'
-    job_identifier = 'withRotCropNewCal'
-    nth_frame = 10
-
     # dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
-    # config_path = 'configs/config_train_rotation_newCal.py'
-    # job_identifier = 'withRotNewCal'
-    nth_frame = 100
+    # config_path = 'configs/config_train_rotation_bl.py'
+    # job_identifier = 'withRot'
+    # nth_frame = 10
+    
+    # dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
+    # config_path = 'configs/config_train_rotation_crop_newCal.py'
+    # job_identifier = 'withRotCropNewCal'
+    # nth_frame = 10
+
+    # # dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
+    # # config_path = 'configs/config_train_rotation_newCal.py'
+    # # job_identifier = 'withRotNewCal'
+    # nth_frame = 100
 
     train_subjects = 'brava/herrera/inkasso/julia/kastanjett/naughty_but_nice/sir_holger'.split('/')
     test_subject = 'aslan'
@@ -222,8 +197,9 @@ def main():
     out_path_meta = model_path[:-4]+'_feats'
     util.mkdir(out_path_meta)
 
-    # save_all_features(config_dict, config_path, all_subjects, out_path_meta, input_to_get, output_to_get)
+    save_all_features(config_dict, config_path, all_subjects, out_path_meta, input_to_get, output_to_get)
     
+    return
     simple = False
     cam_num = 3
     type_match = 'withtrain'

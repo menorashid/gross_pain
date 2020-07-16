@@ -237,18 +237,15 @@ class unet(nn.Module):
         for i,v in enumerate(shuffled_pose):
             shuffled_pose_inv[v]=i
             
-        print('self.training',self.training,'shuffled_appearance',shuffled_appearance)
-        print('shuffled_pose      ',shuffled_pose)
+        # print('self.training',self.training,'shuffled_appearance',shuffled_appearance)
+        # print('shuffled_pose      ',shuffled_pose)
+        # print (rotation_by_user)
         # s = raw_input()
             
         shuffled_appearance = torch.LongTensor(shuffled_appearance).to(device)
         shuffled_pose       = torch.LongTensor(shuffled_pose).to(device)
         shuffled_pose_inv   = torch.LongTensor(shuffled_pose_inv).to(device)
 
-        if rotation_by_user:
-            if 'shuffled_appearance' in input_dict.keys():
-                shuffled_appearance = input_dict['shuffled_appearance'].long()
-        
         return shuffled_appearance, shuffled_pose, shuffled_pose_inv 
 
     def get_cam2cam(self, input_dict, shuffled_pose, rotation_by_user):
@@ -341,6 +338,10 @@ class unet(nn.Module):
         # determine shuffled rotation
         
         shuffled_appearance, shuffled_pose, shuffled_pose_inv = self.get_shuff_idx(batch_size, rotation_by_user, device)
+        
+        if rotation_by_user:
+            if 'shuffled_appearance' in input_dict.keys():
+                shuffled_appearance = input_dict['shuffled_appearance'].long()
 
         if 'extrinsic_rot' in input_dict.keys():
             cam2cam = self.get_cam2cam(input_dict, shuffled_pose, rotation_by_user)

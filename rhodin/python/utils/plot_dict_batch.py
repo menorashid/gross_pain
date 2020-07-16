@@ -37,7 +37,10 @@ def tensor_imshow(ax, img):
     ax.imshow(npimg)
 
 def tensor_to_im(img, mean=None, stdDev=None):
-    npimg = img.numpy()
+    if isinstance(img,np.ndarray):
+        npimg = img
+    else:
+        npimg = img.numpy()
     npimg = np.swapaxes(npimg, 0, 2)
     npimg = np.swapaxes(npimg, 0, 1)
 
