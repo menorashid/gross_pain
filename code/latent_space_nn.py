@@ -35,8 +35,8 @@ def set_up_config_dict(config_path,
     config_dict['data_dir_path'] = dataset_path
     config_dict['dataset_folder_train'] = dataset_path
     config_dict['dataset_folder_test'] = dataset_path
-    config_dict['bg_folder'] = '../data/median_bg/'
-    config_dict['rot_folder'] = '../data/rotation_cal_1/'
+    # config_dict['bg_folder'] = '../data/median_bg/'
+    # config_dict['rot_folder'] = '../data/rotation_cal_1/'
     for val in input_to_get:
         if val not in config_dict['input_types']:
             config_dict['input_types'].append(val) 

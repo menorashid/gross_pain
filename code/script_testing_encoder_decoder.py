@@ -16,6 +16,10 @@ from train_encode_decode_pain import get_model_path
 import glob
 import imageio
 
+# def get_rot_mats(config_dict, test_subject, view):
+#     rot_folder = config_dict['rot_folder']
+
+
 def set_up_config_dict(config_path,
                      train_subjects,
                      test_subjects,
@@ -36,8 +40,8 @@ def set_up_config_dict(config_path,
     config_dict['data_dir_path'] = dataset_path
     config_dict['dataset_folder_train'] = dataset_path
     config_dict['dataset_folder_test'] = dataset_path
-    config_dict['bg_folder'] = '../data/median_bg/'
-    config_dict['rot_folder'] = '../data/rotation_cal_1/'
+    # config_dict['bg_folder'] = '../data/median_bg/'
+    # config_dict['rot_folder'] = '../data/rotation_cal_2/'
     
     return config_dict
 
@@ -52,7 +56,7 @@ def edit_config_retvals(config_dict, input_to_get, output_to_get):
 def save_all_features(config_dict, config_path, all_subjects, out_path_meta):
     output_to_get = ['latent_3d']
     input_to_get = ['img_path']
-    task = 'simple_featsave'
+    # task = 'simple_featsave'
     
     edit_config_retvals(config_dict, input_to_get, output_to_get)
 
@@ -62,7 +66,7 @@ def save_all_features(config_dict, config_path, all_subjects, out_path_meta):
         config_dict['test_subjects'] = [test_subject_curr]
 
 
-        tester = IgniteTestNVS(config_path, config_dict, task)
+        tester = IgniteTestNVS(config_path, config_dict)
         ret_vals = tester.get_values(input_to_get, output_to_get)
         
         for idx_batch, batch in enumerate(ret_vals[0]['img_path']):
@@ -83,11 +87,11 @@ def save_all_features(config_dict, config_path, all_subjects, out_path_meta):
                     util.makedirs(os.path.split(out_file)[0])
                     np.save(out_file, batch)
 
-def save_all_im(config_dict, config_path, all_subjects, out_path_meta):
+def save_all_im(config_dict, config_path, all_subjects, out_path_meta, view = None):
     # (config_dict, config_path, all_subjects, out_path_meta, input_to_get, output_to_get, task):
     output_to_get = ['img_crop']
     input_to_get = ['img_crop']
-    task = 'simple_imsave'
+    # task = 'simple_imsave'
     
     edit_config_retvals(config_dict, input_to_get, output_to_get)
 
@@ -97,8 +101,8 @@ def save_all_im(config_dict, config_path, all_subjects, out_path_meta):
         config_dict['test_subjects'] = [test_subject_curr]
 
 
-        tester = IgniteTestNVS(config_path, config_dict, task)
-        ret_vals = tester.get_images(input_to_get, output_to_get)
+        tester = IgniteTestNVS(config_path, config_dict)
+        ret_vals = tester.get_images(input_to_get, output_to_get, view)
         
         for idx_batch, in_batch in enumerate(ret_vals[0]['img_crop']):
             out_batch = ret_vals[1]['img_crop'][idx_batch]
@@ -114,63 +118,50 @@ def save_all_im(config_dict, config_path, all_subjects, out_path_meta):
         visualize.writeHTMLForFolder(out_dir_data, height = 128, width = 128)
 
 
-def get_file_list(out_path_meta, test_subject):
-    dir_curr = os.path.join(out_path_meta, test_subject)
-    feat_files = [os.path.join(dir_curr,file_curr) for file_curr in os.listdir(dir_curr) if file_curr.startswith('latent_3d')]
-    feat_files.sort()
-    im_files = [feat_file.replace('latent_3d','img_path') for feat_file in feat_files]
-    for im_file in im_files:
-        assert os.path.exists(im_file)
-    return feat_files, im_files
-
-def get_train_feat(train_subjects, meta_path, every_nth):
-    all_feat_files = []
-    all_im_files = []
-    for subject in train_subjects:
-        feat_files, im_files = get_file_list(meta_path, subject)
-        all_feat_files += feat_files
-        all_im_files += im_files
-
-    keep_lists =[[],[]]
-    for feat_file, im_file in zip(all_feat_files, all_im_files):
-        for idx_file_curr, file_curr in enumerate([feat_file, im_file]):
-            feat = np.load(file_curr)
-            feat = feat[::every_nth]
-            keep_lists[idx_file_curr].append(feat)
-
+def save_latent_view_diff(config_dict, config_path, all_subjects, out_path_meta, views = [0,1,2,3]):
+    # (config_dict, config_path, all_subjects, out_path_meta, input_to_get, output_to_get, task):
+    output_to_get = ['latent_3d']
+    input_to_get = ['img_path','view','frame']
+    # task = 'simple_imsave'
     
-    keep_lists = [np.concatenate(keep_list, axis = 0) for keep_list in keep_lists]
+    edit_config_retvals(config_dict, input_to_get, output_to_get)
 
-    return keep_lists
+    for test_subject_curr in all_subjects:
+        print (test_subject_curr, all_subjects)
+        out_dir_data = os.path.join(out_path_meta,test_subject_curr)
+        config_dict['test_subjects'] = [test_subject_curr]
 
-def get_rotated_latent(q_im, q_feat_curr, cam_num, dataset, test_subject):
 
-    cam2world_s = []
-    for idx_q in range(q_im.shape[0]):
-        im_file_curr = q_im[idx_q]
-        im_file_curr_split = im_file_curr.split('/')
-        view = int(im_file_curr_split[-2])
-        subject = im_file_curr_split[-4]
-        assert subject==test_subject
-        rot_path = dataset.get_rot_path( view, subject, 'extrinsic_rot_inv')
-        cam2world_s.append(np.load(rot_path))
+        tester = IgniteTestNVS(config_path, config_dict)
+        ret_vals = tester.get_latent_diff(views)
+        print (ret_vals.keys())
+        for k in ret_vals.keys():
+            vals = ret_vals[k]
+            print (k,len(vals),vals[0].shape,vals[0][0])
 
-    cam2world_s = np.array(cam2world_s)
-    if cam_num>=0:
-        world2cam_t = np.load(dataset.get_rot_path( cam_num, test_subject, 'extrinsic_rot'))[np.newaxis,:,:]
-        cam2cam = np.matmul(world2cam_t,cam2world_s)
-    else:
-        cam2cam = cam2world_s
+        # for idx_batch, in_batch in enumerate(ret_vals['diffs']):
+        #     out_batch = ret_vals[1]['img_crop'][idx_batch]
+        #     for im_num in range(in_batch.shape[0]):
+        #         out_file_pre = os.path.join(out_dir_data, '%04d_%04d')%(idx_batch,im_num)
+        #         util.makedirs(out_dir_data)
 
-    cam2cam_t = np.transpose(cam2cam,(0,2,1))
-    feat_new = np.matmul(q_feat_curr, cam2cam_t)
-    
-    return q_im, feat_new
+        #         out_file = out_file_pre+'_in.jpg'
+        #         imageio.imsave( out_file, in_batch[im_num])
+        #         out_file = out_file_pre+'_out.jpg'
+        #         imageio.imsave( out_file, out_batch[im_num])
+
+        # visualize.writeHTMLForFolder(out_dir_data, height = 128, width = 128)
+
+
 
 def get_job_params(job_identifier, out_path_postpend, test_subjects = None, train_subjects = None, model_num = 50, batch_size_test = 64, test_every = None):
     if job_identifier=='withRotCrop':
         dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
         config_path = 'configs/config_train_rotation_crop.py'
+        nth_frame = 1
+    elif job_identifier=='withRotCropNewCal':
+        dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
+        config_path = 'configs/config_train_rotation_crop_newCal.py'
         nth_frame = 1
     else:
         raise ValueError('job_identifier %s not registered'%job_identifier)
@@ -180,19 +171,7 @@ def get_job_params(job_identifier, out_path_postpend, test_subjects = None, trai
         test_subjects = ['aslan']
     if train_subjects is None:
         train_subjects = [val for val in all_subjects if val not in test_subjects]
-    
-    # model_num = 50
-    # batch_size_test = 64
-    # if 'featsave' in task:
-    #     output_to_get = ['latent_3d']
-    #     input_to_get = ['img_path']
-    # elif 'imsave' in task:
-    #     output_to_get = ['img_crop']
-    #     input_to_get = ['img_crop']
-    # else:
-    #     raise ValueError('task %s not registered'%task)
-
-    
+       
     config_dict = set_up_config_dict(config_path, train_subjects, test_subjects, job_identifier, batch_size_test, dataset_path)
     model_path = get_model_path(config_dict, str(model_num))
     print (model_path)
@@ -209,14 +188,18 @@ def get_job_params(job_identifier, out_path_postpend, test_subjects = None, trai
 
 def main():
 
-    job_identifier = 'withRotCrop'
+    job_identifier = 'withRotCropNewCal'
     test_every = 100
-    task = 'simple_imsave'
+    task = 'viewdiff'
     job_params = get_job_params(job_identifier, task, test_every = test_every)
+    # views = [0
+
     if 'featsave' in task:
         save_all_features(**job_params)
     elif 'imsave' in task:
-        save_all_im(**job_params)
+        save_all_im(**job_params, view = view)
+    elif 'viewdiff' in task:
+        save_latent_view_diff(**job_params)
     
 
 

@@ -77,7 +77,7 @@ config_dict = {
     'every_nth_frame' : 1,
 
     # Encoder-decoder
-    'model_type' : 'unet_encode3D_clean',
+    # 'model_type' : 'unet_encode3D_clean',
     'latent_bg' : 0,
     'latent_fg' : 24,
     'latent_3d' : 200*3,
@@ -100,6 +100,6 @@ config_dict = {
 
     # From rhodin config
     'note'              : 'resL3',
-    'project_wandb': 'multi-view-encdec',
+    'project_wandb': 'debug',
 
 }
