@@ -201,8 +201,8 @@ class unet(nn.Module):
                 else:
                     random.shuffle(selected)
 
-            else: # deterministic shuffling for testing
-                selected = np.roll(selected,1).tolist()
+            # else: # deterministic shuffling for testing
+            #     selected = np.roll(selected,1).tolist()
             list[start:end] = selected
 
         def flip_segment(list, start, width):
@@ -260,6 +260,11 @@ class unet(nn.Module):
             world_2_cam_shuffled = torch.index_select(world_2_cam, dim=0, index=shuffled_pose)
             cam2cam = torch.bmm(world_2_cam_shuffled, cam_2_world)
             # print (cam2cam)
+
+        # print (cam2cam.size())
+        # print (cam2cam[:10])
+        # print (cam_2_world)
+        # s = input()
         return cam2cam
 
 
