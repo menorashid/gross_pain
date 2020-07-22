@@ -334,10 +334,11 @@ class IgniteTrainNVS:
         # annotation and pred is organized as a list, to facilitate multiple output types (e.g. heatmap and 3d loss)
         return loss_train, loss_test
     
-def get_parameter_description(config_dict):
+def get_parameter_description(config_dict, old = False):
     nb_chars = 3 if config_dict['training_set'] == 'treadmill' else 2
     shorter_train_subjects = [subject[:nb_chars] for subject in config_dict['train_subjects']]
     shorter_test_subjects = [subject[:nb_chars] for subject in config_dict['test_subjects']]
+    
     train_subj_str = util.join_string_list(shorter_train_subjects, '_')
     test_subj_str = util.join_string_list(shorter_test_subjects, '_')
     
@@ -345,8 +346,14 @@ def get_parameter_description(config_dict):
         folder = "../output/trainNVS_{job_identifier}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}/skipBG{skip_background}_bg{latent_bg}_fg{latent_fg}_3d{latent_3d}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}/nth{every_nth_frame}_c{active_cameras}_train_{}_test_{}_bs{use_view_batches}_lr{learning_rate}".format(train_subj_str, test_subj_str, **config_dict)
     else: #added model type here
         folder = "../output/train_{model_type}_{job_identifier}_{encoderType}_layers{num_encoding_layers}_implR{implicit_rotation}_w3Dp{loss_weight_pose3D}_w3D{loss_weight_3d}_wRGB{loss_weight_rgb}_wGrad{loss_weight_gradient}_wImgNet{loss_weight_imageNet}/skipBG{skip_background}_bg{latent_bg}_fg{latent_fg}_3d{latent_3d}_lh3Dp{n_hidden_to3Dpose}_ldrop{latent_dropout}_billin{upsampling_bilinear}_fscale{feature_scale}_shuffleFG{shuffle_fg}_shuffle3d{shuffle_3d}_{training_set}/nth{every_nth_frame}_c{active_cameras}_train_{}_test_{}_bs{use_view_batches}_lr{learning_rate}".format(train_subj_str, test_subj_str, **config_dict)
-        print (folder)
 
+    if old:
+        split_folder = os.path.split(folder)
+        end_str = "nth{every_nth_frame}_c{active_cameras}_train{}_test{}_bs{use_view_batches}_lr{learning_rate}".format(shorter_train_subjects, shorter_test_subjects, **config_dict)        
+        folder = os.path.join(split_folder[0],end_str)
+        
+
+        
     folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
     return folder
 

@@ -127,30 +127,23 @@ def save_latent_view_diff(config_dict, config_path, all_subjects, out_path_meta,
     edit_config_retvals(config_dict, input_to_get, output_to_get)
 
     for test_subject_curr in all_subjects:
-        print (test_subject_curr, all_subjects)
         out_dir_data = os.path.join(out_path_meta,test_subject_curr)
         config_dict['test_subjects'] = [test_subject_curr]
 
-
         tester = IgniteTestNVS(config_path, config_dict)
         ret_vals = tester.get_latent_diff(views)
-        print (ret_vals.keys())
+        
         for k in ret_vals.keys():
             vals = ret_vals[k]
-            print (k,len(vals),vals[0].shape,vals[0][0])
-
-        # for idx_batch, in_batch in enumerate(ret_vals['diffs']):
-        #     out_batch = ret_vals[1]['img_crop'][idx_batch]
-        #     for im_num in range(in_batch.shape[0]):
-        #         out_file_pre = os.path.join(out_dir_data, '%04d_%04d')%(idx_batch,im_num)
-        #         util.makedirs(out_dir_data)
-
-        #         out_file = out_file_pre+'_in.jpg'
-        #         imageio.imsave( out_file, in_batch[im_num])
-        #         out_file = out_file_pre+'_out.jpg'
-        #         imageio.imsave( out_file, out_batch[im_num])
-
-        # visualize.writeHTMLForFolder(out_dir_data, height = 128, width = 128)
+        
+        for idx_batch in range(len(ret_vals['diffs'])):
+            out_file = os.path.join(out_dir_data, '%04d.npz')%(idx_batch)
+            util.makedirs(out_dir_data)
+            print (np.mean(ret_vals['diffs'][idx_batch]))
+            inner_batch = {}
+            for k in ret_vals.keys():
+                inner_batch[k] = ret_vals[k][idx_batch]
+            np.savez_compressed(out_file, **inner_batch)
 
 
 
@@ -163,6 +156,10 @@ def get_job_params(job_identifier, out_path_postpend, test_subjects = None, trai
         dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
         config_path = 'configs/config_train_rotation_crop_newCal.py'
         nth_frame = 1
+    elif job_identifier=='withRotNewCal':
+        dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
+        config_path = 'configs/config_train_rotation_newCal.py'
+        nth_frame = 10
     else:
         raise ValueError('job_identifier %s not registered'%job_identifier)
 
@@ -174,7 +171,19 @@ def get_job_params(job_identifier, out_path_postpend, test_subjects = None, trai
        
     config_dict = set_up_config_dict(config_path, train_subjects, test_subjects, job_identifier, batch_size_test, dataset_path)
     model_path = get_model_path(config_dict, str(model_num))
+    if not os.path.exists(model_path):
+        model_path_old = get_model_path(config_dict, str(model_num), True)
+        if os.path.exists(model_path_old):
+            model_path_meta = os.path.split(os.path.split(model_path)[0])[0]
+            model_old_path_meta = os.path.split(os.path.split(model_path_old)[0])[0]
+            os.rename(model_old_path_meta, model_path_meta)
+    
     print (model_path)
+    if not os.path.exists(model_path):
+        print ('model path does not exist')
+        return None
+
+    
     
     if test_every is None:
         test_every = nth_frame
@@ -190,9 +199,15 @@ def main():
 
     job_identifier = 'withRotCropNewCal'
     test_every = 100
+    # job_identifier = 'withRotNewCal'
+    # test_every = 1000
     task = 'viewdiff'
+    view = 0
     job_params = get_job_params(job_identifier, task, test_every = test_every)
-    # views = [0
+    
+    if job_params is None:
+        return
+    
 
     if 'featsave' in task:
         save_all_features(**job_params)

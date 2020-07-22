@@ -68,8 +68,8 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
         return folder
 
 
-def get_model_path(config_dict, epoch):
-    folder = train_encode_decode.get_parameter_description(config_dict)
+def get_model_path(config_dict, epoch, old = False):
+    folder = train_encode_decode.get_parameter_description(config_dict, old)
     model_ext = 'network_0' + epoch + '.pth'
     model_path = os.path.join(folder, 'models', model_ext)
     print ('Model Path',model_path)

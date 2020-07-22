@@ -14,6 +14,7 @@ from rhodin.python.utils import io as rhodin_utils_io
 
 from train_encode_decode_pain import get_model_path 
 import glob
+from tqdm import tqdm
 # as ext_get_model_path
 
 if torch.cuda.is_available():
@@ -121,47 +122,50 @@ class IgniteTestNVS(ted.IgniteTrainNVS):
         ret_vals = {}
         for key in ['diffs']+input_keys:
             ret_vals[key] = []
-
-
+        
+        
         for input_dict, label_dict in self.data_iterator:
-            idx+=1
-            assert 'view' in input_dict.keys()
-            assert 'frame' in input_dict.keys()
-            
-            input_view = input_dict['view']
-            input_frame = input_dict['frame']
-
-            # print (input_view)
-            # print (input_frame)
-            # all_latents = []
-
-            output_dict = self.predict( self.set_view(input_dict, view=None), label_dict)
-            assert 'latent_3d' in output_dict.keys()
-
-            gt_latent  = output_dict['latent_3d']
-
+        
+                idx+=1
+                assert 'view' in input_dict.keys()
+                assert 'frame' in input_dict.keys()
                 
-            diffs = []
-            for view in views:
-                input_dict = self.set_view(input_dict, view)
-                output_dict = self.predict( input_dict, label_dict)
-                latent = output_dict['latent_3d']
-                rel_gt = gt_latent[input_view==view].unsqueeze(1)
-                latent = latent.view(latent.size(0)//4,-1,latent.size(1),latent.size(2))
-                diff = self.mse(rel_gt, latent)
-                diff = torch.mean(torch.sqrt(torch.sum(diff, dim = -1)),-1)
-                diff = diff.view(diff.size(0)*diff.size(1),1)
-                diffs.append(diff)
-                # print (diff[:10])
-                # print (diff.size())
+                input_view = input_dict['view']
+                input_frame = input_dict['frame']
 
-            diffs = torch.cat(diffs, dim = 1)
-            diffs = torch.sum(diffs, dim = 1)/3.
-            diffs = diffs.numpy()
-            for key in input_keys:
-                ret_vals[key].append(input_dict[key].numpy())
-            ret_vals['diffs'].append(diffs)
-            
+                output_dict = self.predict( self.set_view(input_dict, view=None), label_dict)
+                assert 'latent_3d' in output_dict.keys()
+
+                gt_latent  = output_dict['latent_3d']
+
+                    
+                diffs = []
+                for view in views:
+                    input_dict = self.set_view(input_dict, view)
+                    output_dict = self.predict( input_dict, label_dict)
+                    latent = output_dict['latent_3d']
+                    rel_gt = gt_latent[input_view==view].unsqueeze(1).repeat(1,4,1,1)
+                    latent = latent.view(latent.size(0)//4,-1,latent.size(1),latent.size(2))
+                    diff = self.mse(rel_gt, latent)
+
+                    diff = torch.mean(torch.sqrt(torch.sum(diff, dim = -1)),-1)
+                    diff = diff.view(diff.size(0)*diff.size(1),1)
+                    diffs.append(diff)
+                    
+                diffs = torch.cat(diffs, dim = 1)
+                
+                num_views = diffs.size(1)
+                gt_view_tiled = input_view.unsqueeze(1).repeat(1,num_views)
+                tg_view_tiled = torch.Tensor(views).view(1,num_views).repeat(diffs.size(0),1)
+                num_diff = torch.sum(tg_view_tiled!=gt_view_tiled, dim = 1)
+                
+                diffs = torch.sum(diffs, dim = 1)
+                diffs = diffs/num_diff 
+                diffs = diffs.numpy()
+                for key in input_keys:
+                    ret_vals[key].append(input_dict[key].numpy())
+                ret_vals['diffs'].append(diffs)
+                
 
         return ret_vals
 
