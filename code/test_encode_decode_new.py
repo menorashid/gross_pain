@@ -15,6 +15,7 @@ from rhodin.python.utils import io as rhodin_utils_io
 from train_encode_decode_pain import get_model_path 
 import glob
 from tqdm import tqdm
+
 # as ext_get_model_path
 
 if torch.cuda.is_available():
@@ -37,23 +38,17 @@ class IgniteTestNVS(ted.IgniteTrainNVS):
         self.data_iterator = iter(data_loader)
         self.config_dict = config_dict
         self.mse = torch.nn.MSELoss(reduction = 'none')
+        self.bg = None
+        self.bg_path = None
+        
         
 
-        # self.task = task
-        
-        # if erc is None:
-        #     self.erc = np.eye(3)
-        # else:
-        # self.erg = erg
-        # self.view = view
-        # self.rot = self.set_rotmat()
-        # self.erc = self.set_erc()
-
-    def get_view_rotmat(self, view):
+    def get_view_rotmat(self, view, key):
+        print (view, key)
         test_subject = self.config_dict['test_subjects']
         assert len(test_subject)==1
         test_subject = test_subject[0]
-        rot_path = self.data_loader.dataset.get_rot_path(view, test_subject, 'extrinsic_rot')
+        rot_path = self.data_loader.dataset.get_rot_path(view, test_subject, key)
         rot = np.load(rot_path)
         return rot
         
@@ -67,19 +62,37 @@ class IgniteTestNVS(ted.IgniteTrainNVS):
         return output_dict
 
     def set_view(self, input_dict, view):
-        if view is not None:
-            rot = self.get_view_rotmat(view)
-            rot_curr = rot[np.newaxis,:,:]
+        keys = ['extrinsic_rot','extrinsic_tvec']
+        keys = [k for k in keys if k in input_dict.keys()]
+        for key in keys:
             
-            bs = input_dict['extrinsic_rot'].size(0)
-            rot_curr = np.tile(rot_curr,(bs,1,1))
-            input_dict['extrinsic_rot'] = torch.from_numpy(rot_curr).float().to(device)
+            rot_curr = self.get_view_rotmat(view, key)
+            len_rot_curr = len(rot_curr.shape)
+            rot_curr = np.expand_dims(rot_curr,0)
             
+            bs = input_dict[key].size(0)
+            tile_specs = tuple([bs]+[1]*len_rot_curr)
+            rot_curr = np.tile(rot_curr,tile_specs)
+            
+            input_dict[key] = torch.from_numpy(rot_curr).float().to(device)
+                
+        return input_dict
+
+    def set_bg(self, input_dict, bg):
+        
+        if (self.bg is None) or (self.bg_path!=bg):
+            self.bg_path = bg
+            self.bg = self.data_loader.dataset.transform_in(imageio.imread(bg))
+            
+
+        bs = input_dict['bg_crop'].size(0)
+        bg = self.bg.unsqueeze(0).repeat(bs,1,1,1).to(device)
+        input_dict['bg_crop'] = bg
+        
         return input_dict
 
     # get im mse loss
-    # get rotated loss
-
+    
     def unnormalize(self, batch):
         vals = []
         for val in ['img_mean', 'img_std']:
@@ -93,8 +106,8 @@ class IgniteTestNVS(ted.IgniteTrainNVS):
         
 
     # get images
-    def get_images(self, input_to_get = ['img_crop'], output_to_get = ['img_crop'], view = None):
-        ret_vals = self.get_values(input_to_get, output_to_get, view)
+    def get_images(self, input_to_get = ['img_crop'], output_to_get = ['img_crop'], view = None, bg = None):
+        ret_vals = self.get_values(input_to_get, output_to_get, view, bg)
         keys = [input_to_get, output_to_get]
         mean = self.config_dict['img_mean']
         stdDev = self.config_dict['img_std']
@@ -133,7 +146,7 @@ class IgniteTestNVS(ted.IgniteTrainNVS):
                 input_view = input_dict['view']
                 input_frame = input_dict['frame']
 
-                output_dict = self.predict( self.set_view(input_dict, view=None), label_dict)
+                output_dict = self.predict( input_dict, label_dict)
                 assert 'latent_3d' in output_dict.keys()
 
                 gt_latent  = output_dict['latent_3d']
@@ -141,7 +154,9 @@ class IgniteTestNVS(ted.IgniteTrainNVS):
                     
                 diffs = []
                 for view in views:
-                    input_dict = self.set_view(input_dict, view)
+                    if view is not None:
+                        print (view)
+                        input_dict = self.set_view(input_dict, view)
                     output_dict = self.predict( input_dict, label_dict)
                     latent = output_dict['latent_3d']
                     rel_gt = gt_latent[input_view==view].unsqueeze(1).repeat(1,4,1,1)
@@ -170,7 +185,7 @@ class IgniteTestNVS(ted.IgniteTrainNVS):
         return ret_vals
 
                 
-    def get_values(self, input_to_get, output_to_get, view = None):
+    def get_values(self, input_to_get, output_to_get, view = None, bg = None):
         
         the_rest = []
         for vals in [input_to_get,output_to_get]:
@@ -183,9 +198,13 @@ class IgniteTestNVS(ted.IgniteTrainNVS):
         
         for input_dict, label_dict in self.data_iterator:
             idx+=1
-
-            input_dict = self.set_view(input_dict, view)
             
+            if view is not None:
+                input_dict = self.set_view(input_dict, view)
+
+            if bg is not None:
+                input_dict = self.set_bg(input_dict, bg)
+
             output_dict = self.predict( input_dict, label_dict)
 
             dicts =[ input_dict, output_dict]

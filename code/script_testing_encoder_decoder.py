@@ -87,7 +87,7 @@ def save_all_features(config_dict, config_path, all_subjects, out_path_meta):
                     util.makedirs(os.path.split(out_file)[0])
                     np.save(out_file, batch)
 
-def save_all_im(config_dict, config_path, all_subjects, out_path_meta, view = None):
+def save_all_im(config_dict, config_path, all_subjects, out_path_meta, view = None, bg = None):
     # (config_dict, config_path, all_subjects, out_path_meta, input_to_get, output_to_get, task):
     output_to_get = ['img_crop']
     input_to_get = ['img_crop']
@@ -102,7 +102,7 @@ def save_all_im(config_dict, config_path, all_subjects, out_path_meta, view = No
 
 
         tester = IgniteTestNVS(config_path, config_dict)
-        ret_vals = tester.get_images(input_to_get, output_to_get, view)
+        ret_vals = tester.get_images(input_to_get, output_to_get, view, bg)
         
         for idx_batch, in_batch in enumerate(ret_vals[0]['img_crop']):
             out_batch = ret_vals[1]['img_crop'][idx_batch]
@@ -116,6 +116,7 @@ def save_all_im(config_dict, config_path, all_subjects, out_path_meta, view = No
                 imageio.imsave( out_file, out_batch[im_num])
 
         visualize.writeHTMLForFolder(out_dir_data, height = 128, width = 128)
+        
 
 
 def save_latent_view_diff(config_dict, config_path, all_subjects, out_path_meta, views = [0,1,2,3]):
@@ -144,30 +145,43 @@ def save_latent_view_diff(config_dict, config_path, all_subjects, out_path_meta,
             for k in ret_vals.keys():
                 inner_batch[k] = ret_vals[k][idx_batch]
             np.savez_compressed(out_file, **inner_batch)
-
+        
 
 
 def get_job_params(job_identifier, out_path_postpend, test_subjects = None, train_subjects = None, model_num = 50, batch_size_test = 64, test_every = None):
-    if job_identifier=='withRotCrop':
+    if 'crop' in job_identifier.lower():
         dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
-        config_path = 'configs/config_train_rotation_crop.py'
-        nth_frame = 1
-    elif job_identifier=='withRotCropNewCal':
-        dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
-        config_path = 'configs/config_train_rotation_crop_newCal.py'
-        nth_frame = 1
-    elif job_identifier=='withRotNewCal':
+    else:
         dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
+
+    if job_identifier=='withRotCrop':
+        config_path = 'configs/config_train_rotation_crop.py'
+    elif job_identifier=='withRotCropNewCal':
+        config_path = 'configs/config_train_rotation_crop_newCal.py'
+    elif job_identifier=='withRotNewCal':
         config_path = 'configs/config_train_rotation_newCal.py'
-        nth_frame = 10
+    elif job_identifier=='withRotTransAll':
+        config_path = 'configs/config_train_rotation_translation_newCal.py'
+    elif job_identifier=='withRotSeg':
+        config_path = 'configs/config_train_rot_segmask.py'
+    elif job_identifier=='withRotCropSeg':
+        config_path = 'configs/config_train_rotCrop_segmask.py'
+    elif job_identifier=='withRotTranslateSeg':
+        config_path = 'configs/config_train_rotTranslate_segmask.py'
+    elif job_identifier=='withRotCropSegLatent': 
+        config_path = 'configs/config_train_rotCropSegMaskLatent.py'
     else:
         raise ValueError('job_identifier %s not registered'%job_identifier)
 
     all_subjects = 'aslan/brava/herrera/inkasso/julia/kastanjett/naughty_but_nice/sir_holger'.split('/')
     if test_subjects is None:
         test_subjects = ['aslan']
+    
     if train_subjects is None:
         train_subjects = [val for val in all_subjects if val not in test_subjects]
+    elif train_subjects=='all':
+        train_subjects = all_subjects
+
        
     config_dict = set_up_config_dict(config_path, train_subjects, test_subjects, job_identifier, batch_size_test, dataset_path)
     model_path = get_model_path(config_dict, str(model_num))
@@ -182,11 +196,10 @@ def get_job_params(job_identifier, out_path_postpend, test_subjects = None, trai
     if not os.path.exists(model_path):
         print ('model path does not exist')
         return None
-
     
     
-    if test_every is None:
-        test_every = nth_frame
+    # if test_every is None:
+    #     test_every = nth_frame
 
     config_dict['pretrained_network_path'] = model_path
     config_dict['every_nth_frame'] = test_every
@@ -197,13 +210,26 @@ def get_job_params(job_identifier, out_path_postpend, test_subjects = None, trai
 
 def main():
 
-    job_identifier = 'withRotCropNewCal'
-    test_every = 100
+    # job_identifier = 'withRotCropNewCal'
     # job_identifier = 'withRotNewCal'
-    # test_every = 1000
+    # job_identifier = 'withRotTransAll'
+    # job_identifier = 'withRotSeg'
+    # job_identifier = 'withRotCropSeg'
+    # job_identifier = 'withRotTranslateSeg'
+    job_identifier = 'withRotCropSegLatent'
+    bg = '../data/blank_mean.jpg'
+    train_subjects = None
+
+    if 'crop' in job_identifier.lower():
+        test_every = 100
+    else:
+        test_every = 1000
+
+    task = 'imsave'
+    task = 'bgswap'
     task = 'viewdiff'
     view = 0
-    job_params = get_job_params(job_identifier, task, test_every = test_every)
+    job_params = get_job_params(job_identifier, task, train_subjects = train_subjects, test_every = test_every)
     
     if job_params is None:
         return
@@ -211,8 +237,8 @@ def main():
 
     if 'featsave' in task:
         save_all_features(**job_params)
-    elif 'imsave' in task:
-        save_all_im(**job_params, view = view)
+    elif ('imsave' in task) or ('bgswap' in task):
+        save_all_im(**job_params, view = view, bg = bg)
     elif 'viewdiff' in task:
         save_latent_view_diff(**job_params)
     
