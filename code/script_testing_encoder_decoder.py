@@ -117,7 +117,28 @@ def save_all_im(config_dict, config_path, all_subjects, out_path_meta, view = No
 
         visualize.writeHTMLForFolder(out_dir_data, height = 128, width = 128)
         
+def save_im_rot(config_dict, config_path, all_subjects, out_path_meta):
+    output_to_get = ['img_crop']
+    input_to_get = ['img_crop']
+    edit_config_retvals(config_dict, input_to_get, output_to_get)
+    config_dict['batch_size_test'] = 4
+    
+    test_subject_curr = all_subjects[1]
+    
+    out_dir_data = os.path.join(out_path_meta,test_subject_curr)
+    config_dict['test_subjects'] = [test_subject_curr]
 
+    tester = IgniteTestNVS(config_path, config_dict)
+    ret_vals = tester.rotate_one_image()
+        
+    for im_num,im in enumerate(ret_vals):
+        out_file_pre = os.path.join(out_dir_data, '%04d')%(im_num)
+        util.makedirs(out_dir_data)
+
+        out_file = out_file_pre+'.jpg'
+        imageio.imsave( out_file, im)
+        
+    visualize.writeHTMLForFolder(out_dir_data, height = 128, width = 128)
 
 def save_latent_view_diff(config_dict, config_path, all_subjects, out_path_meta, views = [0,1,2,3]):
     # (config_dict, config_path, all_subjects, out_path_meta, input_to_get, output_to_get, task):
@@ -210,14 +231,15 @@ def get_job_params(job_identifier, out_path_postpend, test_subjects = None, trai
 
 def main():
 
-    # job_identifier = 'withRotCropNewCal'
+    job_identifier = 'withRotCropNewCal'
     # job_identifier = 'withRotNewCal'
     # job_identifier = 'withRotTransAll'
     # job_identifier = 'withRotSeg'
     # job_identifier = 'withRotCropSeg'
     # job_identifier = 'withRotTranslateSeg'
-    job_identifier = 'withRotCropSegLatent'
-    bg = '../data/blank_mean.jpg'
+    # job_identifier = 'withRotCropSegLatent'
+    bg = None
+    # '../data/blank_mean.jpg'
     train_subjects = None
 
     if 'crop' in job_identifier.lower():
@@ -225,10 +247,11 @@ def main():
     else:
         test_every = 1000
 
-    task = 'imsave'
-    task = 'bgswap'
-    task = 'viewdiff'
-    view = 0
+    # task = 'imsave'
+    # task = 'bgswap'
+    # task = 'viewdiff'
+    task = 'imrot'
+    view = None
     job_params = get_job_params(job_identifier, task, train_subjects = train_subjects, test_every = test_every)
     
     if job_params is None:
@@ -241,6 +264,8 @@ def main():
         save_all_im(**job_params, view = view, bg = bg)
     elif 'viewdiff' in task:
         save_latent_view_diff(**job_params)
+    elif 'imrot' in task:
+        save_im_rot(**job_params)
     
 
 

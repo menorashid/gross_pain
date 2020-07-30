@@ -44,14 +44,37 @@ class IgniteTestNVS(ted.IgniteTrainNVS):
         
 
     def get_view_rotmat(self, view, key):
-        print (view, key)
+        # print (view, key)
         test_subject = self.config_dict['test_subjects']
         assert len(test_subject)==1
         test_subject = test_subject[0]
         rot_path = self.data_loader.dataset.get_rot_path(view, test_subject, key)
         rot = np.load(rot_path)
         return rot
-        
+
+    def rotate_one_image(self):
+        in_vals = []
+        out_vals = []
+        for input_dict, label_dict in self.data_iterator:
+            in_vals.append(input_dict['img_crop'])
+            
+            angles = np.linspace(0,2*np.pi,10)
+            for angle in angles:
+                rot_mat = util.rotationMatrixXZY(0, angle,0)
+                input_dict['external_rotation_global'] = torch.from_numpy(rot_mat).float().to(device)
+                input_dict['external_rotation_cam'] = torch.from_numpy(np.eye(3)).float().to(device) 
+                output_dict = self.predict( input_dict, label_dict)
+                out_vals.append(output_dict['img_crop'].numpy())
+            break
+
+        ret_vals = []
+        for vals in in_vals+out_vals:
+            batch_un_norm = self.unnormalize(vals)
+            batch_un_norm = np.swapaxes(np.swapaxes(batch_un_norm, 1, 3),1,2)
+            ret_vals.append(batch_un_norm[0])
+
+        return ret_vals
+
 
     def predict(self, input_dict, label_dict):
         self.model.eval()
