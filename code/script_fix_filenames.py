@@ -281,9 +281,9 @@ def extract_frames():
 
 def main():
 
-    extract_frames()
+    # extract_frames()
 
-    return
+    # return
     data_path = '../data/lps_data/surveillance_camera'
     
     data_selection_path = '../metadata/pain_no_pain_x2h_intervals_for_extraction.csv'
@@ -345,9 +345,13 @@ def main():
     # util.mkdir(out_dir_testing)
     # mve = MultiViewFrameExtractor(data_path = data_path, width= 128, height = 128, frame_rate = 2., output_dir = out_dir_testing,views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count(), offset_file = out_file_final)
     
-    out_dir_testing = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps'
+    fps = 10
+    out_dir_testing = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_'+str(fps)+'fps'
     util.mkdir(out_dir_testing)
-    mve = MultiViewFrameExtractor(data_path = data_path, width= 672, height = 380, frame_rate = 0.2, output_dir = out_dir_testing,views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count(), offset_file = out_file_final)
+
+    # print ('data_path =', data_path, 'width=' ,672, 'height =', 380, 'frame_rate =', 0.2, 'output_dir =', out_dir_testing,'views =', [0,1,2,3], 'data_selection_path =', data_selection_path, 'num_processes =', multiprocessing.cpu_count(), 'offset_file =', out_file_final)
+
+    mve = MultiViewFrameExtractor(data_path = data_path, width= 672, height = 380, frame_rate = fps, output_dir = out_dir_testing,views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count(), offset_file = out_file_final)
     
 
 

@@ -291,7 +291,7 @@ class IgniteTrainNVS:
                                                 use_subject_batches=0,
                                                 use_view_batches=config_dict['use_view_batches'],
                                                 batch_size=config_dict['batch_size_test'],
-                                                randomize=True,
+                                                randomize=False,
                                                 every_nth_frame=config_dict['every_nth_frame'])
 
         loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler, num_workers=0, pin_memory=False,
@@ -351,9 +351,9 @@ def get_parameter_description(config_dict, old = False):
         split_folder = os.path.split(folder)
         end_str = "nth{every_nth_frame}_c{active_cameras}_train{}_test{}_bs{use_view_batches}_lr{learning_rate}".format(shorter_train_subjects, shorter_test_subjects, **config_dict)        
         folder = os.path.join(split_folder[0],end_str)
-        
 
-        
+
+
     folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
     return folder
 

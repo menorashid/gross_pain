@@ -63,6 +63,9 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
     def get_parameter_description(self, config_dict):#, config_dict):
         shorter_train_subjects = [subject[:2] for subject in config_dict['train_subjects']]
         shorter_test_subjects = [subject[:2] for subject in config_dict['test_subjects']]
+        shorter_train_subjects = util.join_string_list(shorter_train_subjects, '_')
+        shorter_test_subjects  = util.join_string_list(shorter_test_subjects, '_')
+    
         folder = "../output/trainNVSPainFromLatent_{job_identifier}_{job_identifier_encdec}/{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_lr{learning_rate}_bstrain{batch_size_train}_bstest{batch_size_test}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
         folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
         return folder
@@ -129,10 +132,11 @@ if __name__ == "__main__":
     config_dict['dataset_folder_train'] = args.dataset_path
     config_dict['dataset_folder_test'] = args.dataset_path
     root = args.dataset_path.rsplit('/', 2)[0]
-    config_dict['bg_folder'] = os.path.join(root, 'median_bg/')
-    config_dict['rot_folder'] = os.path.join(root, 'rotation_cal_1/')
-
+    
     config_dict['pretrained_network_path'] = get_model_path(config_dict_for_saved_model, epoch=args.epoch_encdec)
+
+    config_dict['rot_folder'] = config_dict_for_saved_model['rot_folder']
+    config_dict['bg_folder'] =  config_dict_for_saved_model['bg_folder']
 
     ignite = IgniteTrainPainFromLatent()
     ignite.run(config_dict_module.__file__, config_dict)

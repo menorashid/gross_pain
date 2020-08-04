@@ -61,7 +61,7 @@ def back_bone_commands():
 
 def pnp_latent_commands():
 	train_horses = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
-	test_horses_all = ['aslan', 'brava', 'herrera', 'inkasso']
+	test_horses_all = train_horses[:]
 	# , 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
 	# ['herrera','julia','naughty_but_nice']
 	# ['inkasso', 'kastanjett', 'sir_holger']
@@ -69,17 +69,18 @@ def pnp_latent_commands():
 	
 	to_run_str = 'nth1'
 	# 
-	config_file_model = 'configs/config_train_rotation_crop.py'
-	job_name_model = 'withRotCrop'
+	config_file_model = 'configs/config_train_rotation_crop_newCal.py'
+	job_name_model = 'withRotCropNewCal'
 	epoch = '50'
+
 
 	# config_file = 'configs/config_train_painfromlatent_crop.py'
 	# job_name = 'painWithRotCropwApp'
 	# python_path = 'train_encode_decode_pain_wApp.py'
 
 	config_file = 'configs/config_train_painfromlatent_crop.py'
-	job_name = 'painWithRotCrop512'
-	python_path = 'train_encode_decode_pain_512.py'
+	job_name = 'pain'
+	python_path = 'train_encode_decode_pain.py'
 
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
 	
@@ -111,14 +112,14 @@ def pnp_latent_commands():
 			str_com = ' '.join(str_com)
 			commands.append(str_com)
 			print (str_com)
-
+			break
+		break
 		# print (commands)
 		util.writeFile(out_file, commands)
 
 
 def debug_commands():
-	train_horses = ['aslan']
-	# , 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
+	train_horses = ['aslan' , 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
 	test_horses_all = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
 	# ['herrera','julia','naughty_but_nice']
 	# ['inkasso', 'kastanjett', 'sir_holger']
@@ -166,8 +167,8 @@ def debug_commands():
 		print (out_file)
 	
 		for test_subject in test_horses:
-			# train_subjects = [x for x in train_horses if x is not test_subject]
-			train_subjects = train_horses
+			train_subjects = [x for x in train_horses if x is not test_subject]
+			# train_subjects = train_horses
 			str_com = ['python','train_encode_decode.py']
 			str_com+= ['--config_file', config_file]
 			str_com+= ['--dataset_path', data_path]
@@ -180,9 +181,9 @@ def debug_commands():
 		break
 
 def main():
-	# pnp_latent_commands()
+	pnp_latent_commands()
 	# back_bone_commands()
-	debug_commands()
+	# debug_commands()
 
 
 

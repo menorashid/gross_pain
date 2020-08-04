@@ -58,7 +58,7 @@ class IgniteTestNVS(ted.IgniteTrainNVS):
         for input_dict, label_dict in self.data_iterator:
             in_vals.append(input_dict['img_crop'])
             
-            angles = np.linspace(0,2*np.pi,10)
+            angles = np.linspace(0,2*np.pi,15)
             for angle in angles:
                 rot_mat = util.rotationMatrixXZY(0, angle,0)
                 input_dict['external_rotation_global'] = torch.from_numpy(rot_mat).float().to(device)

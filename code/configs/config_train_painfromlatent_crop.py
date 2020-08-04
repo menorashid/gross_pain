@@ -15,9 +15,9 @@ config_dict = {
     'dpi'                     : 190,
     'input_types'             : ['img_crop', 'bg_crop'],
     # Possible output types   :  'img_crop' | '3D' | 'shuffled_pose' | 'shuffled_appearance' | 'latent_3d'
-    'output_types'            : ['pain'],
-    'label_types_train'       : ['img_crop'],
-    'label_types_test'        : ['img_crop'],
+    'output_types'            : ['pain',],
+    'label_types_train'       : ['img_crop','pain'],
+    'label_types_test'        : ['img_crop','pain'],
     'num_workers'             : 4,
     'bones'                   : bones,
 
@@ -76,8 +76,8 @@ config_dict = {
     'latent_dropout' : 0.3,
     'from_latent_hidden_layers' : 0,
     'upsampling_bilinear' : 'upper',
-    'shuffle_fg' : True,
-    'shuffle_3d' : True,
+    'shuffle_fg' : False,
+    'shuffle_3d' : False,
     'feature_scale' : 4,
     'num_encoding_layers' : 4,
     'loss_weight_rgb' : 1,
@@ -88,17 +88,8 @@ config_dict = {
     'encoderType' : 'UNet',
     'implicit_rotation' : False,
     'predict_rotation' : False,
-    'skip_background' : True  # This means use background
+    'skip_background' : True,  # This means use background
 
+    'project_wandb': 'debug',
 }
-config_dict['label_types_test']  += ['pain']
-config_dict['label_types_train'] += ['pain']
-config_dict['latent_dropout'] = 0
-
-config_dict['shuffle_fg'] = False
-config_dict['shuffle_3d'] = False
-config_dict['actor_subset'] = [1]
-config_dict['useCamBatches'] = 0
-config_dict['useSubjectBatches'] = 0
-config_dict['train_scale_normalized'] = 'mean_std'
 

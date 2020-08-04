@@ -182,9 +182,13 @@ class MultiViewFrameExtractor():
                                             # '-ss',diff_str,
                         # print (' '.join(ffmpeg_command))
                         ffmpeg_commands.append(ffmpeg_command)
-                        
+                        # break
 
                     # extract
+                    # print (ffmpeg_commands[0])
+                    # subprocess.call(ffmpeg_commands[0])
+                    # s = input()
+                    # break
                     print('Extracting %d frames multithreaded '%len(ffmpeg_commands))
                     pool.map(subprocess.call,ffmpeg_commands)
                     print('Done for view', view, time_proper.time()-t )

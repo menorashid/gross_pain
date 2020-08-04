@@ -176,7 +176,7 @@ class IgniteTestNVS(train_encodeDecode.IgniteTrainNVS):
             rot = slider_yaw_glob.val
             print("Rotationg ",rot)
             batch_size = input_dict['img_crop'].size()[0]
-            input_dict['external_rotation_global'] = torch.from_numpy(rotationMatrixXZY(theta=0, phi=0, psi=rot)).float().to(device)
+            input_dict['external_rotation_global'] = torch.from_numpy(rotationMatrixXZY(theta=0, phi=rot, psi=0)).float().to(device)
             input_dict['external_rotation_cam'] = torch.from_numpy(np.eye(3)).float().to(device) # torch.from_numpy(rotationMatrixXZY(theta=0, phi=rot, psi=0)).float().cuda()
             predict()
             update_figure()

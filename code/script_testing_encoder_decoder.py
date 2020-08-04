@@ -191,6 +191,9 @@ def get_job_params(job_identifier, out_path_postpend, test_subjects = None, trai
         config_path = 'configs/config_train_rotTranslate_segmask.py'
     elif job_identifier=='withRotCropSegLatent': 
         config_path = 'configs/config_train_rotCropSegMaskLatent.py'
+    elif job_identifier=='withRotCropLatent': 
+        config_path = 'configs/config_train_rotCropLatent.py'
+    
     else:
         raise ValueError('job_identifier %s not registered'%job_identifier)
 
@@ -231,16 +234,21 @@ def get_job_params(job_identifier, out_path_postpend, test_subjects = None, trai
 
 def main():
 
-    job_identifier = 'withRotCropNewCal'
-    # job_identifier = 'withRotNewCal'
+    # job_identifier = 'withRotCropNewCal'
+    job_identifier = 'withRotNewCal'
     # job_identifier = 'withRotTransAll'
     # job_identifier = 'withRotSeg'
     # job_identifier = 'withRotCropSeg'
     # job_identifier = 'withRotTranslateSeg'
     # job_identifier = 'withRotCropSegLatent'
+    
+    # job_identifier = 'withRotCropLatent'
+    # train_subjects = 'all'
+
     bg = None
     # '../data/blank_mean.jpg'
     train_subjects = None
+    
 
     if 'crop' in job_identifier.lower():
         test_every = 100

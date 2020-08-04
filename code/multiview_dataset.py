@@ -193,6 +193,8 @@ class MultiViewDatasetSampler(Sampler):
                  use_sequential_frames=0,
                  every_nth_frame=1):
         # save function arguments
+
+        
         for arg,val in list(locals().items()):
             setattr(self, arg, val)
 
@@ -231,6 +233,9 @@ class MultiViewDatasetSampler(Sampler):
                     interval_keys[interval_i].add(key)
 
         self.all_keys = list(all_keys)
+        # to get rid of random element
+        self.all_keys.sort()
+
         self.viewsets = viewsets
         self.interval_keys = {interval: list(keyset)
                               for interval, keyset in interval_keys.items()}
@@ -257,6 +262,8 @@ class MultiViewDatasetSampler(Sampler):
                 for index in range(0,len(self.all_keys), self.every_nth_frame):
                     pbar.update(1)
                     key = self.all_keys[index]
+                    # print ('key',key)
+                    # s = input()
                     def get_view_subbatch(key):
                         """ Given a key (a moment in time),
                             return x indices for that key,
@@ -275,6 +282,7 @@ class MultiViewDatasetSampler(Sampler):
                         return view_indices
 
                     index_list = index_list + get_view_subbatch(key)
+                    
                     if self.use_subject_batches:
                         # Add indices for other time, t', from the same interval
                         # to disentangle pose from appearance
@@ -294,6 +302,7 @@ class MultiViewDatasetSampler(Sampler):
             # Check that we can safely reshape index_list into sub-batches.
             assert len(index_list) % sub_batch_size == 0
             indices_batched = np.array(index_list).reshape([-1,sub_batch_size])
+            
             if os.path.exists(os.path.split(indices_batched_path)[1]): 
             # if condition to keep the nn code working. 
             # nth is different for testing, so savepath doesn't exist
