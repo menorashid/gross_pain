@@ -98,6 +98,7 @@ def save_testing_error(save_path, trainer, evaluator,
     epoch = trainer.state.epoch
 
     metrics = evaluator.state.metrics
+    # print (list(metrics.keys()))
     print("{} Results - Epoch: {}  AccumulatedLoss: {}".format(dataset_str, epoch, metrics))
     metric_values = []
     for key in metrics.keys():
@@ -119,7 +120,7 @@ def save_testing_error(save_path, trainer, evaluator,
     with open(log_name, 'a') as the_file:
         the_file.write('{},{}\n'.format(iteration, ",".join(map(str, metric_values)) ))
     plot_loss(log_name, log_name.replace('.txt','.jpg'), 'Testing Loss')
-    return metrics['AccumulatedLoss']
+    return metrics['loss']
 
 
 def save_training_example(save_path, engine, config_dict):
