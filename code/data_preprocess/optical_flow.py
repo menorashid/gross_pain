@@ -9,6 +9,7 @@ import subprocess
 import cv2
 import pandas as pd
 import time
+from tqdm import tqdm
 
 class OpticalFlowExtractor():
 
@@ -50,6 +51,17 @@ class OpticalFlowExtractor():
         flow = flow.astype(np.uint8)
         cv2.imwrite(out_file, flow)
 
+    def get_im_dir(self, row, meta_dir):
+        frame_dir = os.path.split(self.get_im_path(row))[0]
+        frame_dir = frame_dir.replace(self.output_dir, meta_dir)
+        return frame_dir
+    
+    def get_flow_path_from_rgb(self,rgb_path):
+        out_file = os.path.split(rgb_path)
+        out_dir = out_file[0]+'_opt'
+        out_dir = out_dir.replace(self.output_dir, self.output_flow)
+        out_file = os.path.join(out_dir,out_file[1].replace('.jpg','.png'))
+        return out_file
 
     def extract_frames(self, replace = True, subjects_to_extract = None):
         
@@ -82,10 +94,7 @@ class OpticalFlowExtractor():
                         if (first is None) or (second is None):
                             continue
 
-                        out_file = os.path.split(second)
-                        out_dir = out_file[0]+'_opt'
-                        out_dir = out_dir.replace(self.output_dir, self.output_flow)
-                        out_file = os.path.join(out_dir,out_file[1].replace('.jpg','.png'))
+                        out_file = self.get_flow_path_from_rgb(second)
                         if not replace and os.path.exists(out_file):
                             continue
                         util.makedirs(os.path.split(out_file)[0])
@@ -107,7 +116,90 @@ class OpticalFlowExtractor():
                     # break
                 # break
             # break
+    
+    def add_symlinks(self, subjects_to_extract = None):
+        assert self.output_dir is not self.output_flow
+        real_out = os.path.realpath(self.output_dir)
+        real_flow = os.path.realpath(self.output_flow)
+
+        if subjects_to_extract is None:
+            subjects_to_extract = self.subjects
         
+        for i, subject in enumerate(subjects_to_extract):
+
+            out_file_index = os.path.join(self.output_dir,subject+'_'+'frame_index.csv')
+            frames = pd.read_csv(out_file_index)
+            rel_intervals = frames.interval.unique()
+            rel_views = frames.view.unique()
+            for idx_interval,interval in enumerate(rel_intervals):
+                for view in rel_views:
+                    rel_frames = frames.loc[(frames['interval'] == interval) & (frames['view'] == view)]
+                    
+                    flow_dir = self.get_im_dir(rel_frames.iloc[0], real_flow)
+                    flow_dir = flow_dir+'_opt'
+
+                    target_dir = flow_dir.replace(real_flow,real_out)
+                    meta_target = os.path.split(target_dir)[0]
+
+                    if not os.path.exists(flow_dir):
+                        print ('flow dir does not exist:',flow_dir)
+                        continue
+
+                    if not os.path.exists(meta_target):
+                        print ('meta_target dir does not exist:',meta_target)
+                        continue
+
+                    if os.path.exists(target_dir):
+                        print ('target_dir alread exists:', target_dir)
+                        continue
+
+                    command = ['ln','-s', flow_dir, target_dir]
+                    print (' '.join(command))
+                    subprocess.call(command)
+            #         break
+            #     break
+            # break
+
+    def create_csv_with_magnitude(self, subjects_to_extract = None):
+        if subjects_to_extract is None:
+            subjects_to_extract = self.subjects
+        
+        # To help us read the data, we save a long .csv-file
+        # with labels for each frame(a frame index).
+        column_headers = ['interval', 'interval_ind', 'view', 'subject', 'pain', 'frame','max_flow_mag']
+        
+        for i, subject in enumerate(subjects_to_extract):
+            in_file_index = os.path.join(self.output_dir,subject+'_reduced_frame_index.csv')
+            assert os.path.exists(in_file_index)
+            out_file_index = os.path.join(self.output_dir,subject+'_reduced_frame_withFlow_index.csv')
+            big_list = []
+
+            rel_frames = pd.read_csv(in_file_index)
+            rel_frames_len = len(rel_frames)
+
+            print('Subject: ', subject)
+            with tqdm(total=rel_frames_len) as pbar:
+                for idx in range(rel_frames_len):
+                    pbar.update(1)
+                    row = rel_frames.iloc[idx]
+                    im_path = self.get_im_path(row)
+                    flow_file = self.get_flow_path_from_rgb(im_path)
+                    if not os.path.exists(flow_file):
+                        continue
+
+                    mag_file = flow_file[:-4]+'.txt'
+                    assert os.path.exists(mag_file)
+                    mag = float(util.readLinesFromFile(mag_file)[0])
+                    row_vals = list(row.values)+[mag]
+                    row_vals = [row[k] for k in column_headers[:-1]]+[mag]
+                    big_list.append(row_vals)
+
+            frame_index_df = pd.DataFrame(big_list, columns=column_headers)
+            frame_index_df.to_csv(path_or_buf= out_file_index)
+            print (len(big_list))
+            df = pd.read_csv(out_file_index)
+
+
 
 def main():
     fps = 10
@@ -119,7 +211,9 @@ def main():
     util.mkdir(out_dir_testing)
 
     ofe = OpticalFlowExtractor(output_dir = out_dir_testing, num_processes = multiprocessing.cpu_count(), output_flow = out_dir_flow)    
-    ofe.extract_frames(replace = False, subjects_to_extract = None)
+    # ofe.extract_frames(replace = False, subjects_to_extract = None)
+    # ofe.add_symlinks(subjects_to_extract = None)
+    ofe.create_csv_with_magnitude()
 
 
 if __name__=='__main__':

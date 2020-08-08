@@ -1,4 +1,7 @@
+import sys
 import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
+
 import glob
 import numpy as np
 from helpers import util, visualize
@@ -280,6 +283,8 @@ def extract_frames():
     mve.extract_frames(replace = False)
 
 def main():
+    print ('hello')
+    return
 
     # extract_frames()
 

@@ -83,7 +83,7 @@ def sanity_check():
         assert (data_all[0]==data_all[1])
 
 def main():
-    data_dir_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop'
+    data_dir_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps'
     reduce_csvs(data_dir_path)
 
         
