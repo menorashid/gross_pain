@@ -10,6 +10,7 @@ import cv2
 import pandas as pd
 import time
 from tqdm import tqdm
+import glob
 
 class OpticalFlowExtractor():
 
@@ -155,49 +156,134 @@ class OpticalFlowExtractor():
 
                     command = ['ln','-s', flow_dir, target_dir]
                     print (' '.join(command))
+
                     subprocess.call(command)
             #         break
             #     break
             # break
 
-    def create_csv_with_magnitude(self, subjects_to_extract = None):
+
+    def create_new_row(self,arg):
+        (row, column_headers) = arg
+        im_path = self.get_im_path(row)
+        flow_file = self.get_flow_path_from_rgb(im_path)
+        if not os.path.exists(flow_file):
+            return None
+        mag_file = flow_file[:-4]+'.txt'
+        assert os.path.exists(mag_file)
+        # args.append(mag_file)
+
+        mag = float(util.readLinesFromFile(mag_file)[0])
+        # row_vals = list(row.values)+[mag]
+        row_vals = [row[k] for k in column_headers[:-1]]+[mag]
+        return row_vals
+
+    def collate_magnitude(self, subjects_to_extract = None):
         if subjects_to_extract is None:
             subjects_to_extract = self.subjects
         
         # To help us read the data, we save a long .csv-file
         # with labels for each frame(a frame index).
-        column_headers = ['interval', 'interval_ind', 'view', 'subject', 'pain', 'frame','max_flow_mag']
-        
+        # column_headers = ['interval', 'interval_ind', 'view', 'subject', 'pain', 'frame','max_flow_mag']
         for i, subject in enumerate(subjects_to_extract):
-            in_file_index = os.path.join(self.output_dir,subject+'_reduced_frame_index.csv')
-            assert os.path.exists(in_file_index)
-            out_file_index = os.path.join(self.output_dir,subject+'_reduced_frame_withFlow_index.csv')
-            big_list = []
+            print ('Subject: {}'.format(subject))
+            out_file_index = os.path.join(self.output_dir,subject+'_'+'frame_index.csv')
+            frames = pd.read_csv(out_file_index)
+            rel_intervals = frames.interval.unique()
+            rel_views = frames.view.unique()
+            for idx_interval,interval in enumerate(rel_intervals):
+                commands = []
+                for view in rel_views:
+                    rel_frames = frames.loc[(frames['interval'] == interval) & (frames['view'] == view)]
+                    flow_dir = self.get_im_dir(rel_frames.iloc[0], self.output_dir)
+                    flow_dir = flow_dir+'_opt'
+                    assert os.path.exists(flow_dir)
 
-            rel_frames = pd.read_csv(in_file_index)
-            rel_frames_len = len(rel_frames)
+                    out_file_files = flow_dir+'_files.txt'
+                    out_file_mags = flow_dir+'_mags.txt'
 
-            print('Subject: ', subject)
-            with tqdm(total=rel_frames_len) as pbar:
-                for idx in range(rel_frames_len):
-                    pbar.update(1)
-                    row = rel_frames.iloc[idx]
-                    im_path = self.get_im_path(row)
-                    flow_file = self.get_flow_path_from_rgb(im_path)
-                    if not os.path.exists(flow_file):
+                    if os.path.exists(out_file_mags):
+                        print('continuing',out_file_mags)
                         continue
 
-                    mag_file = flow_file[:-4]+'.txt'
-                    assert os.path.exists(mag_file)
-                    mag = float(util.readLinesFromFile(mag_file)[0])
-                    row_vals = list(row.values)+[mag]
-                    row_vals = [row[k] for k in column_headers[:-1]]+[mag]
-                    big_list.append(row_vals)
+                    t = time.time()
+                    txt_files = os.listdir(flow_dir)
+                    txt_files = [os.path.join(flow_dir,file) for file in txt_files if file.endswith('.txt')]
 
+                    util.writeFile(out_file_files,txt_files)
+                    
+                    command = ['grep','-v',"'^#'",out_file_files,'|','xargs','cat','>>',out_file_mags]
+                    
+                    # this is the manual part. instead of the subprocess.
+                    command = ' '.join(command)
+                    commands.append(command)
+                    # subprocess.call(command, shell = True)
+                    
+                    print ('done with interval number {} out of {}, view {},  time taken {}'.format(idx_interval, len(rel_intervals), view, time.time()-t ))
+
+                util.writeFile(os.path.join(os.path.split(flow_dir)[0],'commands.txt'),commands)
+
+    def create_thresholded_csv(self, thresh, subjects_to_extract = None):
+        if subjects_to_extract is None:
+            subjects_to_extract = self.subjects
+        
+        # To help us read the data, we save a long .csv-file
+        # with labels for each frame(a frame index).
+        column_headers = ['interval', 'interval_ind', 'view', 'subject', 'pain', 'frame']
+
+        for i, subject in enumerate(subjects_to_extract):
+            
+            print ('Subject: {}'.format(subject))
+            in_file_index = os.path.join(self.output_dir,subject+'_'+'frame_index.csv')
+            str_thresh = '%.2f'%thresh
+            out_file_index = os.path.join(self.output_dir,subject+'_thresh_'+str_thresh+'_'+'frame_index.csv')
+            print (out_file_index)
+            frames = pd.read_csv(in_file_index)
+            rel_intervals = frames.interval.unique()
+            rel_views = frames.view.unique()
+            
+            big_list = []
+
+            for idx_interval,interval in enumerate(rel_intervals):
+                
+                fids = []
+                for view in rel_views:
+                    rel_frames = frames.loc[(frames['interval'] == interval) & (frames['view'] == view)]
+                    
+                    flow_dir = self.get_im_dir(rel_frames.iloc[0], self.output_dir)
+                    flow_dir = flow_dir+'_opt'
+                    out_file_files = flow_dir+'_files.txt'
+                    out_file_mags = flow_dir+'_mags.txt'
+
+                    if not os.path.exists(out_file_files):
+                        print('continuing',out_file_files)
+                        continue
+
+                    files = np.array(util.readLinesFromFile(out_file_files))
+                    mags = [float(val) for val in util.readLinesFromFile(out_file_mags)]
+                    mags = np.array(mags)
+                    assert len(files)==len(mags)
+
+                    bin_keep = mags>=thresh
+                    files_keep = files[bin_keep]
+                    print ('view,len(files), len(files_keep)',view,len(files), len(files_keep))
+                    fids_curr = [int(os.path.split(file)[1][:-4].split('_')[-1]) for file in files_keep]
+                    fids +=fids_curr
+
+                print (len(fids))
+                fids = list(set(fids))
+                print (len(fids))
+                row_in = rel_frames.iloc[0]
+                for fid in fids:
+                    for view in rel_views:
+                        row_out = [row_in['interval'], row_in['interval_ind'], view, row_in['subject'], row_in['pain'], fid]
+                        big_list.append(row_out)
+
+            
             frame_index_df = pd.DataFrame(big_list, columns=column_headers)
-            frame_index_df.to_csv(path_or_buf= out_file_index)
+            print(out_file_index)
             print (len(big_list))
-            df = pd.read_csv(out_file_index)
+            frame_index_df.to_csv(path_or_buf= out_file_index)
 
 
 
@@ -211,9 +297,19 @@ def main():
     util.mkdir(out_dir_testing)
 
     ofe = OpticalFlowExtractor(output_dir = out_dir_testing, num_processes = multiprocessing.cpu_count(), output_flow = out_dir_flow)    
-    # ofe.extract_frames(replace = False, subjects_to_extract = None)
+
+    # # extract optical flow
+    # # ofe.extract_frames(replace = False, subjects_to_extract = None)
+
+    # # add symlinks if storing optical flow in a different drive
     # ofe.add_symlinks(subjects_to_extract = None)
-    ofe.create_csv_with_magnitude()
+
+    # # collate magnitudes and files names in text files. need to manually run commands files after this step.
+    # ofe.collate_magnitude(subjects_to_extract = ['sir_holger'])
+
+    # # create csv with thresholded images only
+    # ofe.create_thresholded_csv(thresh = 0.7,subjects_to_extract = ['aslan'] )
+
 
 
 if __name__=='__main__':
