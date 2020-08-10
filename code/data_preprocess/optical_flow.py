@@ -306,10 +306,11 @@ def main():
     # ofe.add_symlinks(subjects_to_extract = None)
 
     # # collate magnitudes and files names in text files. need to manually run commands files after this step.
-    # ofe.collate_magnitude(subjects_to_extract = ['julia', 'kastanjett', 'naughty_but_nice', 'sir_holger'])
+    ofe.collate_magnitude(subjects_to_extract = ['inkasso'])
+    # ['julia', 'kastanjett', 'naughty_but_nice', 'sir_holger'])
 
     # create csv with thresholded images only
-    ofe.create_thresholded_csv(thresh = 0.7,subjects_to_extract = ['herrera'])
+    ofe.create_thresholded_csv(thresh = 0.7,subjects_to_extract = ['inkasso'])
     # , 'kastanjett', 'naughty_but_nice', 'sir_holger'] )
 
 
