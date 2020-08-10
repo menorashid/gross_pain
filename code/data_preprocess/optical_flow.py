@@ -216,12 +216,13 @@ class OpticalFlowExtractor():
                     
                     # this is the manual part. instead of the subprocess.
                     command = ' '.join(command)
-                    commands.append(command)
-                    # subprocess.call(command, shell = True)
+                    # commands.append(command)
+                    print (command)
+                    subprocess.call(command, shell = True)
                     
                     print ('done with interval number {} out of {}, view {},  time taken {}'.format(idx_interval, len(rel_intervals), view, time.time()-t ))
 
-                util.writeFile(os.path.join(os.path.split(flow_dir)[0],'commands.txt'),commands)
+                # util.writeFile(os.path.join(os.path.split(flow_dir)[0],'commands.txt'),commands)
 
     def create_thresholded_csv(self, thresh, subjects_to_extract = None):
         if subjects_to_extract is None:
@@ -305,10 +306,11 @@ def main():
     # ofe.add_symlinks(subjects_to_extract = None)
 
     # # collate magnitudes and files names in text files. need to manually run commands files after this step.
-    # ofe.collate_magnitude(subjects_to_extract = ['sir_holger'])
+    # ofe.collate_magnitude(subjects_to_extract = ['julia', 'kastanjett', 'naughty_but_nice', 'sir_holger'])
 
-    # # create csv with thresholded images only
-    # ofe.create_thresholded_csv(thresh = 0.7,subjects_to_extract = ['aslan'] )
+    # create csv with thresholded images only
+    ofe.create_thresholded_csv(thresh = 0.7,subjects_to_extract = ['herrera'])
+    # , 'kastanjett', 'naughty_but_nice', 'sir_holger'] )
 
 
 

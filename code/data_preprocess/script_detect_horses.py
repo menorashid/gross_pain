@@ -1,4 +1,7 @@
+import sys
 import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
+
 import numpy as np
 import pandas as pd
 from helpers import util, visualize
@@ -19,79 +22,96 @@ from PIL import Image
 
 import multiprocessing
 
-def get_predictor(thresh = 0.3):
-    cfg = get_cfg()
-    # add project-specific config (e.g., TensorMask) here if you're not running a model in detectron2's core library
-    cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = thresh  # set threshold for this model
-    # Find a model from detectron2's model zoo. You can use the https://dl.fbaipublicfiles... url as well
-    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
-    predictor = DefaultPredictor(cfg)
-    return predictor
+class HorseDetector():
+
+    def __init__(self, data_path, thresh = 0.3, horse_names = None, str_aft = None, batch_size = 16):
+        self.thresh = thresh
+        self.predictor = self.get_predictor()
+        self.data_path = data_path
+        # '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps'
+        
+        if horse_names is None:
+            self.horse_names = ['aslan','brava','herrera','inkasso','julia','kastanjett','naughty_but_nice','sir_holger']
+        else:
+            self.horse_names = horse_names
+        
+        if str_aft is None:
+            self.str_aft = '_frame_index.csv'
+        else:
+            self.str_aft = str_aft
+
+        self.batch_size = batch_size
 
 
+    def get_predictor(self):
+        cfg = get_cfg()
+        # add project-specific config (e.g., TensorMask) here if you're not running a model in detectron2's core library
+        cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
+        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = self.thresh  # set threshold for this model
+        # Find a model from detectron2's model zoo. You can use the https://dl.fbaipublicfiles... url as well
+        cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
+        predictor = DefaultPredictor(cfg)
+        return predictor
 
-def batch_process(predictor, input_images, batch_size):
+    def get_horse_ims(self, horse_name):
+        csv_path = os.path.join(self.data_path, horse_name+self.str_aft)
+        frame_df = pd.read_csv(csv_path)
+        im_files = []
+        for idx_row, row in frame_df.iterrows():
+            im_path = util.get_image_name(row['subject'], row['interval_ind'], row['interval'], \
+                                         row['view'], row['frame'], self.data_path)
+            if os.path.exists(im_path):
+                im_files.append(im_path)
+        return im_files
 
-    start_idx_all = range(0,len(input_images),batch_size)
-    im_paths_batches = []
-    for start_idx in start_idx_all:
-        end_idx = start_idx+batch_size
-        # print (start_idx, end_idx)
-        im_paths_batches.append(input_images[start_idx:end_idx])
-
-    with tqdm(total=len(im_paths_batches)) as pbar:
-        for idx_im_path, im_paths in enumerate(im_paths_batches):
-            pbar.update(1)
-            # print ('idx_im_path', idx_im_path)
-            inputs_all = []
-            # ims_all = []
-            for im_path in im_paths:
-                im = cv2.imread(im_path)
-                height, width = im.shape[:2]
-                # ims_all.append(im)
-                image = predictor.transform_gen.get_transform(im).apply_image(im)
-                image = torch.as_tensor(image.astype("float32").transpose(2, 0, 1))
-                # print (image.size())
-                inputs = {"image": image, "height": height, "width": width}
-                inputs_all.append(inputs)
-
-            predictions = predictor.model(inputs_all)
-            for idx_pred, pred in enumerate(predictions):
-                im_path = im_paths[idx_pred]
-
-                instances = pred['instances'].to("cpu")
-                pred_boxes = instances.pred_boxes.tensor.detach().numpy()
-                scores = instances.scores.detach().numpy()
-                pred_classes = instances.pred_classes.detach().numpy()
-                out_dir = os.path.split(im_path)[0]+'_dets'
-                util.mkdir(out_dir)
-                out_file = os.path.join(out_dir,os.path.split(im_path)[1][:-4]+'.npz')
-                np.savez(out_file, pred_boxes = pred_boxes, pred_classes = pred_classes, scores = scores)
+    def save_detections(self):
+        print (self.horse_names)
+        for horse_name in self.horse_names:
+            im_files = self.get_horse_ims(horse_name)
+            print ('Processing Horse {}, with {} images'.format(horse_name, len(im_files)))
+            self.batch_process(im_files)
 
 
-def get_horse_ims(data_path, horse_name, str_aft):
-    csv_path = os.path.join(data_path, horse_name+str_aft)
-    frame_df = pd.read_csv(csv_path)
-    im_files = []
-    for idx_row, row in frame_df.iterrows():
-        im_path = util.get_image_name(row['subject'], row['interval_ind'], row['interval'], \
-                                     row['view'], row['frame'], data_path)
-        if os.path.exists(im_path):
-            im_files.append(im_path)
-    return im_files
+    def batch_process(self, input_images):
+        batch_size = self.batch_size
+        predictor = self.predictor
 
+        start_idx_all = range(0,len(input_images),batch_size)
+        im_paths_batches = []
+        for start_idx in start_idx_all:
+            end_idx = start_idx+batch_size
+            # print (start_idx, end_idx)
+            im_paths_batches.append(input_images[start_idx:end_idx])
 
-def script_get_dets():
-    data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps'
-    horse_names = ['aslan','brava','herrera','inkasso','julia','kastanjett','naughty_but_nice','sir_holger']
-    str_aft = '_frame_index.csv'
+        with tqdm(total=len(im_paths_batches)) as pbar:
+            for idx_im_path, im_paths in enumerate(im_paths_batches):
+                pbar.update(1)
+                # print ('idx_im_path', idx_im_path)
+                inputs_all = []
+                # ims_all = []
+                for im_path in im_paths:
+                    im = cv2.imread(im_path)
+                    height, width = im.shape[:2]
+                    # ims_all.append(im)
+                    image = predictor.transform_gen.get_transform(im).apply_image(im)
+                    image = torch.as_tensor(image.astype("float32").transpose(2, 0, 1))
+                    # print (image.size())
+                    inputs = {"image": image, "height": height, "width": width}
+                    inputs_all.append(inputs)
 
-    predictor = get_predictor()
-    for horse_name in horse_names:
-        im_files = get_horse_ims(data_path, horse_name, str_aft)
-        print (horse_name, len(im_files))
-        batch_process(predictor, im_files, 16)
+                predictions = predictor.model(inputs_all)
+                for idx_pred, pred in enumerate(predictions):
+                    im_path = im_paths[idx_pred]
+
+                    instances = pred['instances'].to("cpu")
+                    pred_boxes = instances.pred_boxes.tensor.detach().numpy()
+                    scores = instances.scores.detach().numpy()
+                    pred_classes = instances.pred_classes.detach().numpy()
+                    out_dir = os.path.split(im_path)[0]+'_dets'
+                    util.mkdir(out_dir)
+                    out_file = os.path.join(out_dir,os.path.split(im_path)[1][:-4]+'.npz')
+                    np.savez(out_file, pred_boxes = pred_boxes, pred_classes = pred_classes, scores = scores)
+
 
 
 def script_checking_horse_dets():
@@ -327,9 +347,16 @@ def script_to_save_all_crop_bg():
         np.savez(out_file_log, ret_vals = np.array(ret_vals), im_files_used = np.array(im_files_used))
 
 def main():
-    script_to_save_all_crop_bg()
-    
+    # script_to_save_all_crop_bg()
+    data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps'
+    str_aft = '_thresh_0.70_frame_index.csv'
+    # horse_names = ['aslan','brava']
+    # horse_names = ['herrera','inkasso']
+    # horse_names = ['julia','kastanjett']
+    horse_names = ['naughty_but_nice','sir_holger']
 
+    hd = HorseDetector(data_path, horse_names = horse_names, str_aft = str_aft, batch_size = 12)
+    hd.save_detections()
 
 
 if __name__=='__main__':
