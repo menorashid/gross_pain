@@ -22,6 +22,7 @@ def back_bone_commands():
 	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
 	job_name = 'withRotCropDebug'
+
 	util.mkdir('to_runs')
 
 
@@ -153,13 +154,17 @@ def debug_commands():
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
 	job_name = 'withRotCropLatent'
 
+	config_file = 'configs/config_train_rotFlowCropLatent.py'
+	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
+	job_name = 'withRotFlowCropLatent'
+
 	# config_file = 'configs/config_train_rotCropSegMaskLatent.py'
 	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
 	# job_name = 'withRotCropSegLatent'
 
 	util.mkdir('to_runs')
 
-	num_gpus = 1
+	num_gpus = 2
 	num_per_gpu = 1
 	for idx in range(num_gpus):
 		test_horses = test_horses_all[num_per_gpu*idx:num_per_gpu*idx+num_per_gpu]
@@ -177,13 +182,13 @@ def debug_commands():
 			str_com+= ['--job_identifier', job_name]
 			str_com = ' '.join(str_com)
 			print (str_com)
-			break
-		break
+			# break
+		# break
 
 def main():
-	pnp_latent_commands()
+	# pnp_latent_commands()
 	# back_bone_commands()
-	# debug_commands()
+	debug_commands()
 
 
 

@@ -239,7 +239,7 @@ class IgniteTrainNVS:
         return optimizer
     
     def load_data_train(self,config_dict,save_path):
-        if config_dict['training_set']=='LPS_2fps_crop':
+        if 'crop' in config_dict['training_set'].lower():
             dataset = MultiViewDatasetCrop(data_folder=config_dict['dataset_folder_train'],
                                        bg_folder=config_dict['bg_folder'],
                                        input_types=config_dict['input_types'],
@@ -269,7 +269,7 @@ class IgniteTrainNVS:
         return loader
     
     def load_data_test(self,config_dict,save_path):
-        if config_dict['training_set']=='LPS_2fps_crop':
+        if 'crop' in config_dict['training_set'].lower():
             dataset = MultiViewDatasetCrop(data_folder=config_dict['dataset_folder_test'],
                                        bg_folder=config_dict['bg_folder'],
                                        input_types=config_dict['input_types'],

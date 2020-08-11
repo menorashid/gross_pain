@@ -170,7 +170,9 @@ def save_latent_view_diff(config_dict, config_path, all_subjects, out_path_meta,
 
 
 def get_job_params(job_identifier, out_path_postpend, test_subjects = None, train_subjects = None, model_num = 50, batch_size_test = 64, test_every = None):
-    if 'crop' in job_identifier.lower():
+    if 'flowcrop' in job_identifier.lower():
+        dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
+    elif 'crop' in job_identifier.lower():
         dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
     else:
         dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
@@ -193,6 +195,8 @@ def get_job_params(job_identifier, out_path_postpend, test_subjects = None, trai
         config_path = 'configs/config_train_rotCropSegMaskLatent.py'
     elif job_identifier=='withRotCropLatent': 
         config_path = 'configs/config_train_rotCropLatent.py'
+    elif job_identifier=='withRotFlowCropLatent': 
+        config_path = 'configs/config_train_rotFlowCropLatent.py'
     
     else:
         raise ValueError('job_identifier %s not registered'%job_identifier)

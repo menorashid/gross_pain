@@ -321,8 +321,17 @@ class MultiViewDatasetSampler(Sampler):
 def get_label_df_for_subjects(data_folder, subjects):
     subject_fi_dfs = []
     print('Iterating over frame indices per subject (.csv files)')
+
+    # print (data_folder)
+    if 'oft' in data_folder:
+        thresh = float(os.path.split(data_folder)[0].split('_')[-2])
+        str_aft = '_'.join(['','reduced','thresh','%.2f'%float(thresh),'frame','index'])+'.csv'
+    else:
+        str_aft = '_reduced_frame_index.csv'
+
     for subject in subjects:
-        subject_frame_index_dataframe = pd.read_csv(data_folder + subject + '_reduced_frame_index.csv')
+        csv_file = os.path.join(data_folder,subject + str_aft)
+        subject_frame_index_dataframe = pd.read_csv(csv_file)
         subject_fi_dfs.append(subject_frame_index_dataframe)
     frame_index_df = pd.concat(subject_fi_dfs, ignore_index=True)
     return frame_index_df

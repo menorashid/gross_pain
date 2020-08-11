@@ -28,7 +28,7 @@ def get_counts_indices(sdf, subject, data_dir_path):
                 subject_counter += 1
     return subject_counter, missing_inds 
 
-def reduce_csvs(data_dir_path):
+def reduce_csvs(data_dir_path, str_aft = '_frame_index.csv'):
     subjects = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
     subject_counters = []
     subject_dfs = []
@@ -36,7 +36,7 @@ def reduce_csvs(data_dir_path):
     for subject in subjects:
         
         print('Subject: ', subject)
-        sdf = pd.read_csv(os.path.join(data_dir_path, subject + '_frame_index.csv'))
+        sdf = pd.read_csv(os.path.join(data_dir_path, subject + str_aft))
         
         subject_counter, missing_inds = get_counts_indices(sdf, subject, data_dir_path)
                     
@@ -62,7 +62,7 @@ def reduce_csvs(data_dir_path):
         subject_counter, missing_inds = get_counts_indices(reduced_dfs[ind],subject, data_dir_path)
         assert len(missing_inds)==0
         # print (reduced_dfs[ind])
-        reduced_dfs[ind].to_csv(os.path.join(data_dir_path, subject + '_reduced_frame_index.csv'))
+        reduced_dfs[ind].to_csv(os.path.join(data_dir_path, subject + '_reduced'+str_aft))
 
 def sanity_check():
     subjects = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
@@ -83,8 +83,12 @@ def sanity_check():
         assert (data_all[0]==data_all[1])
 
 def main():
-    data_dir_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps'
-    reduce_csvs(data_dir_path)
+    # data_dir_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps'
+    # reduce_csvs(data_dir_path)
+
+    data_dir_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop'
+    print (data_dir_path)
+    reduce_csvs(data_dir_path, str_aft = '_thresh_0.70_frame_index.csv')
 
         
         
