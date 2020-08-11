@@ -24,7 +24,7 @@ from rhodin.python.utils import training as utils_train
 
 class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
     def load_metrics(self, loss_test):
-        metrics = {'loss': utils_train.AccumulatedLoss(loss_test),
+        metrics = {'AccumulatedLoss': utils_train.AccumulatedLoss(loss_test),
                    'accuracy': BinaryAccuracy()}
         return metrics
 

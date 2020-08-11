@@ -111,6 +111,7 @@ def save_testing_error(save_path, trainer, evaluator,
         except:
             pass
 
+    # print (metrics.keys())
 
     # also save as .txt for plotting
     log_name = os.path.join(save_path, save_extension)
@@ -120,7 +121,7 @@ def save_testing_error(save_path, trainer, evaluator,
     with open(log_name, 'a') as the_file:
         the_file.write('{},{}\n'.format(iteration, ",".join(map(str, metric_values)) ))
     plot_loss(log_name, log_name.replace('.txt','.jpg'), 'Testing Loss')
-    return metrics['loss']
+    return metrics['AccumulatedLoss']
 
 
 def save_training_example(save_path, engine, config_dict):
