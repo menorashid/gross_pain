@@ -23,6 +23,7 @@ class MultiViewDataset(Dataset):
                  mean=(0.485, 0.456, 0.406),  #TODO update these to horse dataset.
                  stdDev= (0.229, 0.224, 0.225),
                  use_sequential_frames=0,
+                 str_aft = None
                  ):
         """
         Args:
@@ -49,7 +50,7 @@ class MultiViewDataset(Dataset):
             Image256toTensor(), # torchvision.transforms.ToTensor() the torchvision one behaved differently for different pytorch versions, hence the custom one..
             torchvision.transforms.Normalize(self.mean, self.stdDev)
         ])
-        self.label_dict = get_label_df_for_subjects(data_folder, subjects).to_dict()
+        self.label_dict = get_label_df_for_subjects(data_folder, subjects, str_aft = str_aft).to_dict()
 
     def __len__(self):
         return len(self.label_dict['frame'])
@@ -121,6 +122,7 @@ class MultiViewDatasetCrop(MultiViewDataset):
                  mean=(0.485, 0.456, 0.406),  #TODO update these to horse dataset.
                  stdDev= (0.229, 0.224, 0.225),
                  use_sequential_frames=0,
+                 str_aft = None
                  ):
         """
         Args:
@@ -132,7 +134,7 @@ class MultiViewDatasetCrop(MultiViewDataset):
                  input_types, label_types, subjects,rot_folder,
                  mean,
                  stdDev,
-                 use_sequential_frames)
+                 use_sequential_frames,str_aft)
         
     def __getitem__(self, index):
 
@@ -191,7 +193,8 @@ class MultiViewDatasetSampler(Sampler):
                  use_subject_batches=0, use_view_batches=0,
                  randomize=True,
                  use_sequential_frames=0,
-                 every_nth_frame=1):
+                 every_nth_frame=1,
+                 str_aft = None):
         # save function arguments
 
         
@@ -199,7 +202,7 @@ class MultiViewDatasetSampler(Sampler):
             setattr(self, arg, val)
 
         # build view/subject datastructure
-        self.label_dict = get_label_df_for_subjects(data_folder, subjects).to_dict()
+        self.label_dict = get_label_df_for_subjects(data_folder, subjects, str_aft = str_aft).to_dict()
         print('Establishing sequence association. Available labels:', list(self.label_dict.keys()))
         all_keys = set()
         viewsets = {}
@@ -318,19 +321,22 @@ class MultiViewDatasetSampler(Sampler):
         return iter(indices_batched.reshape([-1,self.batch_size]))
 
 
-def get_label_df_for_subjects(data_folder, subjects):
+def get_label_df_for_subjects(data_folder, subjects, str_aft = None):
     subject_fi_dfs = []
     print('Iterating over frame indices per subject (.csv files)')
-
-    # print (data_folder)
-    if 'oft' in data_folder:
-        thresh = float(os.path.split(data_folder)[0].split('_')[-2])
-        str_aft = '_'.join(['','reduced','thresh','%.2f'%float(thresh),'frame','index'])+'.csv'
-    else:
+    
+    if str_aft is None:
         str_aft = '_reduced_frame_index.csv'
+    # print (data_folder)
+    # if 'oft' in data_folder:
+    #     thresh = float(os.path.split(data_folder)[0].split('_')[-2])
+    #     str_aft = '_'.join(['','reduced','thresh','%.2f'%float(thresh),'frame','index'])+'.csv'
+    # else:
+    #     str_aft = '_reduced_frame_index.csv'
 
     for subject in subjects:
         csv_file = os.path.join(data_folder,subject + str_aft)
+        print ('CSV:',csv_file)
         subject_frame_index_dataframe = pd.read_csv(csv_file)
         subject_fi_dfs.append(subject_frame_index_dataframe)
     frame_index_df = pd.concat(subject_fi_dfs, ignore_index=True)

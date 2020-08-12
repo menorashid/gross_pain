@@ -162,22 +162,6 @@ class OpticalFlowExtractor():
             #     break
             # break
 
-
-    def create_new_row(self,arg):
-        (row, column_headers) = arg
-        im_path = self.get_im_path(row)
-        flow_file = self.get_flow_path_from_rgb(im_path)
-        if not os.path.exists(flow_file):
-            return None
-        mag_file = flow_file[:-4]+'.txt'
-        assert os.path.exists(mag_file)
-        # args.append(mag_file)
-
-        mag = float(util.readLinesFromFile(mag_file)[0])
-        # row_vals = list(row.values)+[mag]
-        row_vals = [row[k] for k in column_headers[:-1]]+[mag]
-        return row_vals
-
     def collate_magnitude(self, subjects_to_extract = None):
         if subjects_to_extract is None:
             subjects_to_extract = self.subjects
@@ -224,7 +208,7 @@ class OpticalFlowExtractor():
 
                 # util.writeFile(os.path.join(os.path.split(flow_dir)[0],'commands.txt'),commands)
 
-    def create_thresholded_csv(self, thresh, subjects_to_extract = None):
+    def create_thresholded_csv(self, thresh, subjects_to_extract = None, percent = False):
         if subjects_to_extract is None:
             subjects_to_extract = self.subjects
         
@@ -237,7 +221,10 @@ class OpticalFlowExtractor():
             print ('Subject: {}'.format(subject))
             in_file_index = os.path.join(self.output_dir,subject+'_'+'frame_index.csv')
             str_thresh = '%.2f'%thresh
-            out_file_index = os.path.join(self.output_dir,subject+'_thresh_'+str_thresh+'_'+'frame_index.csv')
+            if percent:
+                out_file_index = os.path.join(self.output_dir,subject+'_percent_'+str_thresh+'_'+'frame_index.csv')
+            else:
+                out_file_index = os.path.join(self.output_dir,subject+'_thresh_'+str_thresh+'_'+'frame_index.csv')
             print (out_file_index)
             frames = pd.read_csv(in_file_index)
             rel_intervals = frames.interval.unique()
@@ -265,15 +252,34 @@ class OpticalFlowExtractor():
                     mags = np.array(mags)
                     assert len(files)==len(mags)
 
-                    bin_keep = mags>=thresh
+                    if percent:
+                        idx_sort = np.argsort(mags)
+                        num_keep = int(len(mags)*thresh)
+                        bin_keep = idx_sort[-num_keep:]
+                        # print (len(mags),num_keep)
+                        # print (mags[bin_keep[:10]])
+                        # bin_keep = idx_sort[:num_keep]
+                        # print (mags[bin_keep[:10]])
+                        # print (out_file_index)
+                        # s = input()
+                    else:
+                        bin_keep = mags>=thresh
                     files_keep = files[bin_keep]
                     print ('view,len(files), len(files_keep)',view,len(files), len(files_keep))
                     fids_curr = [int(os.path.split(file)[1][:-4].split('_')[-1]) for file in files_keep]
                     fids +=fids_curr
 
+                # unique_fids = list(set(fids))
+                # fids_keep = []
+                # for fid in unique_fids:
+                #     if fids.count(fid)==4:
+                #         fids_keep.append(fid)
+                # print (len(fids_keep))
+
                 print (len(fids))
                 fids = list(set(fids))
                 print (len(fids))
+                # s = input()
                 row_in = rel_frames.iloc[0]
                 for fid in fids:
                     for view in rel_views:
@@ -306,11 +312,12 @@ def main():
     # ofe.add_symlinks(subjects_to_extract = None)
 
     # # collate magnitudes and files names in text files. need to manually run commands files after this step.
-    ofe.collate_magnitude(subjects_to_extract = ['inkasso'])
+    # ofe.collate_magnitude(subjects_to_extract = ['inkasso'])
     # ['julia', 'kastanjett', 'naughty_but_nice', 'sir_holger'])
 
     # create csv with thresholded images only
-    ofe.create_thresholded_csv(thresh = 0.7,subjects_to_extract = ['inkasso'])
+    # ofe.create_thresholded_csv(thresh = 0.7,subjects_to_extract = ['inkasso'])
+    ofe.create_thresholded_csv(thresh = 0.01,subjects_to_extract = None, percent = True)
     # , 'kastanjett', 'naughty_but_nice', 'sir_holger'] )
 
 

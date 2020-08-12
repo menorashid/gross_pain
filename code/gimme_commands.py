@@ -156,7 +156,11 @@ def debug_commands():
 
 	config_file = 'configs/config_train_rotFlowCropLatent.py'
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
-	job_name = 'withRotFlowCropLatent'
+	job_name = 'withRotFlowCropLatentPercent'
+
+	# config_file = 'configs/config_train_rotFlowCrop.py'
+	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
+	# job_name = 'withRotFlowCropPercent'
 
 	# config_file = 'configs/config_train_rotCropSegMaskLatent.py'
 	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
@@ -165,12 +169,12 @@ def debug_commands():
 	util.mkdir('to_runs')
 
 	num_gpus = 2
-	num_per_gpu = 1
+	num_per_gpu = 4
 	for idx in range(num_gpus):
 		test_horses = test_horses_all[num_per_gpu*idx:num_per_gpu*idx+num_per_gpu]
 		out_file = os.path.join('to_runs','to_run_'+job_name+'_'+str(idx))
 		print (out_file)
-	
+		commands = []
 		for test_subject in test_horses:
 			train_subjects = [x for x in train_horses if x is not test_subject]
 			# train_subjects = train_horses
@@ -182,8 +186,10 @@ def debug_commands():
 			str_com+= ['--job_identifier', job_name]
 			str_com = ' '.join(str_com)
 			print (str_com)
+			commands.append(str_com)
 			# break
 		# break
+		util.writeFile(out_file, commands)
 
 def main():
 	# pnp_latent_commands()

@@ -239,20 +239,23 @@ class IgniteTrainNVS:
         return optimizer
     
     def load_data_train(self,config_dict,save_path):
+        str_aft = config_dict.get('csv_str_aft', None)
         if 'crop' in config_dict['training_set'].lower():
             dataset = MultiViewDatasetCrop(data_folder=config_dict['dataset_folder_train'],
                                        bg_folder=config_dict['bg_folder'],
                                        input_types=config_dict['input_types'],
                                        label_types=config_dict['label_types_train'],
                                        subjects=config_dict['train_subjects'],
-                                       rot_folder = config_dict['rot_folder'])
+                                       rot_folder = config_dict['rot_folder'],
+                                       str_aft = str_aft)
         else:
             dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_train'],
                                        bg_folder=config_dict['bg_folder'],
                                        input_types=config_dict['input_types'],
                                        label_types=config_dict['label_types_train'],
                                        subjects=config_dict['train_subjects'],
-                                       rot_folder = config_dict['rot_folder'])
+                                       rot_folder = config_dict['rot_folder'],
+                                       str_aft = str_aft)
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_train'],
                                                 save_path=save_path,
@@ -262,27 +265,31 @@ class IgniteTrainNVS:
                                                 use_view_batches=config_dict['use_view_batches'],
                                                 batch_size=config_dict['batch_size_train'],
                                                 randomize=True,
-                                                every_nth_frame=config_dict['every_nth_frame'])
+                                                every_nth_frame=config_dict['every_nth_frame'],
+                                                str_aft = str_aft)
 
         loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler, num_workers=0, pin_memory=False,
                                              collate_fn=rhodin_utils_datasets.default_collate_with_string)
         return loader
     
     def load_data_test(self,config_dict,save_path):
+        str_aft = config_dict.get('csv_str_aft', None)
         if 'crop' in config_dict['training_set'].lower():
             dataset = MultiViewDatasetCrop(data_folder=config_dict['dataset_folder_test'],
                                        bg_folder=config_dict['bg_folder'],
                                        input_types=config_dict['input_types'],
                                        label_types=config_dict['label_types_test'],
                                        subjects=config_dict['test_subjects'],
-                                       rot_folder = config_dict['rot_folder'])
+                                       rot_folder = config_dict['rot_folder'],
+                                       str_aft = str_aft)
         else:
             dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_test'],
                                        bg_folder=config_dict['bg_folder'],
                                        input_types=config_dict['input_types'],
                                        label_types=config_dict['label_types_test'],
                                        subjects=config_dict['test_subjects'],
-                                       rot_folder = config_dict['rot_folder'])
+                                       rot_folder = config_dict['rot_folder'],
+                                       str_aft = str_aft)
 
         batch_sampler = MultiViewDatasetSampler(data_folder=config_dict['dataset_folder_test'],
                                                 save_path=save_path,
@@ -292,7 +299,8 @@ class IgniteTrainNVS:
                                                 use_view_batches=config_dict['use_view_batches'],
                                                 batch_size=config_dict['batch_size_test'],
                                                 randomize=False,
-                                                every_nth_frame=config_dict['every_nth_frame'])
+                                                every_nth_frame=config_dict['every_nth_frame'],
+                                                str_aft = str_aft)
 
         loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler, num_workers=0, pin_memory=False,
                                              collate_fn=rhodin_utils_datasets.default_collate_with_string)
@@ -355,6 +363,7 @@ def get_parameter_description(config_dict, old = False):
 
 
     folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
+    print (folder)
     return folder
 
 
@@ -378,6 +387,7 @@ if __name__ == "__main__":
     print(args)
     train_subjects = re.split('/', args.train_subjects)
     test_subjects = re.split('/',args.test_subjects)
+    print (args.config_file)
     config_dict_module = rhodin_utils_io.loadModule(args.config_file)
     config_dict = config_dict_module.config_dict
     config_dict['job_identifier'] = args.job_identifier
