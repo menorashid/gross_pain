@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
 import re
 from tqdm import tqdm
 import numpy as np
+import scipy.stats
 import pandas as pd
 from matplotlib.pyplot import imread, imsave
 from helpers import util, visualize
@@ -119,6 +120,10 @@ def rejected_idea():
 def main():
     data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps'
     out_folder = '../data/bg_per_month_672_380_0.2fps'
+
+    # data_path = '../data/pain_no_pain_x5h_intervals_for_extraction_672_380_0.01_fps'
+    # out_folder = '../data/bg_per_month_x5h_672_380_0.01fps'
+    
     util.mkdir(out_folder)
     interval_paths = glob.glob(os.path.join(data_path,'*','*'))
     interval_paths = [dir_curr for dir_curr in interval_paths if os.path.isdir(dir_curr)]
@@ -127,13 +132,17 @@ def main():
     days = list(set(days))
     print (days)
     
+
     for day in days:
+        if '201903' not in day:
+            continue
+
         path_list = []
         for view in range(4):
             path_list += glob.glob(os.path.join(data_path,'*',day+'*',str(view),'*.jpg'))
         
         print (day, len(path_list))
-        # path_list = path_list[::10]
+        path_list = path_list[::10]
         per_cam_lists = [[] for i in range(NUM_CAMERAS)]
             
         for idx, path in enumerate(path_list):
@@ -154,7 +163,7 @@ def main():
                 #     continue
                 ar = np.asarray(ims)
                 med = np.median(ar, axis=0)
-                out_file = os.path.join(out_folder,day+'_0.2fps_camera_{}.jpg'.format(i))
+                out_file = os.path.join(out_folder,day+'_0.01fps_camera_{}.jpg'.format(i))
                 imsave(out_file, med.astype('uint8'))
             print ('saved',out_file)
 

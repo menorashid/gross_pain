@@ -361,33 +361,32 @@ class HorseDetector():
             out_file_log = os.path.join(self.out_data_path, horse_name+'_bg_crop_log.npz')
             np.savez(out_file_log, ret_vals = np.array(ret_vals), im_files_used = np.array(im_files_used))
 
-    def save_all_crop_bg(self, str_aft = None):
+    def save_all_crop_bg(self, str_aft = None, str_pre = 'median_0.1fps_camera_', match_month = False, out_dir_postpend = '_bg'):
         lookup_viewpoint = pd.read_csv(self.viewpoints_file, index_col='subject')
 
         if str_aft is None:
             str_aft = self.str_aft
 
-        # desired_size = 128
-        # mean_vals = (0.485, 0.456, 0.406)
-        # mean_vals = [int(val*256) for val in mean_vals]
-    
-        # data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop'
-        # horse_names = ['aslan','brava','herrera','inkasso','julia','kastanjett','naughty_but_nice','sir_holger']
-        # str_aft = '_frame_index.csv'
-
-
         for horse_name in self.horse_names:
+            print (horse_name)
             im_files = self.get_horse_ims(horse_name, data_path = self.out_data_path, str_aft = str_aft)
 
             args = []
             im_files_used = []
             for idx_im_file, im_file in enumerate(im_files):
                 crop_info_file = os.path.join(os.path.split(im_file)[0]+'_cropbox',os.path.split(im_file)[1][:-4]+'.npz')
-                out_im_file = os.path.join(os.path.split(im_file)[0]+'_bg',os.path.split(im_file)[1])
+                out_im_file = os.path.join(os.path.split(im_file)[0]+out_dir_postpend,os.path.split(im_file)[1])
 
                 view = os.path.split(im_file)[0][-1]
                 camera = lookup_viewpoint.at[horse_name, view]
-                bg_file = os.path.join(self.bg_dir, 'median_0.1fps_camera_{}.jpg'.format(camera-1))
+                if match_month:
+                    month = os.path.split(os.path.dirname(os.path.dirname(im_file)))[1][:6]
+                    # print (month)
+                    bg_file = os.path.join(self.bg_dir, month+'_'+str_pre+'{}.jpg'.format(camera-1))
+                else:
+                    bg_file = os.path.join(self.bg_dir, str_pre+'{}.jpg'.format(camera-1))
+                # print (bg_file, out_im_file, os.path.exists(out_im_file))
+                # assert False
 
                 if os.path.exists(out_im_file):
                     continue
@@ -476,7 +475,9 @@ def main():
     # print (' '.join(command))
 
     # hd.save_all_crop_bg(str_aft = '_reduced'+str_aft)
-    hd.save_all_crop_flow( data_path, '_opt','_opt', str_aft = '_reduced'+str_aft)
+    hd.save_all_crop_bg(str_aft = '_reduced'+str_aft, str_pre = '0.2fps_camera_', match_month = True, out_dir_postpend = '_bg_month')
+
+    # hd.save_all_crop_flow( data_path, '_opt','_opt', str_aft = '_reduced'+str_aft)
 
     
 

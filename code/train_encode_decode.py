@@ -240,6 +240,7 @@ class IgniteTrainNVS:
     
     def load_data_train(self,config_dict,save_path):
         str_aft = config_dict.get('csv_str_aft', None)
+        bg_post_pend = config_dict.get('bg_post_pend', None)
         if 'crop' in config_dict['training_set'].lower():
             dataset = MultiViewDatasetCrop(data_folder=config_dict['dataset_folder_train'],
                                        bg_folder=config_dict['bg_folder'],
@@ -247,7 +248,8 @@ class IgniteTrainNVS:
                                        label_types=config_dict['label_types_train'],
                                        subjects=config_dict['train_subjects'],
                                        rot_folder = config_dict['rot_folder'],
-                                       str_aft = str_aft)
+                                       str_aft = str_aft,
+                                       bg_post_pend = bg_post_pend)
         else:
             dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_train'],
                                        bg_folder=config_dict['bg_folder'],
@@ -274,6 +276,7 @@ class IgniteTrainNVS:
     
     def load_data_test(self,config_dict,save_path):
         str_aft = config_dict.get('csv_str_aft', None)
+        bg_post_pend = config_dict.get('bg_post_pend', None)
         if 'crop' in config_dict['training_set'].lower():
             dataset = MultiViewDatasetCrop(data_folder=config_dict['dataset_folder_test'],
                                        bg_folder=config_dict['bg_folder'],
@@ -281,7 +284,8 @@ class IgniteTrainNVS:
                                        label_types=config_dict['label_types_test'],
                                        subjects=config_dict['test_subjects'],
                                        rot_folder = config_dict['rot_folder'],
-                                       str_aft = str_aft)
+                                       str_aft = str_aft,
+                                       bg_post_pend = bg_post_pend)
         else:
             dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_test'],
                                        bg_folder=config_dict['bg_folder'],

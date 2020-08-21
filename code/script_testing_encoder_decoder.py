@@ -123,7 +123,7 @@ def save_im_rot(config_dict, config_path, all_subjects, out_path_meta):
     edit_config_retvals(config_dict, input_to_get, output_to_get)
     config_dict['batch_size_test'] = 4
     
-    test_subject_curr = all_subjects[1]
+    test_subject_curr = all_subjects[0]
     
     out_dir_data = os.path.join(out_path_meta,test_subject_curr)
     config_dict['test_subjects'] = [test_subject_curr]
@@ -170,7 +170,9 @@ def save_latent_view_diff(config_dict, config_path, all_subjects, out_path_meta,
 
 
 def get_job_params(job_identifier, out_path_postpend, test_subjects = None, train_subjects = None, model_num = 50, batch_size_test = 64, test_every = None):
-    if 'flowcrop' in job_identifier.lower():
+    if 'flowcroppercent' in job_identifier.lower():
+        dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
+    elif 'flowcrop' in job_identifier.lower():
         dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
     elif 'crop' in job_identifier.lower():
         dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
@@ -195,9 +197,14 @@ def get_job_params(job_identifier, out_path_postpend, test_subjects = None, trai
         config_path = 'configs/config_train_rotCropSegMaskLatent.py'
     elif job_identifier=='withRotCropLatent': 
         config_path = 'configs/config_train_rotCropLatent.py'
-    elif job_identifier=='withRotFlowCropLatent': 
+    # elif job_identifier=='withRotFlowCropLatent': 
+    #     config_path = 'configs/config_train_rotFlowCropLatent.py'
+    elif job_identifier=='withRotFlowCropLatentPercentLatentLr0.1':
         config_path = 'configs/config_train_rotFlowCropLatent.py'
-    
+    elif job_identifier=='withRotFlowCropPercentBetterBg':
+        config_path = 'configs/config_train_rotFlowCropBetterBg.py'
+    elif job_identifier=='withRotFlowCropPercent':
+        config_path = 'configs/config_train_rotFlowCrop.py'
     else:
         raise ValueError('job_identifier %s not registered'%job_identifier)
 
@@ -238,8 +245,8 @@ def get_job_params(job_identifier, out_path_postpend, test_subjects = None, trai
 
 def main():
 
-    # job_identifier = 'withRotCropNewCal'
-    job_identifier = 'withRotNewCal'
+    job_identifier = 'withRotCropNewCal'
+    # job_identifier = 'withRotNewCal'
     # job_identifier = 'withRotTransAll'
     # job_identifier = 'withRotSeg'
     # job_identifier = 'withRotCropSeg'
@@ -249,13 +256,18 @@ def main():
     # job_identifier = 'withRotCropLatent'
     # train_subjects = 'all'
 
+    # job_identifier = 'withRotFlowCropLatentPercentLatentLr0.1'
+    # job_identifier = 'withRotFlowCropPercentBetterBg'
+    # job_identifier = 'withRotFlowCropPercent'
+
+
     bg = None
     # '../data/blank_mean.jpg'
     train_subjects = None
-    
+    # test_subjects ='aslan'
 
     if 'crop' in job_identifier.lower():
-        test_every = 100
+        test_every = 1000
     else:
         test_every = 1000
 

@@ -122,7 +122,8 @@ class MultiViewDatasetCrop(MultiViewDataset):
                  mean=(0.485, 0.456, 0.406),  #TODO update these to horse dataset.
                  stdDev= (0.229, 0.224, 0.225),
                  use_sequential_frames=0,
-                 str_aft = None
+                 str_aft = None,
+                 bg_post_pend = None
                  ):
         """
         Args:
@@ -130,11 +131,16 @@ class MultiViewDatasetCrop(MultiViewDataset):
         input_types: [str],
         label_types: [str]
         """
+        
         super().__init__(data_folder, bg_folder,
                  input_types, label_types, subjects,rot_folder,
                  mean,
                  stdDev,
                  use_sequential_frames,str_aft)
+        if bg_post_pend is None:
+            self.bg_post_pend = '_bg'
+        else:
+            self.bg_post_pend = bg_post_pend
         
     def __getitem__(self, index):
 
@@ -150,10 +156,13 @@ class MultiViewDatasetCrop(MultiViewDataset):
         def get_bg_path(key):
             frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
                                 str(view), '%06d'%frame])
-            return self.data_folder + '/{}/{}/{}_bg/{}.jpg'.format(subject,
+            str_format = '/{}/{}/{}'+self.bg_post_pend+'/{}.jpg'
+            file_curr = self.data_folder + str_format.format(subject,
                                                                 interval,
                                                                 view,
                                                                 frame_id)
+            return file_curr 
+            
        
         def load_data(types):
             new_dict = {}

@@ -42,6 +42,9 @@ class PreApplyCriterionListDict(torch.nn.Module):
         losslist = []
         for criterion_idx, criterion_single in enumerate(self.criterions_single):
             loss_i = criterion_single(pred_dict, label_dict)
+            
+            # print (criterion_idx, loss_i)
+
             if self.loss_weights is not None:
                 loss_i = loss_i * self.loss_weights[criterion_idx]
             losslist.append(loss_i)

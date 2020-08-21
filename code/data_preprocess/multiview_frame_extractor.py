@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
+
 import pandas as pd
 import numpy as np
 import subprocess
@@ -445,3 +449,28 @@ def get_timedelta(time_stamp_1, time_stamp_2):
 
 def from_filename_time_to_pd_datetime(yyyymmddHHMMSS):
     return pd.to_datetime(yyyymmddHHMMSS, format='%Y%m%d%H%M%S')
+
+
+def main():
+
+    data_path = '../data/lps_data/surveillance_camera'
+    
+    # data_selection_path = '../metadata/intervals_for_empty.csv'
+    data_selection_path = '../data/frame_extraction_files/pain_no_pain_x5h_intervals_for_extraction.csv'
+    
+    out_dir_offsets = '../metadata/fixing_offsets_with_cam_on'
+    out_file_final =  os.path.join(out_dir_offsets,'video_offsets_final.csv')
+    
+    fps = 0.01
+    width = 672
+    height = 380
+    fname = os.path.split(data_selection_path)[1][:-4]
+    fname = '_'.join([str(val) for val in [fname,width,height,fps,'fps']])
+    out_dir_testing = os.path.join('../data',fname)
+    print (out_dir_testing)
+    mve = MultiViewFrameExtractor(data_path = data_path, width= width, height = height, frame_rate = fps, output_dir = out_dir_testing,views = [0,1,2,3], data_selection_path = data_selection_path, num_processes = multiprocessing.cpu_count(), offset_file = out_file_final)
+    
+    mve.extract_frames(replace = False)
+
+if __name__=='__main__':
+    main()

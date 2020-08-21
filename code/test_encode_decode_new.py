@@ -55,7 +55,11 @@ class IgniteTestNVS(ted.IgniteTrainNVS):
     def rotate_one_image(self):
         in_vals = []
         out_vals = []
+        idx = 0
         for input_dict, label_dict in self.data_iterator:
+            if idx==0:
+                idx+=1
+                continue
             in_vals.append(input_dict['img_crop'])
             
             angles = np.linspace(0,2*np.pi,15)

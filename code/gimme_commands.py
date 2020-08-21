@@ -156,11 +156,15 @@ def debug_commands():
 
 	config_file = 'configs/config_train_rotFlowCropLatent.py'
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
-	job_name = 'withRotFlowCropLatentPercent'
+	job_name = 'withRotFlowCropLatentPercentLatentLr0.1'
 
-	# config_file = 'configs/config_train_rotFlowCrop.py'
-	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
-	# job_name = 'withRotFlowCropPercent'
+	config_file = 'configs/config_train_rotFlowCropBetterBg.py'
+	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
+	job_name = 'withRotFlowCropPercentBetterBg'
+
+	config_file = 'configs/config_train_rotFlowCrop.py'
+	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
+	job_name = 'withRotFlowCropPercent'
 
 	# config_file = 'configs/config_train_rotCropSegMaskLatent.py'
 	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
@@ -187,7 +191,7 @@ def debug_commands():
 			str_com = ' '.join(str_com)
 			print (str_com)
 			commands.append(str_com)
-			# break
+		# 	break
 		# break
 		util.writeFile(out_file, commands)
 
