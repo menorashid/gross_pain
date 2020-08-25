@@ -457,7 +457,8 @@ def main():
     data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps'
     out_data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop'
     # str_aft = '_thresh_0.70_frame_index.csv'
-    str_aft = '_percent_0.01_frame_index.csv'
+    # str_aft = '_percent_0.01_frame_index.csv'
+    str_aft = '_2fps_frame_index.csv'
     # horse_names = ['aslan','brava']
     # horse_names = ['herrera','inkasso']
     # horse_names = ['kastanjett']
@@ -468,14 +469,14 @@ def main():
 
     hd = HorseDetector(data_path, out_data_path, thresh = thresh, horse_names = horse_names, str_aft = str_aft, batch_size = 12)
     # hd.save_detections()
-    # hd.save_all_crop_im()
+    hd.save_all_crop_im()
 
     # copy csv files and potentially reduce them
-    # command = ['cp',os.path.join(data_path,'*'+str_aft),out_data_path+'/']
-    # print (' '.join(command))
+    command = ['cp',os.path.join(data_path,'*'+str_aft),out_data_path+'/']
+    print (' '.join(command))
 
     # hd.save_all_crop_bg(str_aft = '_reduced'+str_aft)
-    hd.save_all_crop_bg(str_aft = '_reduced'+str_aft, str_pre = '0.2fps_camera_', match_month = True, out_dir_postpend = '_bg_month')
+    # hd.save_all_crop_bg(str_aft = '_reduced'+str_aft, str_pre = '0.2fps_camera_', match_month = True, out_dir_postpend = '_bg_month')
 
     # hd.save_all_crop_flow( data_path, '_opt','_opt', str_aft = '_reduced'+str_aft)
 

@@ -196,9 +196,9 @@ def debug_commands():
 		util.writeFile(out_file, commands)
 
 def main():
-	# pnp_latent_commands()
+	pnp_latent_commands()
 	# back_bone_commands()
-	debug_commands()
+	# debug_commands()
 
 
 

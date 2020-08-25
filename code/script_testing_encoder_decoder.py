@@ -168,8 +168,7 @@ def save_latent_view_diff(config_dict, config_path, all_subjects, out_path_meta,
             np.savez_compressed(out_file, **inner_batch)
         
 
-
-def get_job_params(job_identifier, out_path_postpend, test_subjects = None, train_subjects = None, model_num = 50, batch_size_test = 64, test_every = None):
+def get_dataset_path(job_identifier):
     if 'flowcroppercent' in job_identifier.lower():
         dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
     elif 'flowcrop' in job_identifier.lower():
@@ -178,7 +177,9 @@ def get_job_params(job_identifier, out_path_postpend, test_subjects = None, trai
         dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
     else:
         dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
+    return dataset_path
 
+def get_config_path(job_identifier):
     if job_identifier=='withRotCrop':
         config_path = 'configs/config_train_rotation_crop.py'
     elif job_identifier=='withRotCropNewCal':
@@ -208,6 +209,9 @@ def get_job_params(job_identifier, out_path_postpend, test_subjects = None, trai
     else:
         raise ValueError('job_identifier %s not registered'%job_identifier)
 
+    return config_path
+
+def get_subjects(train_subjects, test_subjects):
     all_subjects = 'aslan/brava/herrera/inkasso/julia/kastanjett/naughty_but_nice/sir_holger'.split('/')
     if test_subjects is None:
         test_subjects = ['aslan']
@@ -216,6 +220,24 @@ def get_job_params(job_identifier, out_path_postpend, test_subjects = None, trai
         train_subjects = [val for val in all_subjects if val not in test_subjects]
     elif train_subjects=='all':
         train_subjects = all_subjects
+    return train_subjects, test_subjects, all_subjects
+
+def get_job_params(job_identifier, out_path_postpend, test_subjects = None, train_subjects = None, model_num = 50, batch_size_test = 64, test_every = None):
+    
+    dataset_path = get_dataset_path(job_identifier)
+    config_path = get_config_path(job_identifier)
+    
+    all_subjects = 'aslan/brava/herrera/inkasso/julia/kastanjett/naughty_but_nice/sir_holger'.split('/')
+    
+    train_subjects, test_subjects, all_subjects = get_subjects(train_subjects, test_subjects)
+
+    # if test_subjects is None:
+    #     test_subjects = ['aslan']
+    
+    # if train_subjects is None:
+    #     train_subjects = [val for val in all_subjects if val not in test_subjects]
+    # elif train_subjects=='all':
+    #     train_subjects = all_subjects
 
        
     config_dict = set_up_config_dict(config_path, train_subjects, test_subjects, job_identifier, batch_size_test, dataset_path)

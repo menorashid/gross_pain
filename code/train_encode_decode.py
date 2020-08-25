@@ -52,7 +52,10 @@ class IgniteTrainNVS:
             wandb_run = False
 
         # save path and config files
-        save_path = get_parameter_description(config_dict)
+        print ('before get get_parameter_description')
+        save_path = self.get_parameter_description(config_dict)
+        print ('returned',save_path)
+        s = input()
         rhodin_utils_io.savePythonFile(config_dict_file, save_path)
         rhodin_utils_io.savePythonFile(__file__, save_path)
         
@@ -345,6 +348,9 @@ class IgniteTrainNVS:
                 
         # annotation and pred is organized as a list, to facilitate multiple output types (e.g. heatmap and 3d loss)
         return loss_train, loss_test
+
+    def get_parameter_description(self, config_dict, old = False):
+        return get_parameter_description(config_dict,old)
     
 def get_parameter_description(config_dict, old = False):
     nb_chars = 3 if config_dict['training_set'] == 'treadmill' else 2

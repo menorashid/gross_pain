@@ -399,13 +399,13 @@ class unet(nn.Module):
         # 3D pose stage (parallel to image decoder)
         output_pose = self.to_pose.forward({'latent_3d': latent_3d})['3D']
         output_pain = self.to_pain.forward({'latent_3d': latent_3d})['3D']
-
+        pain_pred = torch.nn.functional.softmax(output_pain, dim = 1)
 
         ###############################################
         # Select the right output
         output_dict_all = {'3D' : output_pose, 'img_crop' : output_img, 'shuffled_pose' : shuffled_pose,
                            'shuffled_appearance' : shuffled_appearance, 'latent_3d': latent_3d, 'latent_3d_transformed': latent_3d_transformed,
-                           'pain': output_pain } 
+                           'pain': output_pain, 'pain_pred': pain_pred} 
         output_dict = {}
         for key in self.output_types:
             output_dict[key] = output_dict_all[key]

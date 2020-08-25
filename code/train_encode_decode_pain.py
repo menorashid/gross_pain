@@ -21,6 +21,7 @@ from rhodin.python.losses import generic as losses_generic
 from rhodin.python.losses import poses as losses_poses
 from metrics.binary_accuracy import BinaryAccuracy
 from rhodin.python.utils import training as utils_train
+from helpers import util
 
 class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
     def load_metrics(self, loss_test):
@@ -60,16 +61,29 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
         # annotation and pred is organized as a list, to facilitate multiple output types (e.g. heatmap and 3d loss)
         return loss_train, loss_test
 
-    def get_parameter_description(self, config_dict):#, config_dict):
-        shorter_train_subjects = [subject[:2] for subject in config_dict['train_subjects']]
-        shorter_test_subjects = [subject[:2] for subject in config_dict['test_subjects']]
+    def get_parameter_description(self, config_dict, old = False):#, config_dict):
+        return get_parameter_description_pain(config_dict, old)
+        
+
+def get_parameter_description_pain(config_dict, old = False):
+    shorter_train_subjects = [subject[:2] for subject in config_dict['train_subjects']]
+    shorter_test_subjects = [subject[:2] for subject in config_dict['test_subjects']]
+
+    if not old:
         shorter_train_subjects = util.join_string_list(shorter_train_subjects, '_')
         shorter_test_subjects  = util.join_string_list(shorter_test_subjects, '_')
-    
-        folder = "../output/trainNVSPainFromLatent_{job_identifier}_{job_identifier_encdec}/{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_lr{learning_rate}_bstrain{batch_size_train}_bstest{batch_size_test}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
-        folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
-        return folder
 
+    folder = "../output/trainNVSPainFromLatent_{job_identifier}_{job_identifier_encdec}/{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_lr{learning_rate}_bstrain{batch_size_train}_bstest{batch_size_test}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
+    folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
+    return folder
+
+
+def get_model_path_pain(config_dict, epoch, old = False):
+    folder = get_parameter_description_pain(config_dict, old)
+    model_ext = 'network_0' + epoch + '.pth'
+    model_path = os.path.join(folder, 'models', model_ext)
+    print ('Model Path',model_path)
+    return model_path
 
 def get_model_path(config_dict, epoch, old = False):
     folder = train_encode_decode.get_parameter_description(config_dict, old)
