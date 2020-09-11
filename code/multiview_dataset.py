@@ -205,7 +205,6 @@ class MultiViewDatasetSampler(Sampler):
                  every_nth_frame=1,
                  str_aft = None):
         # save function arguments
-
         
         for arg,val in list(locals().items()):
             setattr(self, arg, val)
@@ -345,7 +344,6 @@ def get_label_df_for_subjects(data_folder, subjects, str_aft = None):
 
     for subject in subjects:
         csv_file = os.path.join(data_folder,subject + str_aft)
-        print ('CSV:',csv_file)
         subject_frame_index_dataframe = pd.read_csv(csv_file)
         subject_fi_dfs.append(subject_frame_index_dataframe)
     frame_index_df = pd.concat(subject_fi_dfs, ignore_index=True)

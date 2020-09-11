@@ -169,11 +169,15 @@ def save_latent_view_diff(config_dict, config_path, all_subjects, out_path_meta,
         
 
 def get_dataset_path(job_identifier):
+    # print (job_identifier)
+    # s = input()
     if 'flowcroppercent' in job_identifier.lower():
         dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
     elif 'flowcrop' in job_identifier.lower():
         dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
     elif 'crop' in job_identifier.lower():
+        dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
+    elif job_identifier =='pain':
         dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
     else:
         dataset_path = '../data/pain_no_pain_x2h_intervals_for_extraction_128_128_2fps/'
@@ -282,6 +286,7 @@ def main():
     # job_identifier = 'withRotFlowCropPercentBetterBg'
     # job_identifier = 'withRotFlowCropPercent'
 
+    _, _, all_subjects = get_subjects(None, None)
 
     bg = None
     # '../data/blank_mean.jpg'
@@ -298,8 +303,10 @@ def main():
     # task = 'viewdiff'
     task = 'imrot'
     view = None
-    job_params = get_job_params(job_identifier, task, train_subjects = train_subjects, test_every = test_every)
-    
+    for test_subject in all_subjects:
+        job_params = get_job_params(job_identifier, task, train_subjects = train_subjects, test_subjects =[test_subject], test_every = test_every)
+
+    return
     if job_params is None:
         return
     

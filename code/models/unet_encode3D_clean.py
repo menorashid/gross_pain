@@ -326,6 +326,26 @@ class unet(nn.Module):
 
         return output_img_shuffled
 
+    def forward_pain(self, input_dict):
+        if self.skip_connections:
+            assert False
+
+        input = input_dict['img_crop']
+        device = input.device
+        
+        latent_3d, latent_fg = self.get_encoder_outputs(input_dict)
+
+        output_pain = self.to_pain.forward({'latent_3d': latent_3d})['3D']
+        pain_pred = torch.nn.functional.softmax(output_pain, dim = 1)
+
+        ###############################################
+        # Select the right output
+        output_dict_all = {'pain': output_pain, 'pain_pred': pain_pred} 
+        output_dict = {}
+        for key in self.output_types:
+            output_dict[key] = output_dict_all[key]
+
+        return output_dict
 
     def forward(self, input_dict):
         if self.skip_connections:

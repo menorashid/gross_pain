@@ -35,47 +35,84 @@ else:
     device = "cpu"
 
 class IgniteTrainNVS:
-    def run(self, config_dict_file, config_dict):
-        
-        # some default values
+
+    def __init__(self, config_dict_file, config_dict):
         config_dict['implicit_rotation'] = config_dict.get('implicit_rotation', False)
         config_dict['skip_background'] = config_dict.get('skip_background', True)
         config_dict['loss_weight_pose3D'] = config_dict.get('loss_weight_pose3D', 0)
         config_dict['n_hidden_to3Dpose'] = config_dict.get('n_hidden_to3Dpose', 2)
         config_dict['team_wandb'] = config_dict.get('team_wandb', 'egp')
         
-        print (config_dict['rot_folder'])
-        
         if not config_dict['project_wandb']=='debug':
             wandb_run = self.initialize_wandb(config_dict)
         else:
             wandb_run = False
 
+        
         # save path and config files
-        print ('before get get_parameter_description')
         save_path = self.get_parameter_description(config_dict)
-        print ('returned',save_path)
-        s = input()
+        epochs = config_dict['num_epochs']
+        out_file = os.path.join(save_path,'models','network_%03d.pth'%epochs)
+        if os.path.exists(out_file):
+            print ('out_file',out_file,'exists. change exp params')
+            self.model = None
+            return None
+        else:
+            print ('we are good. out_file',out_file,'does not exist')
+            # self.model = None
+            # return None
+        # assert not os.path.exists(out_file)
+        # print (out_file)
+        # print (os.path.exists(out_file))
+        # print (save_path, epochs)
+        # return
+
+        # now do training stuff
         rhodin_utils_io.savePythonFile(config_dict_file, save_path)
         rhodin_utils_io.savePythonFile(__file__, save_path)
         
-        # now do training stuff
-        epochs = config_dict['num_epochs']
         train_loader = self.load_data_train(config_dict, save_path)
         test_loader = self.load_data_test(config_dict, save_path)
         model = self.load_network(config_dict)
-        if wandb_run:
-            wandb.watch(model)
+        
         model = model.to(device)
         optimizer = self.loadOptimizer(model,config_dict)
         loss_train,loss_test = self.load_loss(config_dict)
         metrics = self.load_metrics(loss_test)
-            
+                    
         trainer = utils_train.create_supervised_trainer(model, optimizer, loss_train, device=device)
         evaluator = utils_train.create_supervised_evaluator(model,
                                                 metrics=metrics,
                                                 device=device)
-    
+        self.config_dict = config_dict
+        self.save_path = save_path
+        self.epochs = epochs
+        self.wandb_run = wandb_run
+        self.train_loader = train_loader
+        self.test_loader = test_loader
+        self.model = model
+        self.optimizer = optimizer
+        self.loss_train = loss_train
+        self.loss_test = loss_test
+        self.metrics = metrics
+        self.trainer = trainer
+        self.evaluator = evaluator
+
+    def run(self):
+        config_dict = self.config_dict
+        save_path = self.save_path
+        epochs = self.epochs
+        wandb_run = self.wandb_run
+        train_loader = self.train_loader
+        test_loader = self.test_loader
+        model = self.model
+        optimizer = self.optimizer
+        loss_train = self.loss_train
+        loss_test = self.loss_test
+        metrics = self.metrics
+        trainer = self.trainer
+        evaluator = self.evaluator
+
         @trainer.on(Events.ITERATION_COMPLETED)
         def log_training_progress(engine):
             # log the loss
@@ -273,7 +310,7 @@ class IgniteTrainNVS:
                                                 every_nth_frame=config_dict['every_nth_frame'],
                                                 str_aft = str_aft)
 
-        loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler, num_workers=0, pin_memory=False,
+        loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler, num_workers=config_dict['num_workers'], pin_memory=False,
                                              collate_fn=rhodin_utils_datasets.default_collate_with_string)
         return loader
     
@@ -309,7 +346,7 @@ class IgniteTrainNVS:
                                                 every_nth_frame=config_dict['every_nth_frame'],
                                                 str_aft = str_aft)
 
-        loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler, num_workers=0, pin_memory=False,
+        loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler, num_workers=config_dict['num_workers'], pin_memory=False,
                                              collate_fn=rhodin_utils_datasets.default_collate_with_string)
         return loader
     
@@ -373,7 +410,7 @@ def get_parameter_description(config_dict, old = False):
 
 
     folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
-    print (folder)
+    # print (folder)
     return folder
 
 
@@ -408,6 +445,7 @@ if __name__ == "__main__":
     config_dict['dataset_folder_test'] = args.dataset_path
     root = args.dataset_path.rsplit('/', 2)[0]
     
-    ignite = IgniteTrainNVS()
-    ignite.run(config_dict_module.__file__, config_dict)
+    ignite = IgniteTrainNVS(config_dict_module.__file__, config_dict)
+    ignite.run()
+    # config_dict_module.__file__, config_dict)
 

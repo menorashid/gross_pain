@@ -70,8 +70,19 @@ def pnp_latent_commands():
 	
 	to_run_str = 'nth1'
 	# 
-	config_file_model = 'configs/config_train_rotation_crop_newCal.py'
-	job_name_model = 'withRotCropNewCal'
+	# config_file_model = 'configs/config_train_rotation_crop_newCal.py'
+	# job_name_model = 'withRotCropNewCal'
+
+	# config_file_model = 'configs/config_train_rotFlowCrop.py'
+	# job_name_model = 'withRotFlowCropPercent'
+
+	# config_file_model = 'configs/config_train_rotFlowCropLatent.py'
+	# job_name_model = 'withRotFlowCropLatentPercentLatentLr0.1'
+
+	config_file_model = 'configs/config_train_rotFlowCropBetterBg.py'
+	job_name_model = 'withRotFlowCropPercentBetterBg'
+
+
 	epoch = '50'
 
 
@@ -82,16 +93,15 @@ def pnp_latent_commands():
 	config_file = 'configs/config_train_painfromlatent_crop.py'
 	job_name = 'pain'
 	python_path = 'train_encode_decode_pain.py'
-
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
 	
 	util.mkdir('to_runs')
 
 	num_gpus = 1
-	num_per_gpu = 4
+	num_per_gpu = 8
 	for idx in range(num_gpus):
 		test_horses = test_horses_all[num_per_gpu*idx:num_per_gpu*idx+num_per_gpu]
-		out_file = os.path.join('to_runs','_'.join(['to_run',to_run_str,job_name,str(idx)]))
+		out_file = os.path.join('to_runs','_'.join(['to_run',to_run_str,job_name,job_name_model,str(idx)]))
 		print (out_file)
 
 		commands = []
@@ -112,9 +122,9 @@ def pnp_latent_commands():
 
 			str_com = ' '.join(str_com)
 			commands.append(str_com)
-			print (str_com)
-			break
-		break
+			# print (str_com)
+		# 	break
+		# break
 		# print (commands)
 		util.writeFile(out_file, commands)
 

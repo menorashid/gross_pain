@@ -23,7 +23,29 @@ from metrics.binary_accuracy import BinaryAccuracy
 from rhodin.python.utils import training as utils_train
 from helpers import util
 
+import math
+import torch
+import torch.optim
+
+from rhodin.python.ignite._utils import convert_tensor
+from rhodin.python.ignite.engine import Events
+
+if torch.cuda.is_available():
+    device = "cuda:0"
+else:
+    device = "cpu"
+
 class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
+    def __init__(self, config_dict_file, config_dict):
+        super().__init__(config_dict_file, config_dict)
+        if self.model is None:
+            return
+        # redefine these
+        self.trainer = utils_train.create_supervised_trainer(self.model, self.optimizer, self.loss_train, device=device, forward_fn = self.model.forward_pain)
+        self.evaluator = utils_train.create_supervised_evaluator(self.model,
+                                                metrics=self.metrics,
+                                                device=device, forward_fn = self.model.forward_pain)
+    
     def load_metrics(self, loss_test):
         metrics = {'AccumulatedLoss': utils_train.AccumulatedLoss(loss_test),
                    'accuracy': BinaryAccuracy()}
@@ -53,7 +75,6 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
         return optimizer
 
     def load_loss(self, config_dict):
-    
         pain_key = 'pain'
         loss_train = losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
         loss_test = losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
@@ -70,8 +91,8 @@ def get_parameter_description_pain(config_dict, old = False):
     shorter_test_subjects = [subject[:2] for subject in config_dict['test_subjects']]
 
     if not old:
-        shorter_train_subjects = util.join_string_list(shorter_train_subjects, '_')
-        shorter_test_subjects  = util.join_string_list(shorter_test_subjects, '_')
+        shorter_train_subjects = '_'+util.join_string_list(shorter_train_subjects, '_')
+        shorter_test_subjects  = '_'+util.join_string_list(shorter_test_subjects, '_')
 
     folder = "../output/trainNVSPainFromLatent_{job_identifier}_{job_identifier_encdec}/{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_lr{learning_rate}_bstrain{batch_size_train}_bstest{batch_size_test}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
     folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
@@ -82,14 +103,14 @@ def get_model_path_pain(config_dict, epoch, old = False):
     folder = get_parameter_description_pain(config_dict, old)
     model_ext = 'network_0' + epoch + '.pth'
     model_path = os.path.join(folder, 'models', model_ext)
-    print ('Model Path',model_path)
+    # print ('Model Path',model_path)
     return model_path
 
 def get_model_path(config_dict, epoch, old = False):
     folder = train_encode_decode.get_parameter_description(config_dict, old)
     model_ext = 'network_0' + epoch + '.pth'
     model_path = os.path.join(folder, 'models', model_ext)
-    print ('Model Path',model_path)
+    # print ('Model Path',model_path)
     return model_path
 
 
@@ -120,7 +141,7 @@ def parse_arguments(argv):
     
 if __name__ == "__main__":
     args = parse_arguments(sys.argv[1:])
-    print(args)
+    # print(args)
     train_subjects = re.split('/', args.train_subjects)
     test_subjects = re.split('/',args.test_subjects)
     train_subjects_model = re.split('/', args.train_subjects_model)
@@ -151,7 +172,7 @@ if __name__ == "__main__":
 
     config_dict['rot_folder'] = config_dict_for_saved_model['rot_folder']
     config_dict['bg_folder'] =  config_dict_for_saved_model['bg_folder']
-
-    ignite = IgniteTrainPainFromLatent()
-    ignite.run(config_dict_module.__file__, config_dict)
+    ignite = IgniteTrainPainFromLatent(config_dict_module.__file__, config_dict)
+    if ignite.model is not None:
+        ignite.run()
 

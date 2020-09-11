@@ -18,12 +18,15 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
 # optimization function
-def create_supervised_trainer(model, optimizer, loss_fn, device=None):
+def create_supervised_trainer(model, optimizer, loss_fn, device=None, forward_fn = None):
     def _update(engine, batch):
         model.train()
         optimizer.zero_grad()
         x, y = utils_data.nestedDictToDevice(batch, device=device) # make it work for dict input too
-        y_pred = model(x)
+        if forward_fn is None:
+            y_pred = model(x)
+        else:
+            y_pred = forward_fn(x)
         loss = loss_fn(y_pred, y)
         loss.backward()
         optimizer.step()
@@ -31,13 +34,16 @@ def create_supervised_trainer(model, optimizer, loss_fn, device=None):
     engine = Engine(_update)
     return engine
 
-def create_supervised_evaluator(model, metrics={}, device=None):
+def create_supervised_evaluator(model, metrics={}, device=None, forward_fn = None):
     def _inference(engine, batch):  
         # now compute error
         model.eval()
         with torch.no_grad():
             x, y = utils_data.nestedDictToDevice(batch, device=device) # make it work for dict input too
-            y_pred = model(x)
+            if forward_fn is None:
+                y_pred = model(x)
+            else:
+                y_pred = forward_fn(x)
             
         return y_pred, y        
 
@@ -47,7 +53,6 @@ def create_supervised_evaluator(model, metrics={}, device=None):
         metric.attach(engine, name)
 
     return engine
-
 
 def save_training_error(save_path, engine):
     # log training error

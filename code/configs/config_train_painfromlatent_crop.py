@@ -13,21 +13,22 @@ inputDimension = 128
 config_dict = {
     # General parameters
     'dpi'                     : 190,
-    'input_types'             : ['img_crop', 'bg_crop'],
+    'input_types'             : ['img_crop'],
+    # , 'bg_crop'],
     # Possible output types   :  'img_crop' | '3D' | 'shuffled_pose' | 'shuffled_appearance' | 'latent_3d'
-    'output_types'            : ['pain',],
+    'output_types'            : ['pain'],
     'label_types_train'       : ['img_crop','pain'],
     'label_types_test'        : ['img_crop','pain'],
-    'num_workers'             : 4,
+    'num_workers'             : 32,
     'bones'                   : bones,
 
     # opt parameters    
     'num_epochs'              : 10,
-    'save_every'              : 1,
+    'save_every'              : 5,
     'train_test_every'        : 10,
     'learning_rate'           : 1e-3,# baseline: 0.001=1e-3
     'test_every'              : 1,
-    'plot_every'              : 1,
+    'plot_every'              : 100,
     'print_every'             : 10,
 
 
@@ -43,8 +44,8 @@ config_dict = {
     'image_height'            : 128,
 
     # network parameters
-    'batch_size_train' : 64,
-    'batch_size_test' : 64, #10 #self.batch_size # Note, needs to be = self.batch_size for multi-view validation
+    'batch_size_train' : 1024,
+    'batch_size_test' : 1024, #10 #self.batch_size # Note, needs to be = self.batch_size for multi-view validation
     'outputDimension_3d' : num_joints * 3,
     'outputDimension_2d' : inputDimension // 8,
 

@@ -26,7 +26,7 @@ print(device)
 
 class IgniteTestNVS(ted.IgniteTrainNVS):
     def __init__(self, config_dict_file, config_dict):
-        super(IgniteTestNVS,self).__init__()
+        # super(IgniteTestNVS,self).__init__()
         
         # TODO add all input and output to get to config by default.
 
