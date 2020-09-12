@@ -16,7 +16,81 @@ from rhodin.python.utils import io as rhodin_utils_io
 from tqdm import tqdm
 import time
 import random
-from multiview_dataset import get_label_df_for_subjects
+from multiview_dataset import MultiViewDataset, get_label_df_for_subjects
+
+# class SegBasedDataset(MultiViewDataset):
+#     """Multi-view surveillance dataset of horses in their box."""
+#     def __init__(self, data_folder,
+#                  input_types, label_types, subjects,
+#                  mean=(0.485, 0.456, 0.406),  #TODO update these to horse dataset.
+#                  stdDev= (0.229, 0.224, 0.225),
+#                  str_aft = None
+#                  ):
+#         """
+#         Args:
+#         data_folder: str,
+#         input_types: [str],
+#         label_types: [str]
+#         """
+        
+#         super().__init__(data_folder, data_folder,
+#                  input_types, label_types, subjects,rot_folder = None,
+#                  mean = mean,
+#                  stdDev = stdDev,
+#                  use_sequential_frames = 0,str_aft)
+#         if bg_post_pend is None:
+#             self.bg_post_pend = '_bg'
+#         else:
+#             self.bg_post_pend = bg_post_pend
+        
+#     def __getitem__(self, index):
+
+#         interval, interval_ind, view, subject, frame = self.get_local_indices(index)
+
+#         def get_image_path(key):
+#             frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
+#                                 str(view), '%06d'%frame])
+#             return self.data_folder + '/{}/{}/{}/{}.jpg'.format(subject,
+#                                                                 interval,
+#                                                                 view,
+#                                                                 frame_id)
+#         def get_bg_path(key):
+#             frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
+#                                 str(view), '%06d'%frame])
+#             str_format = '/{}/{}/{}'+self.bg_post_pend+'/{}.jpg'
+#             file_curr = self.data_folder + str_format.format(subject,
+#                                                                 interval,
+#                                                                 view,
+#                                                                 frame_id)
+#             return file_curr 
+            
+       
+#         def load_data(types):
+#             new_dict = {}
+#             for key in types:
+#                 if key == 'img_crop':
+#                     new_dict[key] = self.load_image(get_image_path(key)) 
+#                 elif key == 'bg_crop':
+#                     new_dict[key] = self.load_image(get_bg_path(key))
+#                 elif key in self.label_dict.keys():
+#                  # == 'pain':
+#                     new_dict[key] = int(self.label_dict[key][index])
+#                 elif key == 'img_path':
+#                     interval_int = [int(val) for val in interval.split('_')]
+#                     new_dict[key] = np.array(interval_int+[interval_ind, view, frame])
+#                 # elif key == 'view':
+#                 #     new_dict[key] = int(self.label_dict[key][index])
+#                 elif (key=='extrinsic_rot') or (key=='extrinsic_rot_inv') or (key=='extrinsic_tvec'):
+#                     rot_path = self.get_rot_path(view,subject,key)
+#                     new_dict[key] = np.load(rot_path)
+#                     # print (new_dict[key])
+#                 else:
+#                     new_dict[key] = np.array(self.label_dict[key][index], dtype='float32')
+#             return new_dict
+
+#         return load_data(self.input_types), load_data(self.label_types)
+
+
 
 class SegBasedSampler(Sampler):
     """ This sampler decides how to iterate over the indices in the dataset.
@@ -25,7 +99,7 @@ class SegBasedSampler(Sampler):
         and indices corresponding to frames from different
         views at t', from the same interval."""
 
-    def __init__(self, data_folder, save_path, mode,
+    def __init__(self, data_folder, 
                  batch_size,
                  num_frames_per_seg,
                  subjects=None,
@@ -142,19 +216,38 @@ class SegBasedSampler(Sampler):
 def main():
     print ('hello')
     data_folder = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop'
-    all_subjects = ['aslan','brava','herrera','julia','kastanjett','naughty_but_nice','sir_holger']
-    sampler = SegBasedSampler(data_folder, None, None,
+    all_subjects = ['aslan']
+    # ,'brava','herrera','julia','kastanjett','naughty_but_nice','sir_holger']
+    str_aft = '_reduced_2fps_frame_index_withSegIndexAndIntKey.csv'
+    input_types = ['img_crop']
+    label_types = ['pain','segment_key']
+    dataset = MultiViewDataset(data_folder=data_folder,
+                                       bg_folder=data_folder,
+                                       input_types=input_types,
+                                       label_types=label_types,
+                                       subjects=all_subjects,
+                                       rot_folder = None,
+                                       str_aft = str_aft)
+
+    sampler = SegBasedSampler(data_folder, 
                  1024,
                  num_frames_per_seg = 1024,
                  subjects = all_subjects,
                  randomize=True,
                  every_nth_segment=1,
-                 str_aft = '_reduced_2fps_frame_index_withSegIndexAndKey.csv')
-    print (sampler.subjects)
-    for batches in sampler:
-        print (len(batches))
-        print (batches[::10])
+                 str_aft = str_aft)
+
+    loader = torch.utils.data.DataLoader(dataset, batch_sampler=sampler, num_workers=0, pin_memory=False,
+                                             collate_fn=rhodin_utils_datasets.default_collate_with_string)
+
+    for batch in loader:
+        print (len(batch[1]['segment_key']))
+        print (batch[1]['segment_key'][:10])
+        # print (batch.keys())
         s = input()
+
+
+
 
 if __name__=='__main__':
     main()

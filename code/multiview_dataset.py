@@ -101,6 +101,8 @@ class MultiViewDataset(Dataset):
                     new_dict[key] = int(self.label_dict[key][index])
                 elif key == 'view':
                     new_dict[key] = int(self.label_dict[key][index])
+                elif key == 'segment_key':
+                    new_dict[key] = self.label_dict[key][index]
                 elif key == 'img_path':
                     interval_int = [int(val) for val in interval.split('_')]
                     new_dict[key] = np.array(interval_int+[interval_ind, view, frame])

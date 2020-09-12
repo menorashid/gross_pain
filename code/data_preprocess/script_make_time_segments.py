@@ -31,9 +31,10 @@ class TimeSplitter:
         
         self.data_path = data_path
         # '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps'
-        
+        self.all_horse_names = ['aslan','brava','herrera','inkasso','julia','kastanjett','naughty_but_nice','sir_holger']
+
         if horse_names is None:
-            self.horse_names = ['aslan','brava','herrera','inkasso','julia','kastanjett','naughty_but_nice','sir_holger']
+            self.horse_names = self.all_horse_names[:]    
         else:
             self.horse_names = horse_names
         
@@ -64,11 +65,12 @@ class TimeSplitter:
                 for view_curr in df.view.unique():
                     rel_frames = df.loc[(df.interval==interval) & (df.view == view_curr)]
                     interval_ind = rel_frames.interval_ind.values[0]
-                    
+
                     rel_frames = rel_frames.sort_values('frame')
                     rel_frames = rel_frames.values
                     rel_frames = np.concatenate((rel_frames,-1*np.ones((rel_frames.shape[0],1))),axis = 1)
-                    str_arr = np.array(['']*len(rel_frames))[:,np.newaxis]
+                    # str_arr = np.array(['']*len(rel_frames))[:,np.newaxis]
+                    str_arr = np.array([-1]*len(rel_frames))[:,np.newaxis]
                     rel_frames = np.concatenate((rel_frames,str_arr),axis = 1)
                     
                     frame_inds = rel_frames[:,columns.index('frame')]
@@ -81,8 +83,9 @@ class TimeSplitter:
                         start_idx = idx
                         end_idx =bin_breaks[idx_seg+1]
                         rel_frames[start_idx:end_idx,-2] = idx_seg
-                        seg_key = ''.join([horse_name[:2],'%01d'%view_curr,'%02d'%interval_ind,'%03d'%idx_seg])
-                        rel_frames[start_idx:end_idx,-1] = seg_key
+                        horse_idx = self.all_horse_names.index(horse_name)+1
+                        seg_key = ''.join(['%1d'%horse_idx,'%01d'%view_curr,'%02d'%interval_ind,'%03d'%idx_seg])
+                        rel_frames[start_idx:end_idx,-1] = int(seg_key)
                         # key_arr = [seg_key]*len(rel_frames)
                         # key_arr = np.array(key_arr)[:,np.newaxis]
                         # print (rel_frames.shape, key_arr.shape)
@@ -118,7 +121,7 @@ def main():
     # str_aft = '_thresh_0.70_frame_index.csv'
     # str_aft = '_percent_0.01_frame_index.csv'
     str_aft = '_reduced_2fps_frame_index.csv'
-    str_aft_out = '_reduced_2fps_frame_index_withSegIndexAndKey.csv'
+    str_aft_out = '_reduced_2fps_frame_index_withSegIndexAndIntKey.csv'
     ts = TimeSplitter(data_path, str_aft, str_aft_out, frame_skip = 5) 
     ts.add_time_index()
     

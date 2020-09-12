@@ -30,6 +30,10 @@ import torch.optim
 from rhodin.python.ignite._utils import convert_tensor
 from rhodin.python.ignite.engine import Events
 
+from multiview_dataset import MultiViewDataset
+from seg_based_dataset import SegBasedSampler
+from rhodin.python.utils import datasets as rhodin_utils_datasets
+
 if torch.cuda.is_available():
     device = "cuda:0"
 else:
@@ -84,6 +88,75 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
 
     def get_parameter_description(self, config_dict, old = False):#, config_dict):
         return get_parameter_description_pain(config_dict, old)
+
+    def load_data_train(self, config_dict, save_path):
+        if 'seg' in config_dict['training_set'].lower():
+            data_folder = config_dict['dataset_folder_train']
+            input_types = config_dict['input_types']
+            label_types = config_dict['label_types_train']
+            subjects = config_dict['train_subjects']
+            str_aft = config_dict['csv_str_aft']
+            batch_size = config_dict['batch_size_train']
+            dataset = MultiViewDataset(data_folder=data_folder,
+                                       bg_folder=data_folder,
+                                       input_types=input_types,
+                                       label_types=label_types,
+                                       subjects=subjects,
+                                       rot_folder = None,
+                                       str_aft = str_aft)
+
+            sampler = SegBasedSampler(data_folder, 
+                         batch_size,
+                         num_frames_per_seg = config_dict['num_frames_per_seg'],
+                         subjects = subjects,
+                         randomize=True,
+                         every_nth_segment=config_dict['every_nth_frame'],
+                         str_aft = str_aft,
+                       min_size = config_dict['min_size_seg'])
+
+            loader = torch.utils.data.DataLoader(dataset, batch_sampler=sampler, num_workers=config_dict['num_workers'], pin_memory=False,
+                                                     collate_fn=rhodin_utils_datasets.default_collate_with_string)
+
+        else:
+            print ('hello train')
+            loader =  super().load_data_train(config_dict, save_path)
+            print ('super loader',loader)
+
+        return loader
+
+    def load_data_test(self, config_dict, save_path):
+        if 'seg' in config_dict['training_set'].lower():
+            data_folder = config_dict['dataset_folder_test']
+            input_types = config_dict['input_types']
+            label_types = config_dict['label_types_test']
+            subjects = config_dict['test_subjects']
+            str_aft = config_dict['csv_str_aft']
+            batch_size = config_dict['batch_size_test']
+            dataset = MultiViewDataset(data_folder=data_folder,
+                                       bg_folder=data_folder,
+                                       input_types=input_types,
+                                       label_types=label_types,
+                                       subjects=subjects,
+                                       rot_folder = None,
+                                       str_aft = str_aft)
+
+            sampler = SegBasedSampler(data_folder, 
+                         batch_size,
+                         num_frames_per_seg = config_dict['num_frames_per_seg'],
+                         subjects = subjects,
+                         randomize=True,
+                         every_nth_segment=config_dict['every_nth_frame'],
+                         str_aft = str_aft, 
+                       min_size = config_dict['min_size_seg'])
+
+            loader = torch.utils.data.DataLoader(dataset, batch_sampler=sampler, num_workers=config_dict['num_workers'], pin_memory=False,
+                                                     collate_fn=rhodin_utils_datasets.default_collate_with_string)
+        else:
+            print ('hello test')
+            loader =  super().load_data_test(config_dict, save_path)
+            print ('super loader',loader)
+
+        return loader
         
 
 def get_parameter_description_pain(config_dict, old = False):
