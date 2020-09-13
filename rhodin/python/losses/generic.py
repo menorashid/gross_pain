@@ -8,6 +8,7 @@ class MIL_Loss(torch.nn.Module):
         self.key_idx = key_idx
         self.deno = deno
         self.loss = torch.nn.CrossEntropyLoss()
+        self.smax = torch.nn.Softmax(dim = 1)
         self.accuracy = accuracy
 
     def forward(self, pred_dict, label_dict):
@@ -15,6 +16,7 @@ class MIL_Loss(torch.nn.Module):
         y_pred = pred_dict[self.label_key]
         y = label_dict[self.label_key]
         # print ('begin',y.size())
+        y_pred = self.smax(y_pred)
         y_pred = self.collate(y_pred, segment_key, self.deno)
         y = self.collate(y.view((y.size(0),1)), segment_key, 1).squeeze(dim = 1)
 
