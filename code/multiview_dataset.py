@@ -346,7 +346,9 @@ def get_label_df_for_subjects(data_folder, subjects, str_aft = None):
 
     for subject in subjects:
         csv_file = os.path.join(data_folder,subject + str_aft)
+
         subject_frame_index_dataframe = pd.read_csv(csv_file)
+        # print (csv_file,len(subject_frame_index_dataframe))
         subject_fi_dfs.append(subject_frame_index_dataframe)
     frame_index_df = pd.concat(subject_fi_dfs, ignore_index=True)
     return frame_index_df
@@ -356,7 +358,7 @@ if __name__ == '__main__':
     config_dict_module = rhodin_utils_io.loadModule("configs/config_train_rotation_bl.py")
     config_dict = config_dict_module.config_dict
     print (config_dict['save_every'])
-    train_subjects = ['aslan','brava','herrera','julia','kastanjett','naughty_but_nice','sir_holger']
+    train_subjects = ['aslan','brava','herrera','inkasso','julia','kastanjett','naughty_but_nice','sir_holger']
     config_dict['train_subjects'] = train_subjects
     dataset = MultiViewDataset(data_folder=config_dict['dataset_folder_train'],
                                    bg_folder=config_dict['bg_folder'],

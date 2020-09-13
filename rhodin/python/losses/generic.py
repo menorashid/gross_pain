@@ -1,4 +1,62 @@
 import torch
+import numpy as np
+
+class MIL_Loss(torch.nn.Module):
+    def __init__(self, label_key, key_idx, deno, accuracy = False):
+        super(MIL_Loss, self).__init__()
+        self.label_key = label_key
+        self.key_idx = key_idx
+        self.deno = deno
+        self.loss = torch.nn.CrossEntropyLoss()
+        self.accuracy = accuracy
+
+    def forward(self, pred_dict, label_dict):
+        segment_key = label_dict[self.key_idx]
+        y_pred = pred_dict[self.label_key]
+        y = label_dict[self.label_key]
+        # print ('begin',y.size())
+        y_pred = self.collate(y_pred, segment_key, self.deno)
+        y = self.collate(y.view((y.size(0),1)), segment_key, 1).squeeze(dim = 1)
+
+        # print (y_pred.size(),y.size())
+        if self.accuracy:
+            loss = torch.eq(torch.argmax(y_pred,axis=1).type(y.type()), y).view(-1)
+            # print (y_pred, y)
+            # print (loss)
+            # print (torch.sum(loss))
+            loss = torch.sum(loss)/float(loss.size(0))
+            # print (loss)
+            # s = input()
+        else:
+            # print (loss)    
+            loss = self.loss(y_pred, y)
+        return loss
+
+
+    def collate(self, y, segment_key, deno):
+        y_collate = []
+        vals, inds = torch.unique_consecutive(input = segment_key, return_inverse = True)
+        
+        for idx_val, val in enumerate(vals):
+            x = y[inds==idx_val,:]
+            
+            if deno=='random':
+                deno_curr = 2**np.random.randint(0,4)
+                k = max(1,x.size(0)//deno_curr)
+            else:
+                k = max(1,x.size(0)//deno)
+
+            pmf,_ = torch.sort(x, dim=0, descending=True)
+            pmf = pmf[:k,:]
+            pmf = torch.sum(pmf[:k,:], dim = 0, keepdims = True)/k
+            # print ('pmf',pmf.size())
+            y_collate.append(pmf)
+
+        y_collate = torch.cat(y_collate, dim = 0)
+        # print ('y_collate.size()',y_collate.size())
+        return y_collate
+
+
 
 class LossOnDict(torch.nn.Module):
     def __init__(self, key, loss):

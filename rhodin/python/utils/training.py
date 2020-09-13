@@ -18,18 +18,27 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
 # optimization function
-def create_supervised_trainer(model, optimizer, loss_fn, device=None, forward_fn = None):
+def create_supervised_trainer(model, optimizer, loss_fn, device=None, forward_fn = None, backward_every = 1):
     def _update(engine, batch):
         model.train()
-        optimizer.zero_grad()
+        # print ('engine.state.iteration',engine.state.iteration)
+        if not engine.state.iteration%backward_every:
+            # print ('zero')
+            optimizer.zero_grad()
+
         x, y = utils_data.nestedDictToDevice(batch, device=device) # make it work for dict input too
         if forward_fn is None:
             y_pred = model(x)
         else:
             y_pred = forward_fn(x)
-        loss = loss_fn(y_pred, y)
+
+        loss = loss_fn(y_pred, y)/backward_every
         loss.backward()
-        optimizer.step()
+
+        if not engine.state.iteration%backward_every:
+            # print ('step')
+            optimizer.step()
+        
         return loss.item(), y_pred
     engine = Engine(_update)
     return engine
@@ -256,6 +265,7 @@ class AccumulatedLoss(Metric):
     def update(self, output):
         y_pred, y = output
         average_loss = self._loss_fn(y_pred, y)
+        # print ('average_loss',average_loss)
         assert len(average_loss.shape) == 0, '`loss_fn` did not return the average loss'
         self._sum += average_loss.item() * 1 # HELGE: Changed here from original version
         self._num_examples += 1 # count in number of batches

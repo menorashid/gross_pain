@@ -4,12 +4,8 @@ import sys
 import argparse
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import matplotlib.pyplot as plt
-
-import sys, os, shutil
-
-from rhodin.python.utils import io as rhodin_utils_io
 import numpy as np
+import importlib
 import torch
 torch.cuda.current_device() # to prevent  "Cannot re-initialize CUDA in forked subprocess." error on some configurations
 import torch.optim
@@ -17,8 +13,8 @@ import torch.optim
 import IPython
 
 import train_encode_decode
+from rhodin.python.utils import io as rhodin_utils_io
 from rhodin.python.losses import generic as losses_generic
-from rhodin.python.losses import poses as losses_poses
 from metrics.binary_accuracy import BinaryAccuracy
 from rhodin.python.utils import training as utils_train
 from helpers import util
@@ -40,19 +36,52 @@ else:
     device = "cpu"
 
 class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
-    def __init__(self, config_dict_file, config_dict):
+    def __init__(self, config_dict_file, config_dict, config_dict_for_saved_model):
+        
+        self.config_dict_for_saved_model = config_dict_for_saved_model
+        
         super().__init__(config_dict_file, config_dict)
+        
         if self.model is None:
             return
         # redefine these
-        self.trainer = utils_train.create_supervised_trainer(self.model, self.optimizer, self.loss_train, device=device, forward_fn = self.model.forward_pain)
+        self.trainer = utils_train.create_supervised_trainer(self.model, self.optimizer, self.loss_train, device=device, forward_fn = self.model.forward_pain, backward_every = config_dict.get('backward_every',1))
         self.evaluator = utils_train.create_supervised_evaluator(self.model,
                                                 metrics=self.metrics,
                                                 device=device, forward_fn = self.model.forward_pain)
+        
+
+    def load_network(self, config_dict):
+
+        # load the base network without saved params
+        assert 'pretrained_network_path' not in self.config_dict_for_saved_model.keys()
+        network_base = super().load_network(self.config_dict_for_saved_model)
+
+        # fill it with saved params
+        pretrained_network_path = config_dict['pretrained_network_path']            
+        pretrained_states = torch.load(pretrained_network_path, map_location=device)
+        utils_train.transfer_partial_weights(pretrained_states, network_base, submodule=0) # last argument is to remove "network.single" prefix in saved network
+        print("Done loading weights from config_dict['pretrained_network_path']", pretrained_network_path)
+        # s = input()
+
+        # define the pain model with pretrained encoder
+        model_type_str = config_dict['model_type']
+        pain_model = importlib.import_module('models.'+model_type_str)
+        network_pain = pain_model.PainHead(base_network = network_base, output_types = config_dict['output_types']) 
+
+        # s = input()
+        return network_pain
+
     
     def load_metrics(self, loss_test):
-        metrics = {'AccumulatedLoss': utils_train.AccumulatedLoss(loss_test),
+        loss_type = config_dict.get('loss_type', 'cross_entropy')
+        if loss_type == 'mil_loss':
+            metrics = {'AccumulatedLoss': utils_train.AccumulatedLoss(loss_test),
+                   'accuracy': utils_train.AccumulatedLoss(losses_generic.MIL_Loss('pain', 'segment_key', 8, accuracy = True))}
+        else:
+            metrics = {'AccumulatedLoss': utils_train.AccumulatedLoss(loss_test),
                    'accuracy': BinaryAccuracy()}
+        
         return metrics
 
     def initialize_wandb(self):
@@ -80,8 +109,17 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
 
     def load_loss(self, config_dict):
         pain_key = 'pain'
-        loss_train = losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
-        loss_test = losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
+        segment_key = 'segment_key'
+        loss_type = config_dict.get('loss_type', 'cross_entropy')
+        if loss_type == 'cross_entropy':
+            loss_train = losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
+            loss_test = losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
+        elif loss_type == 'mil_loss':
+            loss_train = losses_generic.MIL_Loss(pain_key, segment_key, config_dict['deno'])
+            # , accuracy = True)
+            loss_test = losses_generic.MIL_Loss(pain_key, segment_key, 8)
+        else:
+            raise ValueError('Loss type %s not allowed'%loss_type)
 
         # annotation and pred is organized as a list, to facilitate multiple output types (e.g. heatmap and 3d loss)
         return loss_train, loss_test
@@ -144,7 +182,7 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
                          batch_size,
                          num_frames_per_seg = config_dict['num_frames_per_seg'],
                          subjects = subjects,
-                         randomize=True,
+                         randomize=False,
                          every_nth_segment=config_dict['every_nth_frame'],
                          str_aft = str_aft, 
                        min_size = config_dict['min_size_seg'])
@@ -245,7 +283,7 @@ if __name__ == "__main__":
 
     config_dict['rot_folder'] = config_dict_for_saved_model['rot_folder']
     config_dict['bg_folder'] =  config_dict_for_saved_model['bg_folder']
-    ignite = IgniteTrainPainFromLatent(config_dict_module.__file__, config_dict)
+    ignite = IgniteTrainPainFromLatent(config_dict_module.__file__, config_dict, config_dict_for_saved_model)
     if ignite.model is not None:
         ignite.run()
 

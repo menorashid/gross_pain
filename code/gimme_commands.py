@@ -92,7 +92,7 @@ def pnp_latent_commands():
 
 	# config_file = 'configs/config_train_painfromlatent_crop.py'
 	config_file = 'configs_pain/config_train_pain_crop_timeseg.py'
-	job_name = 'painDummy'
+	job_name = 'painDummy1'
 	python_path = 'train_encode_decode_pain.py'
 	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop'

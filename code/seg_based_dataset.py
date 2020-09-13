@@ -115,12 +115,11 @@ class SegBasedSampler(Sampler):
         # build view/subject datastructure
         self.label_dict = get_label_df_for_subjects(data_folder, subjects, str_aft = str_aft)
         self.columns = ['segment_key']
-        # ['subject','view','interval_ind','segment_ind']
         columns = self.columns
 
         df_select = self.label_dict[columns[0]].drop_duplicates().values.squeeze()
-        # print (df_select.shape)
-        # print (len(df_select))
+        print (df_select.shape)
+
         all_keys = []
         frame_idx_dict = {}
         num_skipped = 0
@@ -128,43 +127,28 @@ class SegBasedSampler(Sampler):
 
         seg_key_vals = self.label_dict[self.columns[0]].values
         frames_vals = np.array(self.label_dict.index.tolist())
-        # print (frames_vals[:10])
-        # s = input()
         with tqdm(total=len(df_select)) as pbar:
             for idx, row in enumerate(df_select):
-            # df_select.iterrows():
                 pbar.update(1)
                 key_full = row
-                # tuple(row.values)
-                # bin_select = np.ones((len(self.label_dict),))
                 key = columns[0]
                 bin_select = seg_key_vals== key_full
-                # row[key]
-                # for key in columns[1:]:
-                #     print ('here')
-                #     bin_select = bin_select & (self.label_dict[key]==row[key])
-
-                # frames = self.label_dict.loc[bin_select]
                 frames = frames_vals[bin_select]
                 
                 if len(frames)<self.min_size:
                     num_skipped +=1
                     continue
                 all_keys.append(key_full)
-                # frame_idx = list(frames.index)
                 frame_idx = list(frames)
 
                 num_frames += len(frame_idx)
                 frame_idx_dict[key_full] = frame_idx
-                # print (row)
-                # print (self.label_dict.loc[frame_idx])
-                # s = input()
             
         self.all_keys = all_keys
         self.all_keys.sort()
         self.all_keys = self.all_keys[::self.every_nth_segment]
         self.frame_idx_dict = frame_idx_dict
-
+        self.batches = None
 
     def __len__(self):
         return len(self.label_dict['frame'])
@@ -184,40 +168,42 @@ class SegBasedSampler(Sampler):
 
     def __iter__(self):
         
+        if (self.batches is None) or (self.randomize):
+            index_list = []
+            # s_time = time.time()
+           
+            batches = []
+            curr_batch = []
+            print("Making dataset SegBasedSampler")
+            if self.randomize:
+                print("Randomizing dataset (SegBasedSampler.__iter__)")
+                random.shuffle(self.all_keys)
 
-        index_list = []
-        print("Randomizing dataset (SegBasedSampler.__iter__)")
-        s_time = time.time()
-       
-        batches = []
-        curr_batch = []
-
-        
-        random.shuffle(self.all_keys)
-        for index in range(len(self.all_keys)):
-            
-            key = self.all_keys[index]
-            frame_idx = self.frame_idx_dict[key]
-            num_frames = len(frame_idx)
-
-            if num_frames>self.num_frames_per_seg:
-                new_batches = [frame_idx[x:x+self.num_frames_per_seg] for x in range(0,num_frames,self.num_frames_per_seg)]
+            for index in range(len(self.all_keys)):
                 
-                if len(new_batches[-1])<self.min_size:
-                    new_batches = new_batches[:-1]
-                
-                batches, curr_batch = self.add_segments_to_batch(new_batches[::-1],batches, curr_batch)
-            else:
-                batches, curr_batch = self.add_segments_to_batch([frame_idx], batches, curr_batch)
+                key = self.all_keys[index]
+                frame_idx = self.frame_idx_dict[key]
+                num_frames = len(frame_idx)
 
-        return iter(batches)
+                if num_frames>self.num_frames_per_seg:
+                    new_batches = [frame_idx[x:x+self.num_frames_per_seg] for x in range(0,num_frames,self.num_frames_per_seg)]
+                    
+                    if len(new_batches[-1])<self.min_size:
+                        new_batches = new_batches[:-1]
+                    
+                    batches, curr_batch = self.add_segments_to_batch(new_batches[::-1],batches, curr_batch)
+                else:
+                    batches, curr_batch = self.add_segments_to_batch([frame_idx], batches, curr_batch)
+
+            self.batches = batches
+
+        return iter(self.batches)
 
 
 def main():
     print ('hello')
     data_folder = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop'
-    all_subjects = ['aslan']
-    # ,'brava','herrera','julia','kastanjett','naughty_but_nice','sir_holger']
+    all_subjects = ['aslan','brava','herrera','inkasso','julia','kastanjett','naughty_but_nice','sir_holger']
     str_aft = '_reduced_2fps_frame_index_withSegIndexAndIntKey.csv'
     input_types = ['img_crop']
     label_types = ['pain','segment_key']
@@ -240,11 +226,11 @@ def main():
     loader = torch.utils.data.DataLoader(dataset, batch_sampler=sampler, num_workers=0, pin_memory=False,
                                              collate_fn=rhodin_utils_datasets.default_collate_with_string)
 
-    for batch in loader:
-        print (len(batch[1]['segment_key']))
-        print (batch[1]['segment_key'][:10])
-        # print (batch.keys())
-        s = input()
+    # for batch in loader:
+    #     print (len(batch[1]['segment_key']))
+    #     print (batch[1]['segment_key'][:10])
+    #     # print (batch.keys())
+    #     s = input()
 
 
 

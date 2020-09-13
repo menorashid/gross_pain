@@ -119,8 +119,8 @@ class IgniteTrainNVS:
             iteration = engine.state.iteration - 1
             if iteration % config_dict['print_every'] == 0:
                 utils_train.save_training_error(save_path, engine)
-            if iteration in [0,100]:
-                utils_train.save_training_example(save_path, engine, config_dict)
+            # if iteration in [0,100]:
+            #     utils_train.save_training_example(save_path, engine, config_dict)
 
         @trainer.on(Events.EPOCH_COMPLETED)
         def plot_training_image(engine):
@@ -152,8 +152,8 @@ class IgniteTrainNVS:
                                     save_extension='debug_log_testing.txt')
         
                 # save the best model
-                utils_train.save_model_state(save_path, trainer, accumulated_loss,
-                                             model, optimizer, engine.state, wandb_run)
+                # utils_train.save_model_state(save_path, trainer, accumulated_loss,
+                #                              model, optimizer, engine.state, wandb_run)
         
         @trainer.on(Events.EPOCH_COMPLETED)
         def save_model(engine):
@@ -164,11 +164,12 @@ class IgniteTrainNVS:
                                                   optimizer, engine.state, wandb_run)
 
         # print test result
-        @evaluator.on(Events.ITERATION_COMPLETED)
-        def log_test_example(engine):
-            iteration = engine.state.iteration - 1
-            if iteration in [0,100]:
-                utils_train.save_test_example(save_path, trainer, evaluator, config_dict)
+        # @evaluator.on(Events.ITERATION_COMPLETED)
+        # def log_test_example(engine):
+        #     iteration = engine.state.iteration - 1
+        #     if iteration in [0,100]:
+        #         print ('here')
+        #         utils_train.save_test_example(save_path, trainer, evaluator, config_dict)
         
         # kick everything off
         trainer.run(train_loader, max_epochs=epochs, metrics=metrics)
