@@ -18,7 +18,7 @@ from models import unet_encode3D_clean
 
 class PainHead(nn.Module):
 
-    def __init__(self, base_network , output_types, n_hidden_to_pain = 2, d_hidden = 2048, dropout = 0.5 ):
+    def __init__(self, base_network , output_types, n_hidden_to_pain = 2, d_hidden = 2048, dropout = 0.5):
         super(PainHead, self).__init__()
         # self.base_network = base_network
         # attr_keep =['encoder','to_fg','to_3d','dimension_3d']
@@ -30,11 +30,13 @@ class PainHead(nn.Module):
         self.encoder = base_network.encoder
         self.to_3d = base_network.to_3d
 
-        self.to_pain = MLP.MLP_fromLatent(d_in = base_network.dimension_3d, d_hidden=d_hidden, d_out=2, n_hidden=n_hidden_to_pain, dropout=dropout)
-        # self.sig = torch.nn.Sigmoid()
+        self.to_pain = MLP.MLP_fromLatent(d_in = base_network.dimension_3d, d_hidden=d_hidden, d_out=1, n_hidden=n_hidden_to_pain, dropout=dropout, bnorm = False)
+        self.sig = torch.nn.Sigmoid()
+        # torch.nn.Hardtanh(min_val=0., max_val=1.0)
+        # torch.nn.Hardsigmoid()
 
         # , no_bnorm = True)
-        # print (self.to_pain)
+        print (self.to_pain)
         self.output_types = output_types
         # s = input()
         
@@ -51,13 +53,13 @@ class PainHead(nn.Module):
         center_flat = out_enc_conv.view(batch_size,-1)
         latent_3d = self.to_3d(center_flat).view(batch_size,-1,3)
 
-        output_pain = self.to_pain.forward({'latent_3d': latent_3d})['3D']
+        output_pain = self.sig(self.to_pain.forward({'latent_3d': latent_3d})['3D'])
         # output_pain = self.collate(output_pain, input_dict['segment_key'])
-        pain_pred = torch.nn.functional.softmax(output_pain, dim = 1)
+        # pain_pred = torch.nn.functional.softmax(output_pain, dim = 1)
 
         ###############################################
         # Select the right output
-        output_dict_all = {'pain': output_pain, 'pain_pred': pain_pred} 
+        output_dict_all = {'pain': output_pain, 'pain_pred': output_pain} 
         output_dict = {}
         for key in self.output_types:
             output_dict[key] = output_dict_all[key]

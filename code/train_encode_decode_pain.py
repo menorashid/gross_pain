@@ -35,6 +35,27 @@ if torch.cuda.is_available():
 else:
     device = "cpu"
 
+def get_loss(loss_type, config_dict, accuracy=False, deno_key = 'deno'):
+    if loss_type=='cross_entropy':
+        loss = losses_generic.LossLabel('pain', torch.nn.CrossEntropyLoss())
+
+    if loss_type == 'cross_entropy':
+            loss_train = losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
+            loss_test = losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
+    elif loss_type == 'mil_loss':
+        loss = losses_generic.MIL_Loss('pain', 'segment_key', config_dict[deno_key], accuracy = accuracy)
+        print (loss,loss.deno, loss.accuracy)
+    # elif loss_type == 'mil_loss':
+    #     loss = losses_generic.MIL_Loss('pain', 'segment_key', config_dict[deno_key], accuracy = accuracy)
+    
+    #         # , accuracy = True)
+    #         loss_test = losses_generic.MIL_Loss(pain_key, segment_key, 8)
+    else:
+        raise ValueError('Loss type %s not allowed'%loss_type)
+
+    
+    return loss
+
 class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
     def __init__(self, config_dict_file, config_dict, config_dict_for_saved_model):
         
@@ -75,13 +96,12 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
     
     def load_metrics(self, loss_test):
         loss_type = config_dict.get('loss_type', 'cross_entropy')
-        if loss_type == 'mil_loss':
-            metrics = {'AccumulatedLoss': utils_train.AccumulatedLoss(loss_test),
-                   'accuracy': utils_train.AccumulatedLoss(losses_generic.MIL_Loss('pain', 'segment_key', 8, accuracy = True))}
+        metrics = {'AccumulatedLoss': utils_train.AccumulatedLoss(loss_test)}
+        if loss_type == 'cross_entropy':
+            metrics['accuracy'] = BinaryAccuracy()
         else:
-            metrics = {'AccumulatedLoss': utils_train.AccumulatedLoss(loss_test),
-                   'accuracy': BinaryAccuracy()}
-        
+            metrics['accuracy'] = utils_train.AccumulatedLoss(get_loss(loss_type, config_dict, accuracy = True, deno_key = 'deno_test'))    
+
         return metrics
 
     def initialize_wandb(self):
@@ -108,18 +128,21 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
         return optimizer
 
     def load_loss(self, config_dict):
-        pain_key = 'pain'
-        segment_key = 'segment_key'
+        # pain_key = 'pain'
+        # segment_key = 'segment_key'
         loss_type = config_dict.get('loss_type', 'cross_entropy')
-        if loss_type == 'cross_entropy':
-            loss_train = losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
-            loss_test = losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
-        elif loss_type == 'mil_loss':
-            loss_train = losses_generic.MIL_Loss(pain_key, segment_key, config_dict['deno'])
-            # , accuracy = True)
-            loss_test = losses_generic.MIL_Loss(pain_key, segment_key, 8)
-        else:
-            raise ValueError('Loss type %s not allowed'%loss_type)
+        # if loss_type == 'cross_entropy':
+        loss_train = get_loss(loss_type, config_dict)
+        loss_test = get_loss(loss_type, config_dict, deno_key = 'deno_test')
+        #         def get_loss(loss_type, config_dict, accuracy=False, deno_key = 'deno')
+        #     # losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
+        #     loss_test = losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
+        # elif loss_type == 'mil_loss':
+        #     loss_train = losses_generic.MIL_Loss(pain_key, segment_key, config_dict['deno'])
+        #     # , accuracy = True)
+        #     loss_test = losses_generic.MIL_Loss(pain_key, segment_key, 8)
+        # else:
+        #     raise ValueError('Loss type %s not allowed'%loss_type)
 
         # annotation and pred is organized as a list, to facilitate multiple output types (e.g. heatmap and 3d loss)
         return loss_train, loss_test
@@ -205,8 +228,12 @@ def get_parameter_description_pain(config_dict, old = False):
         shorter_train_subjects = '_'+util.join_string_list(shorter_train_subjects, '_')
         shorter_test_subjects  = '_'+util.join_string_list(shorter_test_subjects, '_')
 
-    folder = "../output/trainNVSPainFromLatent_{job_identifier}_{job_identifier_encdec}/{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_lr{learning_rate}_bstrain{batch_size_train}_bstest{batch_size_test}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
-    folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
+    if 'new_folder_style' in config_dict.keys():
+        folder = "../output/{model_type}_{loss_type}_{job_identifier}_{job_identifier_encdec}/{training_set}_nth_{every_nth_frame}_nfps_{num_frames_per_seg}/num_epochs_{num_epochs}_train{}_test{}_lr_{learning_rate}_backward_{backward_every}_bstrain_{batch_size_train}_bstest_{batch_size_test}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
+        folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
+    else:
+        folder = "../output/trainNVSPainFromLatent_{job_identifier}_{job_identifier_encdec}/{training_set}/nth{every_nth_frame}_c{active_cameras}_train{}_test{}_lr{learning_rate}_bstrain{batch_size_train}_bstest{batch_size_test}".format(shorter_train_subjects, shorter_test_subjects,**config_dict)
+        folder = folder.replace(' ','').replace('../','[DOT_SHLASH]').replace('.','o').replace('[DOT_SHLASH]','../').replace(',','_')
     return folder
 
 

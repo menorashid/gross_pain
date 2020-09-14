@@ -91,8 +91,8 @@ def pnp_latent_commands():
 	# python_path = 'train_encode_decode_pain_wApp.py'
 
 	# config_file = 'configs/config_train_painfromlatent_crop.py'
-	config_file = 'configs_pain/config_train_pain_crop_timeseg.py'
-	job_name = 'painDummy1'
+	config_file = 'configs_pain/config_train_painBN_crop_timeseg_random.py'
+	job_name = 'painDenoRandom'
 	python_path = 'train_encode_decode_pain.py'
 	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop'
@@ -126,10 +126,11 @@ def pnp_latent_commands():
 			str_com = ' '.join(str_com)
 			commands.append(str_com)
 			print (str_com)
-			break
-		break
+		# 	break
+		# break
 		# print (commands)
 		util.writeFile(out_file, commands)
+		print (out_file)
 
 
 def debug_commands():

@@ -162,6 +162,9 @@ class IgniteTrainNVS:
             if not epoch % config_dict['save_every']: # +1 to prevent evaluation at iteration 0
                 utils_train.save_model_state_iter(save_path, trainer, model,
                                                   optimizer, engine.state, wandb_run)
+            if not epoch % config_dict['num_epochs']: # +1 to prevent evaluation at iteration 0
+                utils_train.save_model_state_iter(save_path, trainer, model,
+                                                  optimizer, engine.state, wandb_run)
 
         # print test result
         # @evaluator.on(Events.ITERATION_COMPLETED)

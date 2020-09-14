@@ -3,7 +3,7 @@ import os
 
 config_dict = {
     # model type
-    'model_type' : 'pain_simple_binary',
+    'model_type' : 'pain_binary_bn',
     'new_folder_style' : True,
 
     # General parameters
@@ -15,7 +15,7 @@ config_dict = {
     'num_workers'             : 32,
     
     # opt parameters    
-    'num_epochs'              : 10,
+    'num_epochs'              : 5,
     'save_every'              : 5,
     'train_test_every'        : 5,
     'learning_rate'           : 1e-4,# baseline: 0.001=1e-3
@@ -35,7 +35,7 @@ config_dict = {
 
     # loss 
     'loss_type' : 'mil_loss',
-    'deno' : 8,
+    'deno' : 'random',
     'deno_test' : 8,
 
     # dataset

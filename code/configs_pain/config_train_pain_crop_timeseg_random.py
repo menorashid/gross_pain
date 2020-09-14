@@ -35,7 +35,7 @@ config_dict = {
 
     # loss 
     'loss_type' : 'mil_loss',
-    'deno' : 8,
+    'deno' : 'random',
     'deno_test' : 8,
 
     # dataset
