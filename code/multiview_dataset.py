@@ -110,6 +110,12 @@ class MultiViewDataset(Dataset):
                     rot_path = self.get_rot_path(view,subject,key)
                     new_dict[key] = np.load(rot_path)
                     # print (new_dict[key])
+                elif key.startswith('extrinsic_rot_'):
+                    key_split = key.split('_')
+                    key_curr = '_'.join(key_split[:-1])
+                    view_curr = int(key_split[-1])
+                    rot_path = self.get_rot_path(view_curr,subject,key_curr)
+                    new_dict[key] = np.load(rot_path)
                 else:
                     new_dict[key] = np.array(self.label_dict[key][index], dtype='float32')
             return new_dict

@@ -3,13 +3,13 @@ import os
 
 config_dict = {
     # model type
-    'model_type' : 'pain_simple',
+    'model_type' : 'pain_lstm_wbn',
     'new_folder_style' : True,
 
     # General parameters
     'dpi'                     : 190,
-    'input_types'             : ['img_crop'],
-    'output_types'            : ['pain'],
+    'input_types'             : ['img_crop', 'segment_key'],
+    'output_types'            : ['pain','segment_key'],
     'label_types_train'       : ['img_crop','pain','segment_key'],
     'label_types_test'        : ['img_crop','pain','segment_key'],
     'num_workers'             : 32,
@@ -22,7 +22,7 @@ config_dict = {
     'test_every'              : 1,
     'plot_every'              : 100,
     'print_every'             : 10,
-    'backward_every'          : 100,
+    'backward_every'          : 1,
 
     # LPS dataset parameters
     'views'                   : '[0,1,2,3]',
@@ -34,7 +34,7 @@ config_dict = {
     'batch_size_test' : 1200,
 
     # loss 
-    'loss_type' : 'MIL_Loss_Mix',
+    'loss_type' : 'MIL_Loss_CE',
     'deno' : 'random',
     'deno_test' : 8,
 

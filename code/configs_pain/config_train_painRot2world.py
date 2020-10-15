@@ -3,12 +3,13 @@ import os
 
 config_dict = {
     # model type
-    'model_type' : 'pain_simple',
+    'model_type' : 'pain_rot2World',
     'new_folder_style' : True,
 
     # General parameters
     'dpi'                     : 190,
-    'input_types'             : ['img_crop'],
+    'input_types'             : ['img_crop',
+                                'extrinsic_rot_inv'],
     'output_types'            : ['pain'],
     'label_types_train'       : ['img_crop','pain','segment_key'],
     'label_types_test'        : ['img_crop','pain','segment_key'],

@@ -91,8 +91,27 @@ def pnp_latent_commands():
 	# python_path = 'train_encode_decode_pain_wApp.py'
 
 	# config_file = 'configs/config_train_painfromlatent_crop.py'
-	config_file = 'configs_pain/config_train_painBN_crop_timeseg_random.py'
-	job_name = 'painDenoRandom'
+	# config_file = 'configs_pain/config_train_painBN_crop_timeseg_random_llr.py'
+	# job_name = 'painDenoRandomLLR'
+	
+	config_file = 'configs_pain/config_train_painRot2world.py'
+	job_name = 'painRot2World'
+
+	config_file = 'configs_pain/config_train_painRotAllCat_3fc_1024.py'
+	job_name = 'painRotAllCat_3fc_1024'
+
+	config_file = 'configs_pain/config_train_pain_lstm_wbn_milce.py'
+	job_name = 'painLSTM_1024_1_seqlen_10_milce'
+	# job_name = 'painLSTM_exp'
+	config_file = 'configs_pain/config_train_pain_lstm_wbn_binary.py'
+	job_name = 'painLSTM_1024_1_seqlen_10_wbn_binary'
+	
+
+	# config_file = 'configs_pain/config_train_pain_lstm_wbnrelu.py'
+	# job_name = 'painLSTM_2048_2_seqlen_10'
+	# config_file = 'configs_pain/config_train_pain_conv1d.py'
+	# job_name = 'painConv1d_exp'
+
 	python_path = 'train_encode_decode_pain.py'
 	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop'
@@ -100,8 +119,8 @@ def pnp_latent_commands():
 	
 	util.mkdir('to_runs')
 
-	num_gpus = 1
-	num_per_gpu = 8
+	num_gpus = 2
+	num_per_gpu = 4
 	for idx in range(num_gpus):
 		test_horses = test_horses_all[num_per_gpu*idx:num_per_gpu*idx+num_per_gpu]
 		out_file = os.path.join('to_runs','_'.join(['to_run',to_run_str,job_name,job_name_model,str(idx)]))

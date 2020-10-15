@@ -27,6 +27,7 @@ def nestedDictToDevice(nested_dict_list, device):
 
 import collections
 def default_collate_with_string(batch):
+    # return batch
     "Puts each data field into a tensor with outer dimension batch size"
     _use_shared_memory = False
     numpy_type_map = {

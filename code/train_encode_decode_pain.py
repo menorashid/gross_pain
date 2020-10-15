@@ -34,6 +34,7 @@ if torch.cuda.is_available():
     device = "cuda:0"
 else:
     device = "cpu"
+     
 
 def get_loss(loss_type, config_dict, accuracy=False, deno_key = 'deno'):
     if loss_type=='cross_entropy':
@@ -42,14 +43,10 @@ def get_loss(loss_type, config_dict, accuracy=False, deno_key = 'deno'):
     if loss_type == 'cross_entropy':
             loss_train = losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
             loss_test = losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
-    elif loss_type == 'mil_loss':
-        loss = losses_generic.MIL_Loss('pain', 'segment_key', config_dict[deno_key], accuracy = accuracy)
+    elif 'mil' in loss_type.lower():
+        loss = getattr(losses_generic, loss_type)
+        loss = loss('pain', 'segment_key', config_dict[deno_key], accuracy = accuracy)
         print (loss,loss.deno, loss.accuracy)
-    # elif loss_type == 'mil_loss':
-    #     loss = losses_generic.MIL_Loss('pain', 'segment_key', config_dict[deno_key], accuracy = accuracy)
-    
-    #         # , accuracy = True)
-    #         loss_test = losses_generic.MIL_Loss(pain_key, segment_key, 8)
     else:
         raise ValueError('Loss type %s not allowed'%loss_type)
 
@@ -86,10 +83,10 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
         # s = input()
 
         # define the pain model with pretrained encoder
-        model_type_str = config_dict['model_type']
+        model_type_str = config_dict['model_type']    
         pain_model = importlib.import_module('models.'+model_type_str)
         network_pain = pain_model.PainHead(base_network = network_base, output_types = config_dict['output_types']) 
-
+        print (network_pain.to_pain)
         # s = input()
         return network_pain
 
@@ -114,6 +111,8 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
 
         params_static_id = [id_p for id_p in params_all_id if not id_p in params_painnet_id]
 
+        for p in params_toOptimize:
+            print ('opt',id(p),p.size())
         # disable gradient computation for static params, saves memory and computation
         for p in network.parameters():
             if id(p) in params_static_id:
@@ -125,6 +124,7 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
 
         opt_params = [{'params': params_toOptimize, 'lr': config_dict['learning_rate']}]
         optimizer = torch.optim.Adam(opt_params, lr=config_dict['learning_rate']) #weight_decay=0.0005
+        # s = input()
         return optimizer
 
     def load_loss(self, config_dict):
@@ -158,12 +158,13 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
             subjects = config_dict['train_subjects']
             str_aft = config_dict['csv_str_aft']
             batch_size = config_dict['batch_size_train']
+            rot_folder = config_dict.get('rot_folder',None)
             dataset = MultiViewDataset(data_folder=data_folder,
                                        bg_folder=data_folder,
                                        input_types=input_types,
                                        label_types=label_types,
                                        subjects=subjects,
-                                       rot_folder = None,
+                                       rot_folder = rot_folder,
                                        str_aft = str_aft)
 
             sampler = SegBasedSampler(data_folder, 
@@ -193,12 +194,13 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
             subjects = config_dict['test_subjects']
             str_aft = config_dict['csv_str_aft']
             batch_size = config_dict['batch_size_test']
+            rot_folder = config_dict.get('rot_folder',None)
             dataset = MultiViewDataset(data_folder=data_folder,
                                        bg_folder=data_folder,
                                        input_types=input_types,
                                        label_types=label_types,
                                        subjects=subjects,
-                                       rot_folder = None,
+                                       rot_folder = rot_folder,
                                        str_aft = str_aft)
 
             sampler = SegBasedSampler(data_folder, 
@@ -278,6 +280,7 @@ def parse_arguments(argv):
         
     
 if __name__ == "__main__":
+
     args = parse_arguments(sys.argv[1:])
     # print(args)
     train_subjects = re.split('/', args.train_subjects)

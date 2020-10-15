@@ -1,162 +1,6 @@
 import torch
 import numpy as np
 
-# class MIL_Loss(torch.nn.Module):
-#     def __init__(self, label_key, key_idx, deno, accuracy = False):
-#         super(MIL_Loss, self).__init__()
-#         self.label_key = label_key
-#         self.key_idx = key_idx
-#         self.deno = deno
-#         # bce
-#         # self.loss = torch.nn.BCELoss()
-#         self.thresh = 0.5
-
-
-#         self.smax = torch.nn.Softmax(dim = 1)
-#         self.loss = torch.nn.CrossEntropyLoss()
-#         self.accuracy = accuracy
-        
-
-#     def forward(self, pred_dict, label_dict):
-#         segment_key = label_dict[self.key_idx]
-#         y_pred = pred_dict[self.label_key]
-#         y = label_dict[self.label_key]
-
-#         # y = y.type(y_pred.type())        
-#         # y_pred = self.collate(y_pred, segment_key, self.deno).squeeze(dim = 1)
-
-
-#         y_pred = self.smax(y_pred)
-#         y_pred = self.collate(y_pred, segment_key, self.deno)
-
-
-#         y = self.collate(y.view((y.size(0),1)), segment_key, 1).squeeze(dim = 1)
-
-#         # print (y_pred.size(),y.size())
-#         if self.accuracy:
-#             y_pred = y_pred[:,1]
-#             # .squeeze(dim = 1)
-#             # print (y_pred, y)
-#             y_pred[y_pred<self.thresh] = 0
-#             y_pred[y_pred>=self.thresh] = 1
-#             loss = torch.eq(y_pred.type(y.type()), y).view(-1)
-
-#             # print (y_pred, y)
-#             # loss = torch.eq(torch.argmax(y_pred,dim =1).type(y.type()), y).view(-1)
-            
-#             # print (loss)
-#             # print (torch.sum(loss))
-#             loss = torch.sum(loss)/float(loss.size(0))
-#             # print (loss)
-#             # s = input()
-#         else:
-#             # print (loss)    
-#             loss = self.loss(y_pred, y)
-#         return loss
-
-
-#     def collate(self, y, segment_key, deno):
-#         y_collate = []
-#         vals, inds = torch.unique_consecutive(input = segment_key, return_inverse = True)
-        
-#         for idx_val, val in enumerate(vals):
-#             x = y[inds==idx_val,:]
-            
-#             if deno=='random':
-#                 deno_curr = 2**np.random.randint(0,4)
-#                 k = max(1,x.size(0)//deno_curr)
-#             else:
-#                 k = max(1,x.size(0)//deno)
-
-#             pmf,_ = torch.sort(x, dim=0, descending=True)
-#             pmf = pmf[:k,:]
-#             pmf = torch.sum(pmf[:k,:], dim = 0, keepdims = True)/k
-#             # print ('pmf',pmf.size())
-#             y_collate.append(pmf)
-
-#         y_collate = torch.cat(y_collate, dim = 0)
-#         # print ('y_collate.size()',y_collate.size())
-#         return y_collate
-
-# mix approach
-# class MIL_Loss(torch.nn.Module):
-#     def __init__(self, label_key, key_idx, deno, accuracy = False):
-#         super(MIL_Loss, self).__init__()
-#         self.label_key = label_key
-#         self.key_idx = key_idx
-#         self.deno = deno
-        
-#         # bce
-#         self.loss = torch.nn.BCELoss()
-#         self.thresh = 0.5
-
-
-#         self.smax = torch.nn.Softmax(dim = 1)
-#         # self.loss = torch.nn.CrossEntropyLoss()
-#         self.accuracy = accuracy
-        
-
-#     def forward(self, pred_dict, label_dict):
-#         segment_key = label_dict[self.key_idx]
-#         y_pred = pred_dict[self.label_key]
-#         y = label_dict[self.label_key]
-
-#         y = y.type(y_pred.type())        
-#         # y_pred = self.collate(y_pred, segment_key, self.deno).squeeze(dim = 1)
-
-
-#         y_pred = self.smax(y_pred)
-#         y_pred = self.collate(y_pred, segment_key, self.deno)[:,1]
-
-
-#         y = self.collate(y.view((y.size(0),1)), segment_key, 1).squeeze(dim = 1)
-
-#         # print (y_pred.size(),y.size())
-#         if self.accuracy:
-#             # y_pred = y_pred[:,1]
-#             # .squeeze(dim = 1)
-#             # print (y_pred, y)
-#             y_pred[y_pred<self.thresh] = 0
-#             y_pred[y_pred>=self.thresh] = 1
-#             loss = torch.eq(y_pred.type(y.type()), y).view(-1)
-
-#             # print (y_pred, y)
-#             # loss = torch.eq(torch.argmax(y_pred,dim =1).type(y.type()), y).view(-1)
-            
-#             # print (loss)
-#             # print (torch.sum(loss))
-#             loss = torch.sum(loss)/float(loss.size(0))
-#             # print (loss)
-#             # s = input()
-#         else:
-#             # print (loss)    
-#             loss = self.loss(y_pred, y)
-#         return loss
-
-
-#     def collate(self, y, segment_key, deno):
-#         y_collate = []
-#         vals, inds = torch.unique_consecutive(input = segment_key, return_inverse = True)
-        
-#         for idx_val, val in enumerate(vals):
-#             x = y[inds==idx_val,:]
-            
-#             if deno=='random':
-#                 deno_curr = 2**np.random.randint(0,4)
-#                 k = max(1,x.size(0)//deno_curr)
-#             else:
-#                 k = max(1,x.size(0)//deno)
-
-#             pmf,_ = torch.sort(x, dim=0, descending=True)
-#             pmf = pmf[:k,:]
-#             pmf = torch.sum(pmf[:k,:], dim = 0, keepdims = True)/k
-#             # print ('pmf',pmf.size())
-#             y_collate.append(pmf)
-
-#         y_collate = torch.cat(y_collate, dim = 0)
-#         # print ('y_collate.size()',y_collate.size())
-#         return y_collate
-
 class MIL_Loss(torch.nn.Module):
     def __init__(self, label_key, key_idx, deno, accuracy = False):
         super(MIL_Loss, self).__init__()
@@ -176,8 +20,14 @@ class MIL_Loss(torch.nn.Module):
         y_pred = pred_dict[self.label_key]
         y = label_dict[self.label_key]
 
+        if segment_key.size(0)>y_pred.size(0):
+            segment_key_pred = pred_dict[self.key_idx]
+        # print ('hey')
+        else:
+            segment_key_pred = segment_key
+
         y = y.type(y_pred.type())        
-        y_pred = self.collate(y_pred, segment_key, self.deno).squeeze(dim = 1)
+        y_pred = self.collate(y_pred, segment_key_pred, self.deno).squeeze(dim = 1)
 
         y = self.collate(y.view((y.size(0),1)), segment_key, 1).squeeze(dim = 1)
 
@@ -195,7 +45,7 @@ class MIL_Loss(torch.nn.Module):
     def collate(self, y, segment_key, deno):
         y_collate = []
         vals, inds = torch.unique_consecutive(input = segment_key, return_inverse = True)
-        
+        # print (y.size())
         for idx_val, val in enumerate(vals):
             x = y[inds==idx_val,:]
             
@@ -215,6 +65,83 @@ class MIL_Loss(torch.nn.Module):
         # print ('y_collate.size()',y_collate.size())
         return y_collate
 
+
+class MIL_Loss_CE(MIL_Loss):
+    def __init__(self, label_key, key_idx, deno, accuracy = False):
+        super(MIL_Loss_CE, self).__init__(label_key, key_idx, deno, accuracy)
+        self.smax = torch.nn.Softmax(dim = 1)
+        self.loss = torch.nn.CrossEntropyLoss()
+
+    def forward(self, pred_dict, label_dict):
+        segment_key = label_dict[self.key_idx]
+        y_pred = pred_dict[self.label_key]
+        y = label_dict[self.label_key]
+        assert y_pred.size(1)==2
+
+        if segment_key.size(0)>y_pred.size(0):
+            segment_key_pred = pred_dict[self.key_idx]
+        # print ('hey')
+        else:
+            segment_key_pred = segment_key
+
+        y_pred = self.smax(y_pred)
+        y_pred = self.collate(y_pred, segment_key_pred, self.deno)
+
+        y = self.collate(y.view((y.size(0),1)), segment_key, 1).squeeze(dim = 1)
+
+        if self.accuracy:
+            y_pred = y_pred[:,1]
+            y_pred[y_pred<self.thresh] = 0
+            y_pred[y_pred>=self.thresh] = 1
+            loss = torch.eq(y_pred.type(y.type()), y).view(-1)
+            loss = torch.sum(loss)/float(loss.size(0))
+        else:
+            loss = self.loss(y_pred, y)
+        return loss
+
+
+class MIL_Loss_Mix(MIL_Loss):
+    def __init__(self, label_key, key_idx, deno, accuracy = False):
+        super(MIL_Loss_Mix, self).__init__(label_key= label_key, key_idx = key_idx, deno = deno, accuracy = accuracy)
+        self.smax = torch.nn.Softmax(dim = 1)
+        
+
+    def forward(self, pred_dict, label_dict):
+        segment_key = label_dict[self.key_idx]
+        y_pred = pred_dict[self.label_key]
+        assert y_pred.size(1)==2
+
+        if segment_key.size(0)>y_pred.size(0):
+            segment_key_pred = pred_dict[self.key_idx]
+        # print ('hey')
+        else:
+            segment_key_pred = segment_key
+
+        y = label_dict[self.label_key]
+        
+
+        y = y.type(y_pred.type())        
+        y_pred = self.smax(y_pred)
+        # print (y_pred.size(), y.size(), segment_key.size(),pred_dict[self.key_idx].size())
+        y_pred = self.collate(y_pred, segment_key_pred, self.deno)[:,1]
+        # print ('hey')
+
+        y = self.collate(y.view((y.size(0),1)), segment_key, 1).squeeze(dim = 1)
+        # print ('hey y')
+
+        # print (y_pred.size(),y.size())
+        if self.accuracy:
+            # y_pred = y_pred[:,1]
+            # .squeeze(dim = 1)
+            # print (y_pred, y)
+            y_pred[y_pred<self.thresh] = 0
+            y_pred[y_pred>=self.thresh] = 1
+            loss = torch.eq(y_pred.type(y.type()), y).view(-1)
+            loss = torch.sum(loss)/float(loss.size(0))
+        else:
+            loss = self.loss(y_pred, y)
+
+        return loss
 
 
 class LossOnDict(torch.nn.Module):

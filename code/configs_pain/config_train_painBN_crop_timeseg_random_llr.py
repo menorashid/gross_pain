@@ -18,7 +18,7 @@ config_dict = {
     'num_epochs'              : 10,
     'save_every'              : 5,
     'train_test_every'        : 5,
-    'learning_rate'           : 1e-4,# baseline: 0.001=1e-3
+    'learning_rate'           : 1e-5,# baseline: 0.001=1e-3
     'test_every'              : 1,
     'plot_every'              : 100,
     'print_every'             : 10,

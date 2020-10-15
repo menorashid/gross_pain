@@ -13,17 +13,16 @@ class MLP_fromLatent(torch.nn.Module):
                             torch.nn.ReLU()]
             if bnorm:
                 module_list.append(torch.nn.BatchNorm1d(d_hidden, affine=affine))
-            
+            module_list.append(torch.nn.Dropout(inplace=True, p=self.dropout))
             
             for i in range(n_hidden-1):
                 module_list.extend([
-                            torch.nn.Dropout(inplace=True, p=self.dropout),
                             torch.nn.Linear(d_hidden, d_hidden),
                             torch.nn.ReLU()])
                 if bnorm:
                     module_list.append(torch.nn.BatchNorm1d(d_hidden, affine=affine))   
                             # torch.nn.BatchNorm1d(d_hidden, affine=affine),
-                module_list.append(torch.nn.Dropout(inplace=True, p=self.dropout))
+                module_list.append(torch.nn.Dropout(inplace=True, p=self.dropout))    
                                    
             module_list.append(torch.nn.Linear(d_hidden, d_out))
     

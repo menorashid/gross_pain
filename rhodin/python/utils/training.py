@@ -72,7 +72,7 @@ def save_training_error(save_path, engine):
     except:
         pass
     
-    print("Epoch[{}] Iteration[{}] Batch Loss: {:.2f}".format(engine.state.epoch, iteration, loss))
+    print("Epoch[{}] Iteration[{}] Batch Loss: {:.4f}".format(engine.state.epoch, iteration, loss))
     title="Training error"
     # also save as .txt for plotting
     log_name = os.path.join(save_path, 'debug_log_training.txt')
