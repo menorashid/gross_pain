@@ -16,6 +16,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import sklearn.metrics
 
 # optimization function
 def create_supervised_trainer(model, optimizer, loss_fn, device=None, forward_fn = None, backward_every = 1):
@@ -265,7 +266,7 @@ class AccumulatedLoss(Metric):
     def update(self, output):
         y_pred, y = output
         average_loss = self._loss_fn(y_pred, y)
-        # print ('average_loss',average_loss)
+        # print ('average_loss',average_loss.item())
         assert len(average_loss.shape) == 0, '`loss_fn` did not return the average loss'
         self._sum += average_loss.item() * 1 # HELGE: Changed here from original version
         self._num_examples += 1 # count in number of batches
@@ -274,7 +275,54 @@ class AccumulatedLoss(Metric):
         if self._num_examples == 0:
             raise NotComputableError(
                 'Loss must have at least one example before it can be computed')
+        # print (self._sum / self._num_examples)
         return self._sum / self._num_examples
+    
+class AccumulatedF1AndAccu(Metric):
+    """
+    Calculates the average loss according to the passed loss_fn.
+    `loss_fn` must return the average loss over all observations in the batch.
+    `update` must receive output of the form (y_pred, y).
+    """
+    def __init__(self, loss_fn, output_transform=lambda x: x):
+        super(AccumulatedF1AndAccu, self).__init__(output_transform)
+        self._loss_fn = loss_fn
+
+    def reset(self):
+        self._sum = [[],[]]
+        self._num_examples = 0
+
+    def update(self, output):
+        y_pred, y = output
+        y_pred, y = self._loss_fn(y_pred, y)
+        y_pred = y_pred.cpu().numpy().astype(int)
+        y = y.cpu().numpy().astype(int)
+        self._sum[0].append(y_pred)
+        self._sum[1].append(y)
+
+        # print ('average_loss',average_loss.item())
+        # assert len(average_loss.shape) == 0, '`loss_fn` did not return the average loss'
+        # self._sum += list(loss_vec.cpu().numpy().astype(int))
+        
+        # self._sum += average_loss.item() * 1 # HELGE: Changed here from original version
+        accu_curr = sklearn.metrics.accuracy_score(y, y_pred)
+        # print (y_pred, y)
+        f1 = sklearn.metrics.f1_score(y, y_pred, zero_division = 1)
+        # print (y_pred.shape, y.shape)
+        self._num_examples += y_pred.size # count in number of batches
+        # print ('accu f1',accu_curr, f1)
+
+    def compute(self):
+        if self._num_examples == 0:
+            raise NotComputableError(
+                'Loss must have at least one example before it can be computed')
+
+        y = np.concatenate(self._sum[1])
+        y_pred = np.concatenate(self._sum[0])
+        accu_curr = sklearn.metrics.accuracy_score(y, y_pred)
+        f1 = sklearn.metrics.f1_score(y, y_pred)
+        # print ('final accu f1',accu_curr, f1)
+        return accu_curr, f1
     
     
 def transfer_partial_weights(state_dict_other, obj, submodule=0, prefix=None, add_prefix=''):

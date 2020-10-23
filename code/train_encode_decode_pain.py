@@ -68,13 +68,15 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
                                                 metrics=self.metrics,
                                                 device=device, forward_fn = self.model.forward_pain)
         
-
-    def load_network(self, config_dict):
-
+    def load_base_network(self):
         # load the base network without saved params
         assert 'pretrained_network_path' not in self.config_dict_for_saved_model.keys()
         network_base = super().load_network(self.config_dict_for_saved_model)
+        return network_base
 
+    def load_network(self, config_dict):
+
+        network_base = self.load_base_network()
         # fill it with saved params
         pretrained_network_path = config_dict['pretrained_network_path']            
         pretrained_states = torch.load(pretrained_network_path, map_location=device)
@@ -85,20 +87,25 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
         # define the pain model with pretrained encoder
         model_type_str = config_dict['model_type']    
         pain_model = importlib.import_module('models.'+model_type_str)
-        network_pain = pain_model.PainHead(base_network = network_base, output_types = config_dict['output_types']) 
+        if 'network_params' in config_dict.keys():
+            network_pain = pain_model.PainHead(base_network = network_base, output_types = config_dict['output_types'],**config_dict['network_params']) 
+        else:
+            network_pain = pain_model.PainHead(base_network = network_base, output_types = config_dict['output_types']) 
         print (network_pain.to_pain)
         # s = input()
         return network_pain
 
     
-    def load_metrics(self, loss_test):
+    def load_metrics(self, loss_test, config_dict):
         loss_type = config_dict.get('loss_type', 'cross_entropy')
         metrics = {'AccumulatedLoss': utils_train.AccumulatedLoss(loss_test)}
         if loss_type == 'cross_entropy':
             metrics['accuracy'] = BinaryAccuracy()
         else:
-            metrics['accuracy'] = utils_train.AccumulatedLoss(get_loss(loss_type, config_dict, accuracy = True, deno_key = 'deno_test'))    
-
+            accuracy_types = config_dict.get('accuracy_type',[True])
+            for accu in accuracy_types:
+                accu_str = 'thresh' if accu==True else accu
+                metrics[accu_str] = utils_train.AccumulatedF1AndAccu(get_loss(loss_type, config_dict, accuracy = accu, deno_key = 'deno_test'))    
         return metrics
 
     def initialize_wandb(self):
@@ -278,11 +285,8 @@ def parse_arguments(argv):
         help="Which epoch for the saved model to load.")
     return parser.parse_args(argv)
         
-    
-if __name__ == "__main__":
 
-    args = parse_arguments(sys.argv[1:])
-    # print(args)
+def main(args):
     train_subjects = re.split('/', args.train_subjects)
     test_subjects = re.split('/',args.test_subjects)
     train_subjects_model = re.split('/', args.train_subjects_model)
@@ -317,3 +321,10 @@ if __name__ == "__main__":
     if ignite.model is not None:
         ignite.run()
 
+
+if __name__ == "__main__":
+
+    args = parse_arguments(sys.argv[1:])
+    # print(args)
+    main(args)
+    

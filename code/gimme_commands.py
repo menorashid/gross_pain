@@ -106,7 +106,41 @@ def pnp_latent_commands():
 	config_file = 'configs_pain/config_train_pain_lstm_wbn_binary.py'
 	job_name = 'painLSTM_1024_1_seqlen_10_wbn_binary'
 	
+	config_file = 'configs_pain/config_train_pain_avgpool.py'
+	job_name = 'painAvgPool'
 
+	config_file = 'configs_pain/config_train_pain_lstm_wbn_512.py'
+	job_name = 'painLSTM_512_1_seqlen_10'
+	
+	config_file = 'configs_pain/config_train_pain_lstm_wbn_512_milce.py'
+	job_name = 'painLSTM_512_1_seqlen_10_milce'
+
+
+	config_file = 'configs_pain/config_train_pain_lstm_wbn_512_milcepain.py'
+	job_name = 'painLSTM_512_1_seqlen_10_milcepain'
+
+	# config_file = 'configs_pain/config_train_pain_lstm_wbn_512_milce_fix.py'
+	# job_name = 'painLSTM_512_1_seqlen_10_debug'
+	
+
+	# config_file = 'configs_pain/config_train_pain_lstm_wbn_512_2.py'
+	# job_name = 'painLSTM_512_2_seqlen_10'
+		
+	# config_file = 'configs_pain/config_train_pain_lstm_wbn_allout_512.py'
+	# job_name = 'painLSTM_512_1_seqlen_10_wbn_allout'
+	
+	# config_file = 'configs_pain/config_train_pain_fully_lstm_wbn.py'
+	# job_name = 'painFullyLSTM_512_1_seqlen_10_wbn_milce'
+
+	# config_file = 'configs_pain/config_train_pain_fully_lstm_wbn_2layer.py'
+	# job_name = 'painFullyLSTM_512_2_seqlen_10_wbn_milce'
+
+	# config_file = 'configs_pain/config_train_pain_fully_lstm_wbn_allout.py'
+	# job_name = 'painFullyLSTM_512_1_seqlen_10_wbn_allout_milce'
+
+	# config_file = 'configs_pain/config_train_pain_fully_lstm_wbn_allout_2layer.py'
+	# job_name = 'painFullyLSTM_512_2_seqlen_10_wbn_allout_milce'
+	
 	# config_file = 'configs_pain/config_train_pain_lstm_wbnrelu.py'
 	# job_name = 'painLSTM_2048_2_seqlen_10'
 	# config_file = 'configs_pain/config_train_pain_conv1d.py'
@@ -232,6 +266,16 @@ def main():
 	pnp_latent_commands()
 	# back_bone_commands()
 	# debug_commands()
+	# out_file = 'get_counts'
+	# strs = []
+	# train_horses = ['aslan' , 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
+	# for horse_id in train_horses:
+	# 	str_curr = 'echo {}\ncat ../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/{}_reduced_2fps_frame_index_withSegIndexAndKey.csv | grep "{},0" | wc -l\ncat ../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/{}_reduced_2fps_frame_index_withSegIndexAndKey.csv | grep "{},1" | wc -l'.format(horse_id,horse_id,horse_id,horse_id,horse_id)
+	# 	strs.append(str_curr)
+	# util.writeFile(out_file,strs)
+	# print ('sh '+out_file)
+
+
 
 
 

@@ -35,19 +35,28 @@ else:
     device = "cpu"
 
 class IgniteTrainNVS:
-
-    def __init__(self, config_dict_file, config_dict):
+    
+    def set_up_config_dict(self, config_dict):
         config_dict['implicit_rotation'] = config_dict.get('implicit_rotation', False)
         config_dict['skip_background'] = config_dict.get('skip_background', True)
         config_dict['loss_weight_pose3D'] = config_dict.get('loss_weight_pose3D', 0)
         config_dict['n_hidden_to3Dpose'] = config_dict.get('n_hidden_to3Dpose', 2)
         config_dict['team_wandb'] = config_dict.get('team_wandb', 'egp')
-        
+        return config_dict
+    
+    def set_up_wandb(self, config_dict):
         if not config_dict['project_wandb']=='debug':
             wandb_run = self.initialize_wandb(config_dict)
         else:
             wandb_run = False
+        return wandb_run
 
+    def __init__(self, config_dict_file, config_dict):
+       
+        config_dict = self.set_up_config_dict(config_dict)
+        wandb_run = self.set_up_wandb(config_dict)
+
+    
         
         # save path and config files
         save_path = self.get_parameter_description(config_dict)
@@ -78,7 +87,7 @@ class IgniteTrainNVS:
         model = model.to(device)
         optimizer = self.loadOptimizer(model,config_dict)
         loss_train,loss_test = self.load_loss(config_dict)
-        metrics = self.load_metrics(loss_test)
+        metrics = self.load_metrics(loss_test, config_dict)
                     
         trainer = utils_train.create_supervised_trainer(model, optimizer, loss_train, device=device)
         evaluator = utils_train.create_supervised_evaluator(model,
@@ -177,7 +186,7 @@ class IgniteTrainNVS:
         # kick everything off
         trainer.run(train_loader, max_epochs=epochs, metrics=metrics)
 
-    def load_metrics(self, loss):
+    def load_metrics(self, loss, config_dict= None):
         return {'AccumulatedLoss': utils_train.AccumulatedLoss(loss)}
 
     def initialize_wandb(self, config_dict):
