@@ -80,7 +80,7 @@ class IgniteTrainNVS:
         rhodin_utils_io.savePythonFile(config_dict_file, save_path)
         rhodin_utils_io.savePythonFile(__file__, save_path)
         
-        train_loader = self.load_data_train(config_dict, save_path)
+        self.train_loader = self.load_data_train(config_dict, save_path)
         test_loader = self.load_data_test(config_dict, save_path)
         model = self.load_network(config_dict)
         
@@ -97,7 +97,7 @@ class IgniteTrainNVS:
         self.save_path = save_path
         self.epochs = epochs
         self.wandb_run = wandb_run
-        self.train_loader = train_loader
+        # self.train_loader = train_loader
         self.test_loader = test_loader
         self.model = model
         self.optimizer = optimizer

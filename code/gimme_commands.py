@@ -116,8 +116,20 @@ def pnp_latent_commands():
 	job_name = 'painLSTM_512_1_seqlen_10_milce'
 
 
-	config_file = 'configs_pain/config_train_pain_lstm_wbn_512_milcepain.py'
-	job_name = 'painLSTM_512_1_seqlen_10_milcepain'
+	config_file = 'configs_pain/config_train_pain_lstm_wbn_512_milcepain_weighted.py'
+	job_name = 'painLSTM_512_1_seqlen_10_milcepain_weighted'
+
+	config_file = 'configs_pain/config_train_pain_lstm_wln_512_milcepain_weighted_5sec.py'
+	job_name = 'painLSTM_wln_512_1_seqlen_10_milcepain_weighted_5sec'
+
+	config_file = 'configs_pain/config_train_pain_lstm_wln_512_milcepain_weighted_2min.py'
+	job_name = 'painLSTM_wln_512_1_seqlen_10_milcepain_weighted_2min'
+
+	# config_file = 'configs_pain/config_train_pain_lstm_wbn_512_milcepain_weighted_2min.py'
+	# job_name = 'painLSTM_512_1_seqlen_10_milcepain_weighted_2min'
+
+	# config_file = 'configs_pain/config_train_pain_lstm_wbn_wapp_512_milcepain.py'
+	# job_name = 'painLSTM_512_1_seqlen_10_wapp_milcepain'
 
 	# config_file = 'configs_pain/config_train_pain_lstm_wbn_512_milce_fix.py'
 	# job_name = 'painLSTM_512_1_seqlen_10_debug'
@@ -153,8 +165,8 @@ def pnp_latent_commands():
 	
 	util.mkdir('to_runs')
 
-	num_gpus = 2
-	num_per_gpu = 4
+	num_gpus = 1
+	num_per_gpu = 8
 	for idx in range(num_gpus):
 		test_horses = test_horses_all[num_per_gpu*idx:num_per_gpu*idx+num_per_gpu]
 		out_file = os.path.join('to_runs','_'.join(['to_run',to_run_str,job_name,job_name_model,str(idx)]))

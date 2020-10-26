@@ -27,7 +27,7 @@ from rhodin.python.ignite._utils import convert_tensor
 from rhodin.python.ignite.engine import Events
 
 from multiview_dataset import MultiViewDataset
-from seg_based_dataset import SegBasedSampler
+from seg_based_dataset_new import SegBasedSampler
 from rhodin.python.utils import datasets as rhodin_utils_datasets
 
 if torch.cuda.is_available():
@@ -36,7 +36,7 @@ else:
     device = "cpu"
      
 
-def get_loss(loss_type, config_dict, accuracy=False, deno_key = 'deno'):
+def get_loss(loss_type, config_dict, accuracy=False, deno_key = 'deno', weights = None):
     if loss_type=='cross_entropy':
         loss = losses_generic.LossLabel('pain', torch.nn.CrossEntropyLoss())
 
@@ -45,7 +45,11 @@ def get_loss(loss_type, config_dict, accuracy=False, deno_key = 'deno'):
             loss_test = losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
     elif 'mil' in loss_type.lower():
         loss = getattr(losses_generic, loss_type)
-        loss = loss('pain', 'segment_key', config_dict[deno_key], accuracy = accuracy)
+        if weights is not None:
+            print ('weights',weights)
+            loss = loss('pain', 'segment_key', config_dict[deno_key], accuracy = accuracy, weights = weights)
+        else:
+            loss = loss('pain', 'segment_key', config_dict[deno_key], accuracy = accuracy)
         print (loss,loss.deno, loss.accuracy)
     else:
         raise ValueError('Loss type %s not allowed'%loss_type)
@@ -135,23 +139,20 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
         return optimizer
 
     def load_loss(self, config_dict):
-        # pain_key = 'pain'
-        # segment_key = 'segment_key'
         loss_type = config_dict.get('loss_type', 'cross_entropy')
-        # if loss_type == 'cross_entropy':
-        loss_train = get_loss(loss_type, config_dict)
-        loss_test = get_loss(loss_type, config_dict, deno_key = 'deno_test')
-        #         def get_loss(loss_type, config_dict, accuracy=False, deno_key = 'deno')
-        #     # losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
-        #     loss_test = losses_generic.LossLabel(pain_key, torch.nn.CrossEntropyLoss())
-        # elif loss_type == 'mil_loss':
-        #     loss_train = losses_generic.MIL_Loss(pain_key, segment_key, config_dict['deno'])
-        #     # , accuracy = True)
-        #     loss_test = losses_generic.MIL_Loss(pain_key, segment_key, 8)
-        # else:
-        #     raise ValueError('Loss type %s not allowed'%loss_type)
 
-        # annotation and pred is organized as a list, to facilitate multiple output types (e.g. heatmap and 3d loss)
+        loss_weighted = config_dict.get('loss_weighted',False)
+        # print ('loss_weighted',loss_weighted)
+        if loss_weighted:
+            weights = torch.Tensor(self.train_loader.batch_sampler.get_pain_weight()).cuda()
+            # print (weights)
+        else:
+            weights = None
+        # print (self.train_loader.batch_sampler.get_pain_weight())
+        # s = input()
+        loss_train = get_loss(loss_type, config_dict, weights = weights)
+        loss_test = get_loss(loss_type, config_dict, deno_key = 'deno_test')
+        
         return loss_train, loss_test
 
     def get_parameter_description(self, config_dict, old = False):#, config_dict):

@@ -34,7 +34,7 @@ class PainHead(nn.Module):
         else:
             self.lstm = nn.LSTM(input_size = base_network.dimension_3d , hidden_size = d_hidden, num_layers = n_hidden_to_pain)
 
-        self.to_pain = nn.ModuleList([self.lstm,nn.Sequential(torch.nn.BatchNorm1d(d_hidden, affine=True),nn.Dropout(),nn.Linear(d_hidden,2))])
+        self.to_pain = nn.ModuleList([self.lstm,nn.Sequential(torch.nn.LayerNorm(d_hidden),nn.Dropout(),nn.Linear(d_hidden,2))])
 
         
         self.output_types = output_types
@@ -56,7 +56,6 @@ class PainHead(nn.Module):
         
 
     def forward_pain(self, input_dict):
-        # print ('HIIIIIIIII')
         
         input = input_dict['img_crop']
         segment_key = input_dict['segment_key']
@@ -80,20 +79,9 @@ class PainHead(nn.Module):
             segment_key_new.append(segment_key_rel)
 
         h_n = torch.cat(h_n_all,axis = 0)
-        # print (h_n.size())
-        # h_n = h_n[:1]
-
-        fake = False
-        if h_n.size(0)==1:
-            h_n = torch.cat([h_n,h_n],axis = 0)
-            fake = True
+        
         output_pain = self.to_pain[1](h_n)
-        if fake:
-            # print (output_pain.size())
-            assert output_pain.size(0)==2
-            output_pain = output_pain[:1,:]
-            # print (output_pain.size())
-
+        
         segment_key_new = torch.cat(segment_key_new, axis=0)
         
         pain_pred = torch.nn.functional.softmax(output_pain, dim = 1)

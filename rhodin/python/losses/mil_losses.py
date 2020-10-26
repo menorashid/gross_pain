@@ -131,10 +131,13 @@ class MIL_Loss(torch.nn.Module):
 
 
 class MIL_Loss_CE(MIL_Loss):
-    def __init__(self, label_key, key_idx, deno, accuracy = False):
+    def __init__(self, label_key, key_idx, deno, accuracy = False, weights = None):
         super(MIL_Loss_CE, self).__init__(label_key, key_idx, deno, accuracy)
         self.smax = torch.nn.Softmax(dim = 1)
-        self.loss = torch.nn.CrossEntropyLoss()
+        # print (weights)
+        self.loss = torch.nn.CrossEntropyLoss(weight = weights)
+        # print (self.loss)
+        # s = input()
 
     def forward(self, pred_dict, label_dict):
         segment_key = label_dict[self.key_idx]
