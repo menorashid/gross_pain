@@ -125,8 +125,16 @@ def pnp_latent_commands():
 	config_file = 'configs_pain/config_train_pain_lstm_wln_512_milcepain_weighted_2min.py'
 	job_name = 'painLSTM_wln_512_1_seqlen_10_milcepain_weighted_2min'
 
-	# config_file = 'configs_pain/config_train_pain_lstm_wbn_512_milcepain_weighted_2min.py'
-	# job_name = 'painLSTM_512_1_seqlen_10_milcepain_weighted_2min'
+
+	config_file = 'configs_pain/config_train_pain_lstm_wbn_512_milcepain_weighted_2min.py'
+	job_name = 'painLSTM_512_1_seqlen_10_milcepain_weighted_2min'
+
+	config_file = 'configs_pain/config_train_pain_lstm_wbn_512_milcepain_2min.py'
+	job_name = 'painLSTM_512_1_seqlen_10_milcepain_2min'
+
+	config_file = 'configs_pain/config_train_pain_lstm_wbn_wstep_512_milcepain_weighted_2min.py'
+	job_name = 'painLSTM_512_1_seqlen_10_step_5_milcepain_weighted_2min'
+
 
 	# config_file = 'configs_pain/config_train_pain_lstm_wbn_wapp_512_milcepain.py'
 	# job_name = 'painLSTM_512_1_seqlen_10_wapp_milcepain'

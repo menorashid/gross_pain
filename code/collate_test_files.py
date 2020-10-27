@@ -2,9 +2,17 @@ from helpers import util
 import glob
 import os
 import numpy as np
-def parse_test_file(test_file):
+import re
+
+def parse_test_file(test_file,num_select = -1):
 	lines = util.readLinesFromFile(test_file)[1:]
-	accus = np.array([float(line.split(',')[-1]) for line in lines])
+	# line = lines[0]
+	# print (line)
+	# print (util.replaceSpecialChar(line,' ').split())
+	
+	
+
+	accus = np.array([float(util.replaceSpecialChar(line,' ').split()[num_select]) for line in lines])
 	idx_max = np.argmax(accus)
 	end_accu = accus[-1]
 	max_accu = accus[idx_max]
@@ -15,10 +23,25 @@ def main():
 	# meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_Mix_painLSTM_1024_1_seqlen_10_wbn_allout_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
 	meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_CE_painLSTM_1024_1_seqlen_10_wbn_allout_milce_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
 	
+	meta_dir = '../output/pain_lstm_wln_MIL_Loss_Pain_CE_painLSTM_wln_512_1_seqlen_10_milcepain_weighted_2min_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
+
+	meta_dir = '../output/pain_lstm_wln_MIL_Loss_Pain_CE_painLSTM_wln_512_1_seqlen_10_milcepain_weighted_5sec_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_10'
+
+	meta_dir = '../output/pain_lstm_wbn_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_milcepain_2min_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
+	# meta_dir = '../output/pain_lstm_wbn_512_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_milcepain_weighted_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
+	
+	# meta_dir ='../output/pain_lstm_wbn_512_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_milcepain_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
+
+
+	# meta_dir ='../output/pain_lstm_wbn_512_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_milcepain_weighted_2min_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
+
+	# meta_dir ='../output/pain_lstm_wbn_512_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_milcepain_weighted_5sec_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_10'
 	# meta_dir = '../output/pain_lstm_wbn_MIL_Loss_CE_painLSTM_1024_1_seqlen_10_milce_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200/'
 	# meta_dir = '../output/pain_lstm_wbn_MIL_Loss_Mix_painLSTM_1024_1_seqlen_10_latest_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
 
-	dirs = [val for val in glob.glob(os.path.join(meta_dir, '*')) if os.path.isdir(val)]
+
+	dirs = [val for val in glob.glob(os.path.join(meta_dir, '*')) if os.path.isdir(val)][:8]
+	# print (dirs)
 	# keys = []
 	accus = {}
 	for dir_curr in dirs:
@@ -30,7 +53,7 @@ def main():
 		# print (test_sub)
 		if os.path.exists(test_file):
 			# keys.append(test_sub)
-			end_accu, idx_end, max_accu, idx_max = parse_test_file(test_file)
+			end_accu, idx_end, max_accu, idx_max = parse_test_file(test_file,-1)
 			end_accu = end_accu*100
 			max_accu = max_accu*100
 			str_print = '%.2f,%.2f,%d,%d'%(max_accu,end_accu,idx_max,idx_end)
