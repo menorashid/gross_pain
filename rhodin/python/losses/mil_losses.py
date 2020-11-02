@@ -137,7 +137,7 @@ class MIL_Loss_CE(MIL_Loss):
         # print (weights)
         self.loss = torch.nn.CrossEntropyLoss(weight = weights)
         # print (self.loss)
-        # s = input()
+0        # s = input()
 
     def forward(self, pred_dict, label_dict):
         segment_key = label_dict[self.key_idx]

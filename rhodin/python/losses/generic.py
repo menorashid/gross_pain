@@ -24,6 +24,30 @@ class LossOnPredDict(torch.nn.Module):
         loss = self.weight * self.loss(pred_dict[self.key], pred_dict[self.other_key])
         return loss
 
+class LossWeightedOnDict(torch.nn.Module):
+    def __init__(self, key, weight_key):
+        super(LossWeightedOnDict, self).__init__()
+        self.loss = torch.nn.MSELoss(reduction = 'none')
+        self.key = key
+        self.weight_key = weight_key
+
+    def forward(self, pred_dict, label_dict):
+        loss = self.loss(pred_dict[self.key], label_dict[self.key])
+        # print (pred_dict.keys(), label_dict.keys())
+        opt_flow = label_dict[self.weight_key]
+        opt_flow = opt_flow.unsqueeze(1)
+        # print (torch.min(loss), torch.max(loss))
+        # print (torch.min(opt_flow), torch.max(opt_flow))
+        loss = opt_flow*loss
+        loss = torch.mean(loss)
+        # print (loss)
+        return loss
+        # print (opt_flow.size())
+        # print ('loss.size()',loss.size())
+        # s = input()
+
+
+
 class PreApplyCriterionListDict(torch.nn.Module):
     """
     Wraps a loss operating on tensors into one that processes dict of labels and predictions

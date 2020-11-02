@@ -352,6 +352,11 @@ class unet(nn.Module):
             assert False
 
         input = input_dict['img_crop']
+        
+        # for k in input_dict.keys():
+        #     print (k,input_dict[k].size(),torch.min(input_dict[k]), torch.max(input_dict[k]))
+        # raw_input()
+
         device = input.device
         batch_size = input.size()[0]
         # num_pose_examples = batch_size//2

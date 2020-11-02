@@ -16,51 +16,40 @@ from rhodin.python.models import resnet_VNECT_3Donly
 from rhodin.python.models.unet_utils import *
 from rhodin.python.models import MLP
 from models import unet_encode3D_clean
+from . import pain_lstm_wbn
+from helpers import util
 
-class PainHead(nn.Module):
+raw_input = input
 
-    # def __init__(self):
-    #     super(PainHead, self).__init__()
+class PainHead(pain_lstm_wbn.PainHead):
 
-    def __init__(self, base_network , output_types, n_hidden_to_pain = 1, d_hidden = 1024, dropout = 0.5 , seq_len = 10):
-        super(PainHead, self).__init__()
-        
-        self.seq_len = seq_len
 
-        self.encoder = base_network.encoder
-        self.to_3d = base_network.to_3d
-        if n_hidden_to_pain>1:
-            self.lstm = nn.LSTM(input_size = base_network.dimension_3d , hidden_size = d_hidden, num_layers = n_hidden_to_pain, dropout = dropout)
-        else:
-            self.lstm = nn.LSTM(input_size = base_network.dimension_3d , hidden_size = d_hidden, num_layers = n_hidden_to_pain)
+    def augment_latent3d(self, rel_latent, rot_rel, rot_inv_rel):
+        angles = np.linspace(0,2*np.pi,15)
+        angle = np.random.choice(angles)
+        rot_mat = util.rotationMatrixXZY(0, angle,0)
+        rot_mat = torch.from_numpy(rot_mat).float().cuda()
 
-        self.to_pain = nn.ModuleList([self.lstm,nn.Sequential(torch.nn.BatchNorm1d(d_hidden, affine=True),nn.Dropout(),nn.Linear(d_hidden,2))])
+        batch_size = rel_latent.size(0)
+        rot_mat = rot_mat.unsqueeze(0).repeat(batch_size,1,1)
+        cam2cam = torch.bmm(rot_rel,torch.bmm(rot_mat,rot_inv_rel))
+        latent_3d = rel_latent.view(batch_size,-1,3)
+        latent_3d_rotated = torch.bmm(latent_3d, cam2cam.transpose(1,2))
+        latent_3d_rotated = latent_3d_rotated.view(batch_size,-1)
+        return latent_3d_rotated
 
-        
-        self.output_types = output_types
 
-        
-    def pad_input(self, latent_3d):
-        seq_len = self.seq_len
-        input_size = latent_3d.size(0)
-        rem = 1 if (input_size%seq_len)>0 else 0
-        batch_size = input_size//seq_len + rem
 
-        rem = seq_len*batch_size - input_size
-        padding = torch.zeros((rem,latent_3d.size(1))).cuda()
-        latent_3d = torch.cat((latent_3d,padding), axis = 0)
-        
-        latent_3d = torch.reshape(latent_3d,(batch_size,seq_len,latent_3d.size(1)))
-        latent_3d = torch.transpose(latent_3d, 0,1)
-        return latent_3d
-        
 
     def forward_pain(self, input_dict):
-        # print ('HIIIIIIIII')
-        
+        # print (self.training)
         input = input_dict['img_crop']
         segment_key = input_dict['segment_key']
         batch_size = input_dict['img_crop'].size()[0]
+        
+        rot_inv = input_dict['extrinsic_rot_inv'].float()
+        rot = input_dict['extrinsic_rot'].float()
+
         device = input.device
         
         out_enc_conv = self.encoder(input)
@@ -71,7 +60,14 @@ class PainHead(nn.Module):
         segment_key_new = []
         for segment_val in torch.unique_consecutive(segment_key):
             segment_bin = segment_key==segment_val
+            
             rel_latent = latent_3d[segment_bin,:]
+            rot_inv_rel = rot_inv[segment_bin,:]
+            rot_rel = rot[segment_bin,:]
+            # print (self.training)
+            if self.training:
+                rel_latent = self.augment_latent3d(rel_latent, rot_rel, rot_inv_rel)
+
             rel_latent = self.pad_input(rel_latent)
             _,(h_n,c_n) = self.lstm(rel_latent)
             h_n = h_n[-1]
@@ -89,7 +85,7 @@ class PainHead(nn.Module):
             fake = True
         output_pain = self.to_pain[1](h_n)
         if fake:
-            # print (output_pain.size())
+            # print (output_pain)
             assert output_pain.size(0)==2
             output_pain = output_pain[:1,:]
             # print (output_pain)

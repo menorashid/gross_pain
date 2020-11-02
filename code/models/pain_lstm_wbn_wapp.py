@@ -25,7 +25,7 @@ class PainHead(pain_lstm_wbn.PainHead):
 
         input_size = base_network.dimension_3d + base_network.dimension_fg
         base_network.dimension_3d = input_size
-        
+
         super(PainHead, self).__init__(base_network , output_types, n_hidden_to_pain, d_hidden , dropout , seq_len)
         
         # self.seq_len = seq_len
@@ -76,7 +76,18 @@ class PainHead(pain_lstm_wbn.PainHead):
             segment_key_new.append(segment_key_rel)
 
         h_n = torch.cat(h_n_all,axis = 0)
+        # h_n = h_n[:1,:]
+        fake = False
+        if h_n.size(0)==1:
+            h_n = torch.cat([h_n,h_n],axis = 0)
+            fake = True
+        
         output_pain = self.to_pain[1](h_n)
+        
+        if fake:
+            assert output_pain.size(0)==2
+            output_pain = output_pain[:1,:]
+
         segment_key_new = torch.cat(segment_key_new, axis=0)
         
         pain_pred = torch.nn.functional.softmax(output_pain, dim = 1)

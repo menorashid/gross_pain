@@ -88,7 +88,7 @@ class SegBasedSampler(Sampler):
             # num_frames = 1210
             num_segs = num_frames//self.num_frames_per_seg
             rem = num_frames%self.num_frames_per_seg
-            if rem>self.min_size:
+            if rem>=self.min_size:
                 num_segs += 1
             pain_label = self.label_dict.loc[self.label_dict['segment_key']==key,'pain'].iloc[0]
             counts[pain_label]+=num_segs
@@ -172,9 +172,10 @@ class SegBasedSampler(Sampler):
             batches.append(curr_batch)
             self.batch_keys = batch_keys
             self.batches = batches
+            # print (self.batch_keys)
             if self.randomize:
                 random.shuffle(self.batches)
-                
+
         print ('HOLA', self.num_frames_per_seg, len(self.batch_keys))
         return iter(self.batches)
 
@@ -191,21 +192,58 @@ def main():
     str_aft = '_reduced_2fps_frame_index_withSegIndexAndIntKey.csv'
     input_types = ['img_crop']
     label_types = ['pain','segment_key']
-    sampler = SegBasedSampler(data_folder, 
+    for horse in all_subjects:
+
+        sampler = SegBasedSampler(data_folder, 
                      1200,
                      num_frames_per_seg = 240,
-                     subjects = all_subjects,
-                     randomize=True,
+                     subjects = [horse],
+                     randomize=False,
                      every_nth_segment=1,
                      str_aft = str_aft,
                      min_size = 10)
+        pain_counts = np.array(sampler.get_pain_counts())
+        pain_percent = pain_counts/np.sum(pain_counts)
+        pain_all = list(pain_counts)+list(pain_percent)
+        print (pain_all)
+        str_print = '%d,%d,%.2f,%.2f'%tuple(pain_all)
+        print (horse+','+str_print)
+        # sampler.__iter__()
+        # all_keys_check = []
+        # for k in sampler.batch_keys:
+        #     all_keys_check+=k
+        # print (len(all_keys_check))
+        # for k in all_keys_check:
+        #     num_frames = len(sampler.frame_idx_dict[k])
+        #     num_segs = num_frames//sampler.num_frames_per_seg
+        #     rem = num_frames%sampler.num_frames_per_seg
+        #     if rem>=sampler.min_size:
+        #         num_segs += 1
+        #     if num_segs!=all_keys_check.count(k):
+        #         print (num_segs,all_keys_check.count(k),rem)
 
-    sampler.__iter__()
-    print (len(sampler.batches), len(sampler.batch_keys))
-    for k in sampler.batch_keys:
-        set_k = list(set(k))
-        print (len(k),len(set_k))
-        assert len(k)==len(set_k)
+    
+        # break
+
+
+    # counts = [0,0]
+    #     for key in self.all_keys:
+    #         num_frames = len(self.frame_idx_dict[key])
+    #         # num_frames = 1210
+    #         num_segs = num_frames//self.num_frames_per_seg
+    #         rem = num_frames%self.num_frames_per_seg
+    #         if rem>self.min_size:
+    #             num_segs += 1
+    #         pain_label = self.label_dict.loc[self.label_dict['segment_key']==key,'pain'].iloc[0]
+    #         counts[pain_label]+=num_segs
+
+    #     return counts
+    # sampler.__iter__()
+    # print (len(sampler.batches), len(sampler.batch_keys))
+    # for k in sampler.batch_keys:
+    #     set_k = list(set(k))
+    #     print (len(k),len(set_k))
+    #     assert len(k)==len(set_k)
     # print (sampler.batch_keys[-1])
     # for k in sampler.batch_keys:
     #     print (k)

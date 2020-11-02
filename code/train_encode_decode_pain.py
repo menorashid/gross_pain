@@ -27,7 +27,7 @@ from rhodin.python.ignite._utils import convert_tensor
 from rhodin.python.ignite.engine import Events
 
 from multiview_dataset import MultiViewDataset
-from seg_based_dataset_new import SegBasedSampler
+from seg_based_dataset import SegBasedSampler
 from rhodin.python.utils import datasets as rhodin_utils_datasets
 
 if torch.cuda.is_available():
@@ -64,6 +64,20 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
         
         super().__init__(config_dict_file, config_dict)
         
+        if 'val_subjects' in config_dict.keys():
+            assert 'val_every' in config_dict.keys()
+            org_test = config_dict['test_subjects']
+            # print ('a', config_dict['test_subjects'])
+            config_dict['test_subjects'] = config_dict['val_subjects']
+            # print ('b', config_dict['test_subjects'])
+            self.val_loader = self.load_data_test(config_dict, self.save_path)
+            config_dict['test_subjects'] = org_test
+            # print ('c', config_dict['test_subjects'])
+
+            # print (config_dict['val_subjects'])
+
+            # input()
+
         if self.model is None:
             return
         # redefine these
@@ -284,12 +298,15 @@ def parse_arguments(argv):
         help="Job identifier for the saved model to load.")
     parser.add_argument('--epoch_encdec', type=str,
         help="Which epoch for the saved model to load.")
+    parser.add_argument('--val_subjects', type=str,
+        help="Which subjects to val on.", default = '')
     return parser.parse_args(argv)
         
 
 def main(args):
     train_subjects = re.split('/', args.train_subjects)
     test_subjects = re.split('/',args.test_subjects)
+    val_subjects = re.split('/',args.val_subjects)
     train_subjects_model = re.split('/', args.train_subjects_model)
     test_subjects_model = re.split('/',args.test_subjects_model)
 
@@ -309,6 +326,8 @@ def main(args):
     config_dict['job_identifier'] = args.job_identifier
     config_dict['train_subjects'] = train_subjects
     config_dict['test_subjects'] = test_subjects
+    if len(val_subjects[0])>0:
+        config_dict['val_subjects'] = val_subjects
     config_dict['data_dir_path'] = args.dataset_path
     config_dict['dataset_folder_train'] = args.dataset_path
     config_dict['dataset_folder_test'] = args.dataset_path

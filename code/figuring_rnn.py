@@ -1,8 +1,20 @@
 import torch
-
-def main():
+import numpy as np
+from helpers import util
+import imageio
+import math
+def scratch():
     # seq_len = self.seq_len
     # step_size = self.step_size
+    angles = np.linspace(0,2*np.pi,15)
+    angle = np.random.choice(angles)
+    print (angles, angle)
+    rot_mat = util.rotationMatrixXZY(0, angle,0)
+    rot_mat = torch.from_numpy(rot_mat).float().cuda()
+    print (rot_mat)
+    return
+
+
 
     seq_len = 10
     step_size = 5
@@ -80,22 +92,56 @@ def main():
     print (hn[:,-1,:2])
 
 
+def main():
+    # img = torch.from_numpy(pic.transpose((2, 0, 1))).float()
+    file_name = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/aslan/20190103122542_130850/0_opt/as_00_0_000434.png'
+    im = np.array(imageio.imread(file_name)).astype(float)
+    print (type(im))
+    # .astype(float)
+    # im = im/255.
+    # mag = im[:,:,2]
 
 
 
-#   rnn = nn.LSTM(10, 20, 2)
-# >>> input = torch.randn(5, 3, 10)
-# >>> h0 = torch.randn(2, 3, 20)
-# >>> c0 = torch.randn(2, 3, 20)
-# >>> output, (hn, cn) = rnn(input, (h0, c0))
 
-# input of shape (seq_len, batch, input_size): tensor containing the features of the input sequence. The input can also be a packed variable length sequence. See torch.nn.utils.rnn.pack_padded_sequence() or torch.nn.utils.rnn.pack_sequence() for details.
+    # mag = im[:3,:3,0]
+    # mag = im[:3,:3,1]
+    # print (np.min(mag), np.max(mag))
+    for s in range(3):
+        print (im[:3,:3,s])
 
-# h_0 of shape (num_layers * num_directions, batch, hidden_size): tensor containing the initial hidden state for each element in the batch. If the LSTM is bidirectional, num_directions should be 2, else it should be 1.
+    # mag_max = math.sqrt(15**2+15**2)
+    # print (mag_max)
+    # mag_ac = np.sqrt(np.sum(np.square(im[:,:,:2]*30), axis = 2))
+    # mag_other = im[:,:,2]*mag_max
 
-# c_0 of shape (num_layers * num_directions, batch, hidden_size): tensor containing the initial cell state for each element in the batch.
+    # print (mag_ac.shape, np.min(mag_ac), np.max(mag_ac))
+    # print (np.min(mag_other), np.max(mag_other))
+    # diff = np.abs(mag_ac - mag_other)
+    # print (np.min(diff), np.max(diff), np.mean(diff))
 
-# If (h_0, c_0) is not provided, both h_0 and c_0 default to zero.
+
+
+    # mag_ac = np.sqrt(np.sum(np.square(im[:,:,1:]*30), axis = 2))
+    # mag_other = im[:,:,0]
+    # print (mag_ac.shape, np.min(mag_ac), np.max(mag_ac))
+    # print (np.min(im[:,:,1:]), np.max(im[:,:,1:]))
+    # diff = np.abs(mag_ac - mag_other)
+    # print (np.min(diff), np.max(diff), np.mean(diff))
+
+
+    # for i in range(im.shape[2]):
+    #     print (np.min(im[:,:,i]), np.max(im[:,:,i]))
+
+    # im = torch.from_numpy(imageio.imread(file_name)).float()
+    # print (im.type())
+    # print (im.size())
+    # print (im.size(), torch.min(im), torch.max(im))
+
+        #         img = img.div(255)
+                
+
+        # return np.array(self.transform_in(imageio.imread(name)), dtype='float32')
 
 
 if __name__=='__main__':

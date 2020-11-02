@@ -11,7 +11,15 @@ def get_image_name(subject, interval_ind, interval, view, frame, data_dir_path):
                                                         view,
                                                         frame_id))
 
-def get_counts_indices(sdf, subject, data_dir_path):
+def get_flow_name(subject, interval_ind, interval, view, frame, data_dir_path):
+    frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
+                             str(view), '%06d'%frame])
+    return os.path.join(data_dir_path,'{}/{}/{}_opt/{}.png'.format(subject,
+                                                        interval,
+                                                        view,
+                                                        frame_id))
+
+def get_counts_indices(sdf, subject, data_dir_path, flow=False):
     subject_counter = 0
     sdf_length = len(sdf)
     missing_inds = []
@@ -22,13 +30,16 @@ def get_counts_indices(sdf, subject, data_dir_path):
             interval = row['interval']
             view = row['view']
             frame = row['frame']
-            frame_path = get_image_name(subject, interval_ind, interval, view, frame, data_dir_path)
+            if not flow:
+                frame_path = get_image_name(subject, interval_ind, interval, view, frame, data_dir_path)
+            else:
+                frame_path = get_flow_name(subject, interval_ind, interval, view, frame, data_dir_path)
             if not os.path.isfile(frame_path):
                 missing_inds.append(ind)
                 subject_counter += 1
     return subject_counter, missing_inds 
 
-def reduce_csvs(data_dir_path, str_aft = '_frame_index.csv'):
+def reduce_csvs(data_dir_path, str_aft = '_frame_index.csv',flow = False):
     subjects = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
     subject_counters = []
     subject_dfs = []
@@ -38,7 +49,7 @@ def reduce_csvs(data_dir_path, str_aft = '_frame_index.csv'):
         print('Subject: ', subject)
         sdf = pd.read_csv(os.path.join(data_dir_path, subject + str_aft))
         
-        subject_counter, missing_inds = get_counts_indices(sdf, subject, data_dir_path)
+        subject_counter, missing_inds = get_counts_indices(sdf, subject, data_dir_path, flow)
                     
         subject_missing_inds.append(missing_inds)
         subject_counters.append(subject_counter)
@@ -62,7 +73,10 @@ def reduce_csvs(data_dir_path, str_aft = '_frame_index.csv'):
         subject_counter, missing_inds = get_counts_indices(reduced_dfs[ind],subject, data_dir_path)
         assert len(missing_inds)==0
         # print (reduced_dfs[ind])
-        out_file = os.path.join(data_dir_path, subject + '_reduced'+str_aft)
+        if flow:
+            out_file = os.path.join(data_dir_path, subject + '_optreduced'+str_aft)
+        else:
+            out_file = os.path.join(data_dir_path, subject + '_reduced'+str_aft)
         print (out_file)
         reduced_dfs[ind].to_csv(out_file)
 
@@ -139,14 +153,19 @@ def main():
     # print (data_dir_path)
     # reduce_csvs(data_dir_path, str_aft = str_aft)
 
-    data_dir_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps'
-    old_csv_aft = '_frame_index.csv'
-    new_csv_aft = '_2fps_frame_index.csv'
-    jump_val = 5
-    subjects = None
-    # make_smaller_fps_csv(data_dir_path,old_csv_aft,new_csv_aft,jump_val, subjects = subjects)
-    data_dir_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop'
-    reduce_csvs(data_dir_path, str_aft = new_csv_aft)
+    str_aft = '_reduced_percent_0.01_frame_index.csv'
+    print (data_dir_path)
+    reduce_csvs(data_dir_path, str_aft = str_aft, flow = True)
+
+
+    # data_dir_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps'
+    # old_csv_aft = '_frame_index.csv'
+    # new_csv_aft = '_2fps_frame_index.csv'
+    # jump_val = 5
+    # subjects = None
+    # # make_smaller_fps_csv(data_dir_path,old_csv_aft,new_csv_aft,jump_val, subjects = subjects)
+    # data_dir_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop'
+    # reduce_csvs(data_dir_path, str_aft = new_csv_aft)
 
         
         

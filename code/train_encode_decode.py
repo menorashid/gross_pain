@@ -159,7 +159,13 @@ class IgniteTrainNVS:
                 accumulated_loss = utils_train.save_testing_error(save_path, engine, evaluator,
                                     dataset_str='Validation set',
                                     save_extension='debug_log_testing.txt')
-        
+            
+            if 'val_every' in config_dict.keys() and (ep) % config_dict['val_every'] == 0:
+                print("Running validation at epoch ", ep)
+                evaluator.run(self.val_loader, metrics=metrics)
+                accumulated_loss = utils_train.save_testing_error(save_path, engine, evaluator,
+                                    dataset_str='Validation set',
+                                    save_extension='debug_log_validation.txt')
                 # save the best model
                 # utils_train.save_model_state(save_path, trainer, accumulated_loss,
                 #                              model, optimizer, engine.state, wandb_run)
@@ -379,6 +385,9 @@ class IgniteTrainNVS:
             loss = torch.nn.modules.loss.MSELoss(),
             weight = config_dict['loss_weight_latent'] if 'loss_weight_latent' in config_dict.keys() else 1.)
         
+        if 'loss_opt_flow' in config_dict.keys() and config_dict['loss_opt_flow']>0:
+            loss_opt_flow = losses_generic.LossWeightedOnDict(key = 'img_crop', weight_key = 'opt_flow')
+
         losses_train = []
         losses_test = []
         
@@ -392,6 +401,11 @@ class IgniteTrainNVS:
             if 'loss_weight_latent' in config_dict.keys() and config_dict['loss_weight_latent']>0:
                 losses_train.append(latent_dist_loss)
                 losses_test.append(latent_dist_loss)
+            if 'loss_opt_flow' in config_dict.keys() and config_dict['loss_opt_flow']>0:
+                losses_train.append(loss_opt_flow)
+                losses_test.append(loss_opt_flow)
+                
+
                 
         loss_train = losses_generic.PreApplyCriterionListDict(losses_train, sum_losses=True)
         loss_test  = losses_generic.PreApplyCriterionListDict(losses_test,  sum_losses=True)

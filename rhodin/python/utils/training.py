@@ -320,9 +320,13 @@ class AccumulatedF1AndAccu(Metric):
         y = np.concatenate(self._sum[1])
         y_pred = np.concatenate(self._sum[0])
         accu_curr = sklearn.metrics.accuracy_score(y, y_pred)
-        f1 = sklearn.metrics.f1_score(y, y_pred)
+        # f1 = sklearn.metrics.f1_score(y, y_pred)
+        # precision 
+
+        prec,recall,f1_new,support = sklearn.metrics.precision_recall_fscore_support(y, y_pred, average = 'binary')
+
         # print ('final accu f1',accu_curr, f1)
-        return accu_curr, f1
+        return accu_curr, prec, recall, f1_new
     
     
 def transfer_partial_weights(state_dict_other, obj, submodule=0, prefix=None, add_prefix=''):

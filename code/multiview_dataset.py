@@ -79,6 +79,12 @@ class MultiViewDataset(Dataset):
     def load_image(self, name):
         return np.array(self.transform_in(imageio.imread(name)), dtype='float32')
     
+    def load_flow(self, name):
+        im = np.array(imageio.imread(name)).astype(float)
+        im = im/255.
+        mag = im[:,:,2]
+        # print (np.min(mag), np.max(mag))
+        return mag
 
     def __getitem__(self, index):
         interval, interval_ind, view, subject, frame = self.get_local_indices(index)
@@ -90,6 +96,14 @@ class MultiViewDataset(Dataset):
                                                                 interval,
                                                                 view,
                                                                 frame_id)
+        def get_flow_path(key):
+            frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
+                                str(view), '%06d'%frame])
+            return self.data_folder + '/{}/{}/{}_opt/{}.png'.format(subject,
+                                                                interval,
+                                                                view,
+                                                                frame_id)
+
         def load_data(types):
             new_dict = {}
             for key in types:
@@ -170,15 +184,25 @@ class MultiViewDatasetCrop(MultiViewDataset):
                                                                 view,
                                                                 frame_id)
             return file_curr 
-            
+        
+        def get_flow_path(key):
+            frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
+                                str(view), '%06d'%frame])
+            return self.data_folder + '/{}/{}/{}_opt/{}.png'.format(subject,
+                                                                interval,
+                                                                view,
+                                                                frame_id)
        
         def load_data(types):
             new_dict = {}
             for key in types:
                 if key == 'img_crop':
                     new_dict[key] = self.load_image(get_image_path(key)) 
+                    # print (new_dict[key].shape)
                 elif key == 'bg_crop':
                     new_dict[key] = self.load_image(get_bg_path(key))
+                elif key == 'opt_flow':
+                    new_dict[key] = self.load_flow(get_flow_path(key))
                 elif key in self.label_dict.keys():
                  # == 'pain':
                     new_dict[key] = int(self.label_dict[key][index])
@@ -190,7 +214,7 @@ class MultiViewDatasetCrop(MultiViewDataset):
                 elif (key=='extrinsic_rot') or (key=='extrinsic_rot_inv') or (key=='extrinsic_tvec'):
                     rot_path = self.get_rot_path(view,subject,key)
                     new_dict[key] = np.load(rot_path)
-                    # print (new_dict[key])
+                    # print (new_dict[key].shape)
                 else:
                     new_dict[key] = np.array(self.label_dict[key][index], dtype='float32')
             return new_dict

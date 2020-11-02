@@ -1,0 +1,155 @@
+python train_encode_decode_pain.py --config_file configs_pain/config_train_pain_lstm_wbn_wapp_512_milcepain.py --dataset_path ../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop --train_subjects brava --test_subjects aslan --job_identifier painLSTM_512_1_seqlen_10_wapp_milcepain --config_file_model configs/config_train_rotFlowCropBetterBg.py --train_subjects_model brava/herrera/inkasso/julia/kastanjett/naughty_but_nice/sir_holger --test_subjects_model aslan --job_identifier_encdec withRotFlowCropPercentBetterBg --epoch_encdec 50
+
+to do:
+0. play good music. - done
+1. link your orcid id - done
+2. fix plos submission - done
+3. check results. - done
+4. make list of experiments run - done
+5. use list of experiments run to determine experiments left to run.
+	
+	lstm - 512 fc 2 mil-ce --- 58.05571429	55.34857143	6.142857143	10	
+	
+	done. need to compile results :)
+	lstm - 512 fc 2 mil-mix - vision9 screen 0
+	lstm - 512 fc 2 (ao) milce - vision8 sc1
+	lstm - 512 fc 2 (ao) mil-mix - vision9 sc1
+	lstm - 512,512 fc 2 - vision8 sc 0
+
+	ALL with mil_ce, wbn
+	lstm - 512,2 (ao) - v9 sc1
+	lstm - 512,2 - v9 sc0
+	lstm - 512,512,2 (ao) - v8 sc1
+	lstm - 512,512,2 - v8 sc0
+
+
+6. make a very rough outline.
+
+
+vision9 - ../output/pain_lstm_wbn_512_MIL_Loss_CE_painLSTM_512_1_seqlen_10_milce_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200/num_epochs_10_train
+_as_br_he_in_ju_ka_na_test_si_lr_0o0001_backward_1_bstrain_1200_bstest_1200/models/network_010.pth
+
+vision8 - ../output/pain_lstm_wbn_allout_MIL_Loss_Mix_painLSTM_1024_1_seqlen_10_wbn_allout_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200/num_epoch
+s_10_train_as_br_he_in_ju_ka_na_test_si_lr_0o0001_backward_1_bstrain_1200_bstest_1200/models/network_010.pth
+
+../output/pain_lstm_wbn_allout_MIL_Loss_CE_painLSTM_1024_1_seqlen_10_wbn_allout_milce_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200/num_
+epochs_10_train_as_br_he_in_ju_ka_na_test_si_lr_0o0001_backward_1_bstrain_1200_bstest_1200/models/network_010.pth
+
+vision5 - ../output/pain_lstm_wbn_binary_MIL_Loss_painLSTM_1024_1_seqlen_10_wbn_binary_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200/num_epochs_10_train_as_br_he_ju_ka_na_si_test_in_lr_0o0001_backward_1_bstrain_1200_bstest_1200/models/network_010.pth
+
+things to do 
+check mail - done
+resend eco social email - done
+ask about swimsuit. -done
+save wacv papers. - done
+
+
+write outline - done
+
+IDEA. ONLY USE THE RIGHT CLASS DURING TRAINING LOSS. IGNORE wrong class entirely. what's the loss formulation? OH no.
+- ylogx
+x<-collate(smax(X))
+
+
+
+check the positive negative distributions of the data you've been using - 
+	based on num frames, not that much.
+	check code used to generate csv
+	will check num segs.
+	also will create newer csvs
+
+make list of experiments left to run
+check the results of experiments run
+
+
+make it data that's of all occurrences, not just the most movement ones
+rerun all experiments we need to rerun
+check the horses. does appearance seem important
+enable an experiment with appearance. 
+see if appearance is disentangled or not...
+change base network to include optical flow supervision
+change base network to have better examples from other horse match
+
+
+python train_encode_decode_pain.py --config_file configs_pain/config_train_pain_lstm_wbn_wapp_512_milcepain_weighted_2min.py --dataset_path ../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop --train_subjects brava --test_subjects aslan --job_identifier painLSTM_512_1_seqlen_10_wapp_milcepain_weighted_2min --config_file_model configs/config_train_rotFlowCropBetterBg.py --train_subjects_model brava/herrera/inkasso/julia/kastanjett/naughty_but_nice/sir_holger --test_subjects_model aslan --job_identifier_encdec withRotFlowCropPercentBetterBg --epoch_encdec 50
+
+python train_encode_decode_pain.py --config_file configs_pain/config_train_pain_lstm_wbn_512_milcepain_weighted_2min_withval.py --dataset_path ../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop --train_subjects brava --test_subjects aslan --job_identifier testingval --config_file_model configs/config_train_rotFlowCropBetterBg.py --train_subjects_model brava/herrera/inkasso/julia/kastanjett/naughty_but_nice/sir_holger --test_subjects_model aslan --job_identifier_encdec withRotFlowCropPercentBetterBg --epoch_encdec 50
+
+things to do today:
+1. compile with rotation results - done
+1a. make sure rotation method is a ok.
+2. compile with overlap results - done
+3. compile with app results - done
+4. train with backward 10, to see if results are more stable. - doing
+	compile. -done. continuing
+4a. tain with app weighted 240 - done
+	results not that great. quit
+
+9. check precision recall of best models -done
+	
+5. implement validation fold. choose based on balanced test data - done
+5b. train with validation and compile results. - doing
+5c. bring back saving best model? - too complicated. just save every one. -done
+
+6a. train with 8 not random - done
+
+6. look at outline.
+7. make list of basenetworks to train.
+10. work on optical flow loss
+11. work on rotation augmentation or whatever for base network.
+
+bw10 is looking good. lower learning rate is also looking good. 
+deno8 is not looking that good. deno8 is killed. doing bw10, with val for 20 epochs instead.
+
+simple with val is split between v9 and v8. running on v8.
+bw10 with val 20 one fold is done on v9. rest tbd
+bw10 with val allout 20 is on v8
+
+collate with val - done
+check on with val 20 allout - done
+start withval 20 on v8 again - done (as is on v9)
+
+do eval with majority vote?
+do eval with top1 
+set up for sofia exact experiment
+set up for frame based
+
+1do optical flow base network - done
+figure out rotation base network
+
+
+
+
+do optical flow base network
+1. load opt flow and check min max in each channel. - done
+2. from csv check if we have opt flow for each image. - done
+3. add opt flow loading to dataloader. -done
+4. check mse with no reduction. -done
+5. multiply mse with no reduction with opt flow block - done
+6. take mean and return loss. - done
+7. start training with opt flow. -done
+
+python train_encode_decode.py --config_file configs/config_train_rotFlowCropBetterBgOptFlow.py --dataset_path ../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/ --train_subjects brava --test_subjects aslan --job_identifier withRotFlowCropPercentBetterBgOptFlow
+
+to do today. 
+compile experiments from weekend.
+	bw10 val 20 - done
+run best exp with 1200 - done 
+
+run best exp with optical flow base network -done
+
+run eval with argmaxg
+set up saving best model given val
+run best exp with other times too
+reply to yj. send him outline.
+
+read rhodin and figure out rot aug (shear)
+
+other stuff:
+	message farmhouse about sarah
+
+
+
+
+
+
