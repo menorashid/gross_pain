@@ -40,7 +40,7 @@ class MIL_Loss(torch.nn.Module):
         return y_pred
 
     def get_accuracy(self, y_pred, segment_key_pred, y):
-
+        # print ('HERE I AM',self.accuracy)
         if self.accuracy=='argmax':
             y_pred = self.get_pred_argmax(y_pred, segment_key_pred)
             loss = (y_pred, y)
@@ -51,6 +51,15 @@ class MIL_Loss(torch.nn.Module):
             y_pred = self.get_pred_thresh(y_pred, segment_key_pred)
             loss = torch.eq(y_pred.type(y.type()), y).view(-1)
             loss = torch.sum(loss)/float(loss.size(0))
+        elif self.accuracy=='majority':
+            y_pred = torch.argmax(y_pred, dim = 1).type(y_pred.type())
+            # print (y_pred[:10])
+            y_pred = self.collate(y_pred.unsqueeze(1), segment_key_pred, 1).squeeze(1)
+            # print (y_pred.size(),y_pred)
+            y_pred[y_pred>=0.5] = 1
+            y_pred[y_pred<0.5] = 0
+            # print (y_pred.size(),y.size())
+            loss = (y_pred,y)
         elif self.accuracy:
             y_pred = self.get_pred_thresh(y_pred, segment_key_pred)
             loss = (y_pred, y)
@@ -137,7 +146,7 @@ class MIL_Loss_CE(MIL_Loss):
         # print (weights)
         self.loss = torch.nn.CrossEntropyLoss(weight = weights)
         # print (self.loss)
-0        # s = input()
+        # s = input()
 
     def forward(self, pred_dict, label_dict):
         segment_key = label_dict[self.key_idx]

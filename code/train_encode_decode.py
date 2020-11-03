@@ -166,9 +166,18 @@ class IgniteTrainNVS:
                 accumulated_loss = utils_train.save_testing_error(save_path, engine, evaluator,
                                     dataset_str='Validation set',
                                     save_extension='debug_log_validation.txt')
-                # save the best model
-                # utils_train.save_model_state(save_path, trainer, accumulated_loss,
-                #                              model, optimizer, engine.state, wandb_run)
+                if 'metric_for_save' in config_dict.keys():
+                    metric_for_save = config_dict['metric_for_save']
+                    val = evaluator.state.metrics[metric_for_save]
+                    # print ('val')
+
+                    if type(val)==tuple:
+                        val = val[-1]
+                    # val = 1-val
+                    # evaluator.state.metrics['best_val'] = val
+
+                    # save the best model
+                    utils_train.save_model_state(save_path, trainer, val, model, optimizer, engine.state, wandb_run, max_it = True)
         
         @trainer.on(Events.EPOCH_COMPLETED)
         def save_model(engine):
@@ -182,12 +191,12 @@ class IgniteTrainNVS:
                                                   optimizer, engine.state, wandb_run)
 
         # print test result
-        # @evaluator.on(Events.ITERATION_COMPLETED)
-        # def log_test_example(engine):
-        #     iteration = engine.state.iteration - 1
-        #     if iteration in [0,100]:
-        #         print ('here')
-        #         utils_train.save_test_example(save_path, trainer, evaluator, config_dict)
+        @trainer.on(Events.EPOCH_COMPLETED)
+        def log_test_example(engine):
+            print ('plotting test')
+            epoch = engine.state.epoch - 1
+            if ('plot_test_every' in config_dict.keys()) and (epoch % config_dict['plot_test_every'] == 0):
+                utils_train.save_test_example(save_path, trainer, evaluator, config_dict)
         
         # kick everything off
         trainer.run(train_loader, max_epochs=epochs, metrics=metrics)
@@ -386,7 +395,7 @@ class IgniteTrainNVS:
             weight = config_dict['loss_weight_latent'] if 'loss_weight_latent' in config_dict.keys() else 1.)
         
         if 'loss_opt_flow' in config_dict.keys() and config_dict['loss_opt_flow']>0:
-            loss_opt_flow = losses_generic.LossWeightedOnDict(key = 'img_crop', weight_key = 'opt_flow')
+            loss_opt_flow = losses_generic.LossWeightedOnDict(key = 'img_crop', weight_key = 'opt_flow',loss_weight = config_dict['loss_opt_flow'])
 
         losses_train = []
         losses_test = []

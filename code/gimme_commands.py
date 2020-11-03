@@ -246,11 +246,9 @@ def pnp_latent_commands_withval():
 	config_file_model = 'configs/config_train_rotFlowCropBetterBg.py'
 	job_name_model = 'withRotFlowCropPercentBetterBg'
 
-	config_file_model = 'configs/config_train_rotFlowCropBetterBgOptFlow.py'
-	job_name_model = 'withRotFlowCropPercentBetterBgOptFlow'
-	# config_file_model = 'configs/config_train_rotFlowCropBetterBg.py'
-	# job_name_model = 'withRotFlowCropPercentBetterBg'
-
+	# config_file_model = 'configs/config_train_rotFlowCropBetterBgOptFlow.py'
+	# job_name_model = 'withRotFlowCropPercentBetterBgOptFlow'
+	
 
 	epoch = '50'
 
@@ -266,7 +264,10 @@ def pnp_latent_commands_withval():
 	
 	# config_file = 'configs_pain/config_train_pain_lstm_wbn_allout_512_milcepain_weighted_10min_withval_bw10.py'
 	# job_name = 'painLSTM_allout_512_1_seqlen_10_milcepain_weighted_10min_withval_bw10'
-		
+	
+	config_file = 'configs_pain/config_train_pain_lstm_wbn_allout_512_milcepain_weighted_5min_withval_bw10.py'
+	job_name = 'painLSTM_allout_512_1_seqlen_10_milcepain_weighted_5min_withval_bw10'
+			
 
 	python_path = 'train_encode_decode_pain.py'
 	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
@@ -275,15 +276,15 @@ def pnp_latent_commands_withval():
 	
 	util.mkdir('to_runs')
 
-	num_gpus = 1
-	num_per_gpu = 8
+	num_gpus = 2
+	num_per_gpu = 4
 	for idx in range(num_gpus):
 		test_horses = test_horses_all[num_per_gpu*idx:num_per_gpu*idx+num_per_gpu]
 		out_file = os.path.join('to_runs','_'.join(['to_run',to_run_str,job_name,job_name_model,str(idx)]))
 		print (out_file)
 
 		commands = []
-		for test_subject in test_horses[1:]:
+		for test_subject in test_horses:
 			val_subject = val_horses[0] if test_subject is not val_horses[0] else val_horses[1]
 
 			train_subjects = [x for x in train_horses if (x is not test_subject) and (x is not val_subject)]
@@ -361,6 +362,10 @@ def debug_commands():
 	config_file = 'configs/config_train_rotFlowCropBetterBgOptFlow.py'
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
 	job_name = 'withRotFlowCropPercentBetterBgOptFlow'
+
+	config_file = 'configs/config_train_rotFlowCropBetterBgOptFlow_lw10.py'
+	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
+	job_name = 'withRotFlowCropPercentBetterBgOptFlowLW10'
 
 	# config_file = 'configs/config_train_rotCropSegMaskLatent.py'
 	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'

@@ -64,6 +64,9 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
         
         super().__init__(config_dict_file, config_dict)
         
+        if self.model is None:
+            return
+            
         if 'val_subjects' in config_dict.keys():
             assert 'val_every' in config_dict.keys()
             org_test = config_dict['test_subjects']
@@ -78,8 +81,6 @@ class IgniteTrainPainFromLatent(train_encode_decode.IgniteTrainNVS):
 
             # input()
 
-        if self.model is None:
-            return
         # redefine these
         self.trainer = utils_train.create_supervised_trainer(self.model, self.optimizer, self.loss_train, device=device, forward_fn = self.model.forward_pain, backward_every = config_dict.get('backward_every',1))
         self.evaluator = utils_train.create_supervised_evaluator(self.model,

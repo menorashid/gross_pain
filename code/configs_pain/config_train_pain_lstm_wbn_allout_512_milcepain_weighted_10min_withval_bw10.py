@@ -38,6 +38,7 @@ config_dict = {
     'loss_type' : 'MIL_Loss_Pain_CE',
     'loss_weighted': True,
     'accuracy_type' : ['argmax_pain'],
+    'metric_for_save': 'argmax_pain',
     'deno' : 'random',
     'deno_test' : 8,
 

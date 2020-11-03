@@ -45,7 +45,7 @@ config_dict = {
     # dataset
     'training_set' : 'LPS_2fps_crop_timeseg',
     'csv_str_aft': '_reduced_2fps_frame_index_withSegIndexAndIntKey.csv',
-    'num_frames_per_seg': 240, #10 min long segs
+    'num_frames_per_seg': 600, #10 min long segs
     'min_size_seg': 10,
 
     'img_mean' : (0.485, 0.456, 0.406),

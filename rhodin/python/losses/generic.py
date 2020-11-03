@@ -25,11 +25,12 @@ class LossOnPredDict(torch.nn.Module):
         return loss
 
 class LossWeightedOnDict(torch.nn.Module):
-    def __init__(self, key, weight_key):
+    def __init__(self, key, weight_key, loss_weight = 1):
         super(LossWeightedOnDict, self).__init__()
         self.loss = torch.nn.MSELoss(reduction = 'none')
         self.key = key
         self.weight_key = weight_key
+        self.weight = loss_weight
 
     def forward(self, pred_dict, label_dict):
         loss = self.loss(pred_dict[self.key], label_dict[self.key])
@@ -39,7 +40,7 @@ class LossWeightedOnDict(torch.nn.Module):
         # print (torch.min(loss), torch.max(loss))
         # print (torch.min(opt_flow), torch.max(opt_flow))
         loss = opt_flow*loss
-        loss = torch.mean(loss)
+        loss = self.weight * torch.mean(loss)
         # print (loss)
         return loss
         # print (opt_flow.size())

@@ -171,12 +171,17 @@ def load_model_state(save_path, model, optimizer, state):
     print('Loaded ',sate_variables)
 
 
-def save_model_state(save_path, engine, current_loss, model, optimizer, state, wandb_run):
+def save_model_state(save_path, engine, current_loss, model, optimizer, state, wandb_run, max_it = False):
+
     # Update the best value, 99999999 if first time
     best_val = engine.state.metrics.get('best_val', 99999999)
-    engine.state.metrics['best_val'] = np.minimum(current_loss, best_val)
+    if max_it:
+        best_val = engine.state.metrics.get('best_val', -99999999)
+        engine.state.metrics['best_val'] = np.maximum(current_loss, best_val)
+    else:
+        engine.state.metrics['best_val'] = np.minimum(current_loss, best_val)
     
-    print("Saving last model")
+    # print("Saving last model")
     model_path = os.path.join(save_path,"models/")
     if not os.path.exists(model_path):
         os.makedirs(model_path)
@@ -185,13 +190,13 @@ def save_model_state(save_path, engine, current_loss, model, optimizer, state, w
     #     util.translate_special_char(model_path[-80:-20], None),
     #     type='model')
 
-    network_last_str = os.path.join(model_path,"network_last_val.pth")
-    optimizer_last_str = os.path.join(model_path,"optimizer_last_val.pth")
-    state_last_str = os.path.join(model_path,"state_last_val.pickle")
-    torch.save(model.state_dict(), network_last_str)
-    torch.save(optimizer.state_dict(), optimizer_last_str)
-    state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
-    pickle.dump(state_variables, open(state_last_str, 'wb'))
+    # network_last_str = os.path.join(model_path,"network_last_val.pth")
+    # optimizer_last_str = os.path.join(model_path,"optimizer_last_val.pth")
+    # state_last_str = os.path.join(model_path,"state_last_val.pickle")
+    # torch.save(model.state_dict(), network_last_str)
+    # torch.save(optimizer.state_dict(), optimizer_last_str)
+    # state_variables = {key:value for key, value in engine.state.__dict__.items() if key in ['iteration','metrics']}
+    # pickle.dump(state_variables, open(state_last_str, 'wb'))
     
     if current_loss==engine.state.metrics['best_val']:
         print("Saving best model (previous best_loss={} > current_loss={})".format(best_val, current_loss))
@@ -310,7 +315,9 @@ class AccumulatedF1AndAccu(Metric):
         f1 = sklearn.metrics.f1_score(y, y_pred, zero_division = 1)
         # print (y_pred.shape, y.shape)
         self._num_examples += y_pred.size # count in number of batches
+        # print (y_pred, y)
         # print ('accu f1',accu_curr, f1)
+        # s = input()
 
     def compute(self):
         if self._num_examples == 0:
@@ -325,7 +332,7 @@ class AccumulatedF1AndAccu(Metric):
 
         prec,recall,f1_new,support = sklearn.metrics.precision_recall_fscore_support(y, y_pred, average = 'binary')
 
-        # print ('final accu f1',accu_curr, f1)
+        # print ('final',accu_curr, prec, recall, f1_new)
         return accu_curr, prec, recall, f1_new
     
     

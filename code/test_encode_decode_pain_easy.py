@@ -79,7 +79,7 @@ class IgniteTestPainFromLatent(tedp.IgniteTrainPainFromLatent):
         # metrics['thresh'] = utils_train.AccumulatedF1AndAccu(tedp.get_loss(loss_type, config_dict, accuracy = True, deno_key = 'deno_test'))    
         # metrics['argmax'] = utils_train.AccumulatedF1AndAccu(tedp.get_loss(loss_type, config_dict, accuracy = 'argmax', deno_key = 'deno_test'))    
         # metrics['old'] = utils_train.AccumulatedLoss(tedp.get_loss(loss_type, config_dict, accuracy = 'old', deno_key = 'deno_test'))    
-        metrics['argmax_pain'] = utils_train.AccumulatedF1AndAccu(tedp.get_loss(loss_type, config_dict, accuracy = 'argmax_pain', deno_key = 'deno_test'))    
+        metrics['majority'] = utils_train.AccumulatedF1AndAccu(tedp.get_loss(loss_type, config_dict, accuracy = 'majority', deno_key = 'deno_test'))    
         
         return metrics
 
@@ -88,7 +88,8 @@ class IgniteTestPainFromLatent(tedp.IgniteTrainPainFromLatent):
         evaluator = self.evaluator
         save_path = self.save_path
         evaluator.run(self.test_loader, metrics=self.metrics)
-        return
+        # print (evaluator.state.metrics['argmax_pain'])
+        # return
         metrics = evaluator.state.metrics
         out_file = self.out_file.replace('.pth','_test.txt')
         lines = []

@@ -5,18 +5,23 @@ import numpy as np
 import re
 
 def parse_test_file(test_file,num_select = -1, idx_select = -1):
-	lines = util.readLinesFromFile(test_file)[1:11]
+	lines = util.readLinesFromFile(test_file)[1:]
 	# line = lines[0]
 	# print (line)
 	# print (util.replaceSpecialChar(line,' ').split())
-	
+	# print ('NUM SELECT',num_select)
 	
 	# print (lines, test_file)
+	print (util.replaceSpecialChar(lines[0],' ').split())
+	
 	accus = np.array([float(util.replaceSpecialChar(line,' ').split()[num_select]) for line in lines])
+	print (accus)
 	accus = accus*100
 	idx_max = np.argmax(accus)
 	end_accu = accus[-1]
 	max_accu = accus[idx_max]
+	print (idx_max, max_accu)
+	input()
 	if idx_select>-1:
 		# idx_val = idx_select+1
 		print (len(accus))
@@ -27,6 +32,8 @@ def parse_test_file(test_file,num_select = -1, idx_select = -1):
 
 def main():
 	has_val = False
+	dirs_select = list(range(8))
+	idx_metric = -1
 	meta_dir = '../output/pain_lstm_wbn_512_MIL_Loss_CE_painLSTM_512_1_seqlen_10_milce_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
 	# meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_Mix_painLSTM_1024_1_seqlen_10_wbn_allout_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
 	meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_CE_painLSTM_1024_1_seqlen_10_wbn_allout_milce_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
@@ -55,6 +62,17 @@ def main():
 	meta_dir = '../output/pain_lstm_wbn_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_milcepain_weighted_2min_withval_bw10_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
 	has_val = True
 
+	meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_Pain_CE_painLSTM_allout_512_1_seqlen_10_milcepain_weighted_10min_withval_bw10_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
+	has_val = True
+	idx_metric = 5
+	dirs_select = [6]
+
+	meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_Pain_CE_painLSTM_allout_512_1_seqlen_10_milcepain_weighted_2min_withval_bw10_withRotFlowCropPercentBetterBgOptFlow/LPS_2fps_crop_timeseg_nth_1_nfps_240'
+	has_val = True
+	idx_metric = 5
+	dirs_select = [6]
+
+
 	# meta_dir = '../output/pain_lstm_wbn_512_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_milcepain_weighted_2min_deno8_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
 	# meta_dir = '../output/pain_lstm_wbn_wapp_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_wapp_milcepain_weighted_2min_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
 
@@ -72,8 +90,9 @@ def main():
 
 	dirs = [val for val in glob.glob(os.path.join(meta_dir, '*')) if os.path.isdir(val)]
 	dirs.sort()
-	if len(dirs)>8:
-		dirs = dirs[:8]
+	dirs = [dirs[idx] for idx in dirs_select]
+	# if len(dirs)>8:
+	# 	dirs = dirs[:8]
 
 	# dirs = dirs[:-1]
 	# print (dirs,len(dirs))
@@ -95,11 +114,11 @@ def main():
 		if os.path.exists(test_file):
 			if has_val and os.path.exists(val_file):
 				print (val_file)
-				_, idx_end_val, _, idx_max_val = parse_test_file(val_file,-1)
-				end_accu, idx_end, max_accu, idx_max, val_accu, idx_val = parse_test_file(test_file,-1, idx_max_val)
+				_, idx_end_val, _, idx_max_val = parse_test_file(val_file,idx_metric)
+				end_accu, idx_end, max_accu, idx_max, val_accu, idx_val = parse_test_file(test_file,idx_metric, idx_max_val)
 				str_print = '%.2f,%.2f,%.2f,%d,%d,%d'%(max_accu,end_accu,val_accu,idx_max,idx_end,idx_val)
 			else:
-				end_accu, idx_end, max_accu, idx_max = parse_test_file(test_file,-1)
+				end_accu, idx_end, max_accu, idx_max = parse_test_file(test_file,idx_metric)
 				# end_accu = end_accu*100
 				# max_accu = max_accu*100
 				str_print = '%.2f,%.2f,%d,%d'%(max_accu,end_accu,idx_max,idx_end)
