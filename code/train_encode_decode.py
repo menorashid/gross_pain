@@ -34,6 +34,7 @@ if torch.cuda.is_available():
 else:
     device = "cpu"
 
+
 class IgniteTrainNVS:
     
     def set_up_config_dict(self, config_dict):
@@ -51,8 +52,9 @@ class IgniteTrainNVS:
             wandb_run = False
         return wandb_run
 
-    def __init__(self, config_dict_file, config_dict):
-       
+    def __init__(self, config_dict_file, config_dict,resume = 0):
+        # print ('resume',resume)
+        # return
         config_dict = self.set_up_config_dict(config_dict)
         wandb_run = self.set_up_wandb(config_dict)
 
@@ -68,24 +70,25 @@ class IgniteTrainNVS:
             return None
         else:
             print ('we are good. out_file',out_file,'does not exist')
-            # self.model = None
             # return None
-        # assert not os.path.exists(out_file)
-        # print (out_file)
-        # print (os.path.exists(out_file))
-        # print (save_path, epochs)
-        # return
 
+        self.resume = resume
+        if not self.resume:
+            rhodin_utils_io.savePythonFile(config_dict_file, save_path)
+            rhodin_utils_io.savePythonFile(__file__, save_path)
+        
+        model = self.load_network(config_dict)
+        optimizer = self.loadOptimizer(model,config_dict)
+       
+        
+        model = model.to(device)
+        
         # now do training stuff
-        rhodin_utils_io.savePythonFile(config_dict_file, save_path)
-        rhodin_utils_io.savePythonFile(__file__, save_path)
         
         self.train_loader = self.load_data_train(config_dict, save_path)
         test_loader = self.load_data_test(config_dict, save_path)
-        model = self.load_network(config_dict)
         
-        model = model.to(device)
-        optimizer = self.loadOptimizer(model,config_dict)
+        
         loss_train,loss_test = self.load_loss(config_dict)
         metrics = self.load_metrics(loss_test, config_dict)
                     
@@ -93,6 +96,7 @@ class IgniteTrainNVS:
         evaluator = utils_train.create_supervised_evaluator(model,
                                                 metrics=metrics,
                                                 device=device)
+
         self.config_dict = config_dict
         self.save_path = save_path
         self.epochs = epochs
@@ -121,6 +125,19 @@ class IgniteTrainNVS:
         metrics = self.metrics
         trainer = self.trainer
         evaluator = self.evaluator
+        
+        @trainer.on(Events.STARTED)
+        def load_stuff(engine):
+            if self.resume:
+                strings_to_load = ['network_%03d.pth','optimizer_%03d.pth','state_%03d.pickle']
+                strings_to_load = [os.path.join('models',string_curr%self.resume) for string_curr in strings_to_load]
+                for val in strings_to_load:
+                    print (val)
+                    assert os.path.exists(os.path.join(save_path,val))
+                print (engine.state)
+                utils_train.load_model_state(save_path, model, optimizer, engine.state, strings_to_load)
+                engine.state.epoch = self.resume
+            # trainer.state.epoch = 
 
         @trainer.on(Events.ITERATION_COMPLETED)
         def log_training_progress(engine):
@@ -462,15 +479,16 @@ def parse_arguments(argv):
         help="Which subjects to test on.")
     parser.add_argument('--job_identifier', type=str,
         help="Slurm job ID, or other identifier, to not overwrite output.")
+    parser.add_argument('--resume',type = int, default = 0, help="epoch num to resume from")
     return parser.parse_args(argv)
         
     
 if __name__ == "__main__":
     args = parse_arguments(sys.argv[1:])
-    print(args)
+    # print(args)
     train_subjects = re.split('/', args.train_subjects)
     test_subjects = re.split('/',args.test_subjects)
-    print (args.config_file)
+    # print (args.config_file)
     config_dict_module = rhodin_utils_io.loadModule(args.config_file)
     config_dict = config_dict_module.config_dict
     config_dict['job_identifier'] = args.job_identifier
@@ -480,8 +498,9 @@ if __name__ == "__main__":
     config_dict['dataset_folder_train'] = args.dataset_path
     config_dict['dataset_folder_test'] = args.dataset_path
     root = args.dataset_path.rsplit('/', 2)[0]
-    
-    ignite = IgniteTrainNVS(config_dict_module.__file__, config_dict)
+    print (config_dict['test_subjects'])
+    ignite = IgniteTrainNVS(config_dict_module.__file__, config_dict,args.resume)
+    # if ignite is not None:
     ignite.run()
     # config_dict_module.__file__, config_dict)
 

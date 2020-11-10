@@ -12,19 +12,19 @@ def parse_test_file(test_file,num_select = -1, idx_select = -1):
 	# print ('NUM SELECT',num_select)
 	
 	# print (lines, test_file)
-	print (util.replaceSpecialChar(lines[0],' ').split())
+	# print (util.replaceSpecialChar(lines[0],' ').split())
 	
 	accus = np.array([float(util.replaceSpecialChar(line,' ').split()[num_select]) for line in lines])
-	print (accus)
+	# print (accus)
 	accus = accus*100
 	idx_max = np.argmax(accus)
 	end_accu = accus[-1]
 	max_accu = accus[idx_max]
-	print (idx_max, max_accu)
-	input()
+	# print (idx_max, max_accu)
+	# input()
 	if idx_select>-1:
 		# idx_val = idx_select+1
-		print (len(accus))
+		# print (len(accus))
 		val_accu = accus[idx_select]
 		return end_accu, len(accus)-1, max_accu, idx_max, val_accu, idx_select
 	else:
@@ -34,15 +34,15 @@ def main():
 	has_val = False
 	dirs_select = list(range(8))
 	idx_metric = -1
-	meta_dir = '../output/pain_lstm_wbn_512_MIL_Loss_CE_painLSTM_512_1_seqlen_10_milce_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
-	# meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_Mix_painLSTM_1024_1_seqlen_10_wbn_allout_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
-	meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_CE_painLSTM_1024_1_seqlen_10_wbn_allout_milce_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
+	# meta_dir = '../output/pain_lstm_wbn_512_MIL_Loss_CE_painLSTM_512_1_seqlen_10_milce_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
+	# # meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_Mix_painLSTM_1024_1_seqlen_10_wbn_allout_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
+	# meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_CE_painLSTM_1024_1_seqlen_10_wbn_allout_milce_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
 	
-	meta_dir = '../output/pain_lstm_wln_MIL_Loss_Pain_CE_painLSTM_wln_512_1_seqlen_10_milcepain_weighted_2min_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
+	# meta_dir = '../output/pain_lstm_wln_MIL_Loss_Pain_CE_painLSTM_wln_512_1_seqlen_10_milcepain_weighted_2min_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
 
-	meta_dir = '../output/pain_lstm_wln_MIL_Loss_Pain_CE_painLSTM_wln_512_1_seqlen_10_milcepain_weighted_5sec_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_10'
+	# meta_dir = '../output/pain_lstm_wln_MIL_Loss_Pain_CE_painLSTM_wln_512_1_seqlen_10_milcepain_weighted_5sec_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_10'
 
-	meta_dir = '../output/pain_lstm_wbn_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_milcepain_2min_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
+	# meta_dir = '../output/pain_lstm_wbn_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_milcepain_2min_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
 
 	# meta_dir = '../output/pain_lstm_wbn_wstep_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_step_5_milcepain_weighted_2min_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
 
@@ -52,25 +52,35 @@ def main():
 
 	# meta_dir = '../output/pain_lstm_wbn_wstep_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_step_5_milcepain_weighted_2min_minsize30_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
 
-	meta_dir = '../output/pain_lstm_wbn_512_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_milcepain_weighted_2min_bw10_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
+	# meta_dir = '../output/pain_lstm_wbn_512_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_milcepain_weighted_2min_bw10_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
 
 
 	# meta_dir = '../output/pain_lstm_wbn_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_milcepain_weighted_2min_withval_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
 	# has_val = True
 
-	meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_Pain_CE_painLSTM_allout_512_1_seqlen_10_milcepain_weighted_2min_withval_bw10_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
-	meta_dir = '../output/pain_lstm_wbn_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_milcepain_weighted_2min_withval_bw10_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
-	has_val = True
+	# meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_Pain_CE_painLSTM_allout_512_1_seqlen_10_milcepain_weighted_2min_withval_bw10_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
+	# meta_dir = '../output/pain_lstm_wbn_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_milcepain_weighted_2min_withval_bw10_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
+	# has_val = True
 
-	meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_Pain_CE_painLSTM_allout_512_1_seqlen_10_milcepain_weighted_10min_withval_bw10_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
+	# meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_Pain_CE_painLSTM_allout_512_1_seqlen_10_milcepain_weighted_10min_withval_bw10_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_1200'
+	# has_val = True
+	# idx_metric = 5
+	# dirs_select = [6]
+
+	# meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_Pain_CE_painLSTM_allout_512_1_seqlen_10_milcepain_weighted_2min_withval_bw10_withRotFlowCropPercentBetterBgOptFlow/LPS_2fps_crop_timeseg_nth_1_nfps_240'
+	# has_val = True
+	# idx_metric = 5
+	# dirs_select = [6]
+
+	# meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_Pain_CE_painLSTM_allout_512_1_seqlen_10_milcepain_weighted_2min_withval_bw10_withRotFlowCropPercentBetterBgOptFlowLW10/LPS_2fps_crop_timeseg_nth_1_nfps_240'
+	# has_val = True
+	# idx_metric = 5
+	
+	meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_Pain_CE_painLSTM_allout_512_1_seqlen_10_milcepain_weighted_2min_withval_bw10_epoch20_withRotFlowCropPercentBetterBgOptFlowLW10/LPS_2fps_crop_timeseg_nth_1_nfps_240'
 	has_val = True
 	idx_metric = 5
-	dirs_select = [6]
 
-	meta_dir = '../output/pain_lstm_wbn_allout_MIL_Loss_Pain_CE_painLSTM_allout_512_1_seqlen_10_milcepain_weighted_2min_withval_bw10_withRotFlowCropPercentBetterBgOptFlow/LPS_2fps_crop_timeseg_nth_1_nfps_240'
-	has_val = True
-	idx_metric = 5
-	dirs_select = [6]
+
 
 
 	# meta_dir = '../output/pain_lstm_wbn_512_MIL_Loss_Pain_CE_painLSTM_512_1_seqlen_10_milcepain_weighted_2min_deno8_withRotFlowCropPercentBetterBg/LPS_2fps_crop_timeseg_nth_1_nfps_240'
@@ -90,12 +100,14 @@ def main():
 
 	dirs = [val for val in glob.glob(os.path.join(meta_dir, '*')) if os.path.isdir(val)]
 	dirs.sort()
+	# print (dirs,len(dirs))
+	dirs_select
 	dirs = [dirs[idx] for idx in dirs_select]
 	# if len(dirs)>8:
 	# 	dirs = dirs[:8]
 
 	# dirs = dirs[:-1]
-	# print (dirs,len(dirs))
+	
 	# return
 
 	# keys = []

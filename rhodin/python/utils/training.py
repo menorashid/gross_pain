@@ -163,10 +163,13 @@ def save_test_example(save_path, trainer, evaluator, config_dict):
     img_name = os.path.join(save_path, 'debug_images_{}_{:06d}.jpg'.format(mode,iteration))
     utils_plot_batch.plot_iol(inputs, labels, output, config_dict, mode, img_name)               
     
-def load_model_state(save_path, model, optimizer, state):
-    model.load_state_dict(torch.load(os.path.join(save_path,"network_best_val_t1.pth")))
-    optimizer.load_state_dict(torch.load(os.path.join(save_path,"optimizer_best_val_t1.pth")))
-    sate_variables = pickle.load(open(os.path.join(save_path,"state_last_best_val_t1.pickle"),'rb'))
+def load_model_state(save_path, model, optimizer, state, strings_to_load = None):
+    if strings_to_load is None:
+        strings_to_load = ["network_best_val_t1.pth","optimizer_best_val_t1.pth","state_last_best_val_t1.pickle"]
+    
+    model.load_state_dict(torch.load(os.path.join(save_path,strings_to_load[0])))
+    optimizer.load_state_dict(torch.load(os.path.join(save_path,strings_to_load[1])))
+    sate_variables = pickle.load(open(os.path.join(save_path,strings_to_load[2]),'rb'))
     for key, value in sate_variables.items(): setattr(state, key, value)
     print('Loaded ',sate_variables)
 

@@ -192,6 +192,14 @@ class MultiViewDatasetCrop(MultiViewDataset):
                                                                 interval,
                                                                 view,
                                                                 frame_id)
+
+        def get_warprot_path(key):
+            frame_id = '_'.join([subject[:2], '%02d'%interval_ind,
+                                str(view), '%06d'%frame])
+            return self.data_folder + '/{}/{}/{}_rot/{}.npy'.format(subject,
+                                                                interval,
+                                                                view,
+                                                                frame_id)
        
         def load_data(types):
             new_dict = {}
@@ -215,6 +223,8 @@ class MultiViewDatasetCrop(MultiViewDataset):
                     rot_path = self.get_rot_path(view,subject,key)
                     new_dict[key] = np.load(rot_path)
                     # print (new_dict[key].shape)
+                elif key=='warp_rot':
+                    new_dict[key] = np.load(get_warprot_path(key))
                 else:
                     new_dict[key] = np.array(self.label_dict[key][index], dtype='float32')
             return new_dict

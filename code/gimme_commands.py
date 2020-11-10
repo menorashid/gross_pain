@@ -243,14 +243,20 @@ def pnp_latent_commands_withval():
 	# config_file_model = 'configs/config_train_rotFlowCropLatent.py'
 	# job_name_model = 'withRotFlowCropLatentPercentLatentLr0.1'
 
-	config_file_model = 'configs/config_train_rotFlowCropBetterBg.py'
-	job_name_model = 'withRotFlowCropPercentBetterBg'
+	# config_file_model = 'configs/config_train_rotFlowCropBetterBg.py'
+	# job_name_model = 'withRotFlowCropPercentBetterBg'
 
 	# config_file_model = 'configs/config_train_rotFlowCropBetterBgOptFlow.py'
 	# job_name_model = 'withRotFlowCropPercentBetterBgOptFlow'
 	
+	# config_file_model = 'configs/config_train_rotFlowCropBetterBgOptFlow_lw10.py'
+	# job_name_model = 'withRotFlowCropPercentBetterBgOptFlowLW10'
+	
+	config_file = 'configs/config_train_rotFlowCropBetterBg_warp.py'
+	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_ofp_0.01_warpcrop/'
+	job_name = 'withRotFlowCropPercentBetterBgWarp'
 
-	epoch = '50'
+	epoch = '20'
 
 
 	config_file = 'configs_pain/config_train_pain_lstm_wbn_512_milcepain_weighted_2min_withval.py'
@@ -260,13 +266,14 @@ def pnp_latent_commands_withval():
 	job_name = 'painLSTM_512_1_seqlen_10_milcepain_weighted_2min_withval_bw10'
 	
 	config_file = 'configs_pain/config_train_pain_lstm_wbn_allout_512_milcepain_weighted_2min_withval_bw10.py'
-	job_name = 'painLSTM_allout_512_1_seqlen_10_milcepain_weighted_2min_withval_bw10'
-	
+	# job_name = 'painLSTM_allout_512_1_seqlen_10_milcepain_weighted_2min_withval_bw10'
+	job_name = 'painLSTM_allout_512_1_seqlen_10_milcepain_weighted_2min_withval_bw10_epoch20'
+
 	# config_file = 'configs_pain/config_train_pain_lstm_wbn_allout_512_milcepain_weighted_10min_withval_bw10.py'
 	# job_name = 'painLSTM_allout_512_1_seqlen_10_milcepain_weighted_10min_withval_bw10'
 	
-	config_file = 'configs_pain/config_train_pain_lstm_wbn_allout_512_milcepain_weighted_5min_withval_bw10.py'
-	job_name = 'painLSTM_allout_512_1_seqlen_10_milcepain_weighted_5min_withval_bw10'
+	# config_file = 'configs_pain/config_train_pain_lstm_wbn_allout_512_milcepain_weighted_5min_withval_bw10.py'
+	# job_name = 'painLSTM_allout_512_1_seqlen_10_milcepain_weighted_5min_withval_bw10'
 			
 
 	python_path = 'train_encode_decode_pain.py'
@@ -315,6 +322,9 @@ def pnp_latent_commands_withval():
 def debug_commands():
 	train_horses = ['aslan' , 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
 	test_horses_all = ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
+	# ['naughty_but_nice']
+	# ['aslan', 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']
+	# 
 	# ['herrera','julia','naughty_but_nice']
 	# ['inkasso', 'kastanjett', 'sir_holger']
 	# 
@@ -363,9 +373,13 @@ def debug_commands():
 	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
 	job_name = 'withRotFlowCropPercentBetterBgOptFlow'
 
-	config_file = 'configs/config_train_rotFlowCropBetterBgOptFlow_lw10.py'
-	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
-	job_name = 'withRotFlowCropPercentBetterBgOptFlowLW10'
+	# config_file = 'configs/config_train_rotFlowCropBetterBgOptFlow_lw10.py'
+	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop/'
+	# job_name = 'withRotFlowCropPercentBetterBgOptFlowLW10'
+
+	config_file = 'configs/config_train_rotFlowCropBetterBg_warp.py'
+	data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_ofp_0.01_warpcrop/'
+	job_name = 'withRotFlowCropPercentBetterBgWarp'
 
 	# config_file = 'configs/config_train_rotCropSegMaskLatent.py'
 	# data_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_0.2fps_crop/'
@@ -373,8 +387,8 @@ def debug_commands():
 
 	util.mkdir('to_runs')
 
-	num_gpus = 2
-	num_per_gpu = 4
+	num_gpus = 3
+	num_per_gpu = 3
 	for idx in range(num_gpus):
 		test_horses = test_horses_all[num_per_gpu*idx:num_per_gpu*idx+num_per_gpu]
 		out_file = os.path.join('to_runs','to_run_'+job_name+'_'+str(idx))
@@ -398,9 +412,9 @@ def debug_commands():
 
 def main():
 	# pnp_latent_commands()
-	pnp_latent_commands_withval()
+	# pnp_latent_commands_withval()
 	# back_bone_commands()
-	# debug_commands()
+	debug_commands()
 	# out_file = 'get_counts'
 	# strs = []
 	# train_horses = ['aslan' , 'brava', 'herrera', 'inkasso', 'julia', 'kastanjett', 'naughty_but_nice', 'sir_holger']

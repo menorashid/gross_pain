@@ -148,14 +148,15 @@ def main():
     # reduce_csvs(data_dir_path)
 
     data_dir_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_oft_0.7_crop'
+    data_dir_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps_ofp_0.01_warpcrop'
     # str_aft = '_thresh_0.70_frame_index.csv'
     # str_aft = '_percent_0.01_frame_index.csv'
     # print (data_dir_path)
     # reduce_csvs(data_dir_path, str_aft = str_aft)
 
-    str_aft = '_reduced_percent_0.01_frame_index.csv'
+    str_aft = '_percent_0.01_frame_index.csv'
     print (data_dir_path)
-    reduce_csvs(data_dir_path, str_aft = str_aft, flow = True)
+    reduce_csvs(data_dir_path, str_aft = str_aft)
 
 
     # data_dir_path = '../data/pain_no_pain_x2h_intervals_for_extraction_672_380_10fps'
